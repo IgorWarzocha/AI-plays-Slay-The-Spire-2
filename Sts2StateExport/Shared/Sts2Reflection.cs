@@ -1,7 +1,7 @@
 using System.Reflection;
 using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
-using MegaCrit.Sts2.Core.Nodes.Events;
 using MegaCrit.Sts2.Core.Nodes.Cards;
+using MegaCrit.Sts2.Core.Nodes.Events;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
@@ -48,7 +48,12 @@ public sealed class Sts2Reflection
     public FieldInfo? EventField { get; } = GetField<NEventRoom>("_event");
     public FieldInfo? ConnectedOptionsField { get; } = GetField<NEventRoom>("_connectedOptions");
     public FieldInfo? CardGridConfirmButtonField { get; } = GetField<NCardGridSelectionScreen>("_selectModeConfirmButton");
+    public FieldInfo? DeckViewObtainedSorterField { get; } = GetField<NDeckViewScreen>("_obtainedSorter");
+    public FieldInfo? DeckViewTypeSorterField { get; } = GetField<NDeckViewScreen>("_typeSorter");
+    public FieldInfo? DeckViewCostSorterField { get; } = GetField<NDeckViewScreen>("_costSorter");
+    public FieldInfo? DeckViewAlphabetSorterField { get; } = GetField<NDeckViewScreen>("_alphabetSorter");
     public FieldInfo? RewardsProceedButtonField { get; } = GetField<NRewardsScreen>("_proceedButton");
+    public FieldInfo? CardPileBackButtonField { get; } = GetField<NCardPileScreen>("_backButton");
 
     public MethodInfo? MainMenuContinueMethod { get; } = GetMethod<NMainMenu>("OnContinueButtonPressedAsync", 0);
     public MethodInfo? MainMenuTimelineMethod { get; } = GetMethod<NMainMenu>("OpenTimelineScreen", 1);
@@ -62,6 +67,11 @@ public sealed class Sts2Reflection
     public MethodInfo? EventFallbackDescriptionMethod { get; } = GetMethod<NEventRoom>("GetDescriptionOrFallback", 0);
     public MethodInfo? CardGridOnCardClickedMethod { get; } = GetMethod<NCardGridSelectionScreen>("OnCardClicked", 1);
     public MethodInfo? CardGridConfirmSelectionMethod { get; } = GetMethod<NCardGridSelectionScreen>("ConfirmSelection", 0);
+    public MethodInfo? DeckViewOnObtainedSortMethod { get; } = GetMethod<NDeckViewScreen>("OnObtainedSort", 1);
+    public MethodInfo? DeckViewOnCardTypeSortMethod { get; } = GetMethod<NDeckViewScreen>("OnCardTypeSort", 1);
+    public MethodInfo? DeckViewOnCostSortMethod { get; } = GetMethod<NDeckViewScreen>("OnCostSort", 1);
+    public MethodInfo? DeckViewOnAlphabetSortMethod { get; } = GetMethod<NDeckViewScreen>("OnAlphabetSort", 1);
+    public MethodInfo? CardPileReturnMethod { get; } = GetMethod<NCardPileScreen>("OnReturnButtonPressed", 1);
     public MethodInfo? MapTravelToCoordMethod { get; } = GetMethod<NMapScreen>("TravelToMapCoord", 1);
     public MethodInfo? TopBarMapButtonOnReleaseMethod { get; } = GetMethod<NTopBarMapButton>("OnRelease", 0);
     public MethodInfo? TopBarMapButtonIsOpenMethod { get; } = GetMethod<NTopBarMapButton>("IsOpen", 0);
@@ -71,6 +81,7 @@ public sealed class Sts2Reflection
     public MethodInfo? TopBarPauseButtonIsOpenMethod { get; } = GetMethod<NTopBarPauseButton>("IsOpen", 0);
     public MethodInfo? CombatEndTurnOnReleaseMethod { get; } = GetMethod<NEndTurnButton>("OnRelease", 0);
     public MethodInfo? CombatEndTurnCanTurnBeEndedMethod { get; } = GetMethod<NEndTurnButton>("get_CanTurnBeEnded", 0);
+    public MethodInfo? CombatPileOnReleaseMethod { get; } = GetMethod<NCombatCardPile>("OnRelease", 0);
     public MethodInfo? RewardButtonOnReleaseMethod { get; } = GetMethod<NRewardButton>("OnRelease", 0);
     public MethodInfo? ProceedButtonOnReleaseMethod { get; } = GetMethod<NProceedButton>("OnRelease", 0);
     public MethodInfo? RewardsOnProceedButtonPressedMethod { get; } = GetMethod<NRewardsScreen>("OnProceedButtonPressed", 1);
@@ -102,7 +113,12 @@ public sealed class Sts2Reflection
         RequireField(CustomConfirmButtonField, nameof(CustomConfirmButtonField));
         RequireField(EventField, nameof(EventField));
         RequireField(ConnectedOptionsField, nameof(ConnectedOptionsField));
+        RequireField(DeckViewObtainedSorterField, nameof(DeckViewObtainedSorterField));
+        RequireField(DeckViewTypeSorterField, nameof(DeckViewTypeSorterField));
+        RequireField(DeckViewCostSorterField, nameof(DeckViewCostSorterField));
+        RequireField(DeckViewAlphabetSorterField, nameof(DeckViewAlphabetSorterField));
         RequireField(RewardsProceedButtonField, nameof(RewardsProceedButtonField));
+        RequireField(CardPileBackButtonField, nameof(CardPileBackButtonField));
         RequireProperty(MapPointIsTravelableProperty, nameof(MapPointIsTravelableProperty));
         RequireProperty(TopBarMapButtonHotkeysProperty, nameof(TopBarMapButtonHotkeysProperty));
         RequireProperty(TopBarDeckButtonHotkeysProperty, nameof(TopBarDeckButtonHotkeysProperty));
@@ -118,6 +134,11 @@ public sealed class Sts2Reflection
         RequireMethod(CharacterEmbarkMethod, nameof(CharacterEmbarkMethod));
         RequireMethod(CustomEmbarkMethod, nameof(CustomEmbarkMethod));
         RequireMethod(EventFallbackDescriptionMethod, nameof(EventFallbackDescriptionMethod));
+        RequireMethod(DeckViewOnObtainedSortMethod, nameof(DeckViewOnObtainedSortMethod));
+        RequireMethod(DeckViewOnCardTypeSortMethod, nameof(DeckViewOnCardTypeSortMethod));
+        RequireMethod(DeckViewOnCostSortMethod, nameof(DeckViewOnCostSortMethod));
+        RequireMethod(DeckViewOnAlphabetSortMethod, nameof(DeckViewOnAlphabetSortMethod));
+        RequireMethod(CardPileReturnMethod, nameof(CardPileReturnMethod));
         RequireMethod(MapTravelToCoordMethod, nameof(MapTravelToCoordMethod));
         RequireMethod(TopBarMapButtonOnReleaseMethod, nameof(TopBarMapButtonOnReleaseMethod));
         RequireMethod(TopBarMapButtonIsOpenMethod, nameof(TopBarMapButtonIsOpenMethod));
@@ -127,6 +148,7 @@ public sealed class Sts2Reflection
         RequireMethod(TopBarPauseButtonIsOpenMethod, nameof(TopBarPauseButtonIsOpenMethod));
         RequireMethod(CombatEndTurnOnReleaseMethod, nameof(CombatEndTurnOnReleaseMethod));
         RequireMethod(CombatEndTurnCanTurnBeEndedMethod, nameof(CombatEndTurnCanTurnBeEndedMethod));
+        RequireMethod(CombatPileOnReleaseMethod, nameof(CombatPileOnReleaseMethod));
         RequireMethod(RewardButtonOnReleaseMethod, nameof(RewardButtonOnReleaseMethod));
         RequireMethod(ProceedButtonOnReleaseMethod, nameof(ProceedButtonOnReleaseMethod));
         RequireMethod(RewardsOnProceedButtonPressedMethod, nameof(RewardsOnProceedButtonPressedMethod));

@@ -218,6 +218,7 @@ function summarizeRun(run, savePath, screenState) {
           topBar: screenState.topBar ?? null,
           relics: Array.isArray(screenState.relics) ? screenState.relics : [],
           map: screenState.map ?? null,
+          cardBrowse: screenState.cardBrowse ?? null,
           combat: screenState.combat ?? null,
         }
       : null,
@@ -319,6 +320,25 @@ function printText(summary) {
       console.log(
         `Map: travelEnabled=${Boolean(summary.screen.map.travelEnabled)}, traveling=${Boolean(summary.screen.map.traveling)}${travelable ? `, Travelable ${travelable}` : ""}`,
       );
+    }
+
+    if (summary.screen.cardBrowse) {
+      const previewCards = Array.isArray(summary.screen.cardBrowse.cards)
+        ? summary.screen.cardBrowse.cards
+          .slice(0, 8)
+          .map((card) => `${card.title}${card.costText ? `(${card.costText})` : ""}${card.upgraded ? "+" : ""}`)
+          .join(" | ")
+        : "";
+      const sortText = Array.isArray(summary.screen.cardBrowse.sorts)
+        ? summary.screen.cardBrowse.sorts.map((sort) => sort.label).join(" | ")
+        : "";
+      console.log(
+        `Browse: ${summary.screen.cardBrowse.title} (${summary.screen.cardBrowse.cardCount ?? "?"} cards)${sortText ? `, Sorts ${sortText}` : ""}`,
+      );
+
+      if (previewCards) {
+        console.log(`Browse cards: ${previewCards}`);
+      }
     }
 
     if (summary.screen.combat) {

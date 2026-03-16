@@ -82,6 +82,7 @@ public sealed class CombatFeature : IAgentFeature
             .. handCards.Where(static card => card.IsPlayable).Select(card => $"combat.play:{card.Id}"),
             .. handCards.Where(static card => card.IsPlayable && card.ValidTargetIds.Count > 0)
                 .SelectMany(card => card.ValidTargetIds.Select(targetId => $"combat.play:{card.Id}@{targetId}")),
+            .. BuildPileActions(ui),
             "combat.end_turn"
         ];
         state.Notes =
@@ -108,6 +109,9 @@ public sealed class CombatFeature : IAgentFeature
                 RuntimeInvoker.Invoke(
                     ui.EndTurnButton ?? throw new InvalidOperationException("End turn button is unavailable."),
                     context.Reflection.CombatEndTurnOnReleaseMethod);
+                return true;
+            case "open_pile":
+                OpenPile(context, ui, command.Argument);
                 return true;
             case "play":
                 ExecutePlayCommand(room, ui, command.Argument);
@@ -172,6 +176,42 @@ public sealed class CombatFeature : IAgentFeature
         return room.CreatureNodes
             .Select(static node => node.Entity)
             .FirstOrDefault(entity => string.Equals(CombatCardIdentity.FromCreature(entity), targetId, StringComparison.Ordinal));
+    }
+
+    private static IEnumerable<string> BuildPileActions(NCombatUi ui)
+    {
+        if (ui.DrawPile is not null && SceneTraversal.IsNodeVisible(ui.DrawPile))
+        {
+            yield return "combat.open_pile:draw";
+        }
+
+        if (ui.DiscardPile is not null && SceneTraversal.IsNodeVisible(ui.DiscardPile))
+        {
+            yield return "combat.open_pile:discard";
+        }
+
+        if (ui.ExhaustPile is not null && SceneTraversal.IsNodeVisible(ui.ExhaustPile))
+        {
+            yield return "combat.open_pile:exhaust";
+        }
+    }
+
+    private static void OpenPile(FeatureContext context, NCombatUi ui, string? argument)
+    {
+        Node pileButton = argument switch
+        {
+            "draw" => ui.DrawPile ?? throw new InvalidOperationException("Draw pile button is unavailable."),
+            "discard" => ui.DiscardPile ?? throw new InvalidOperationException("Discard pile button is unavailable."),
+            "exhaust" => ui.ExhaustPile ?? throw new InvalidOperationException("Exhaust pile button is unavailable."),
+            _ => throw new InvalidOperationException($"Unsupported combat pile '{argument}'.")
+        };
+
+        if (!SceneTraversal.IsNodeVisible(pileButton))
+        {
+            throw new InvalidOperationException($"Combat pile '{argument}' is not visible.");
+        }
+
+        RuntimeInvoker.Invoke(pileButton, context.Reflection.CombatPileOnReleaseMethod);
     }
 
     private static CombatState ReadCombatState(NPlayerHand hand)
