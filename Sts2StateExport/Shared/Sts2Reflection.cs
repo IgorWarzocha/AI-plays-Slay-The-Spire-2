@@ -12,8 +12,12 @@ using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.ProfileScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
+using MegaCrit.Sts2.Core.Nodes.RestSite;
 using MegaCrit.Sts2.Core.Nodes.TopBar;
+using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
+using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
+using MegaCrit.Sts2.Core.Nodes.Screens.TreasureRoomRelic;
 
 namespace Sts2StateExport;
 
@@ -54,6 +58,8 @@ public sealed class Sts2Reflection
     public FieldInfo? DeckViewAlphabetSorterField { get; } = GetField<NDeckViewScreen>("_alphabetSorter");
     public FieldInfo? RewardsProceedButtonField { get; } = GetField<NRewardsScreen>("_proceedButton");
     public FieldInfo? CardPileBackButtonField { get; } = GetField<NCardPileScreen>("_backButton");
+    public FieldInfo? TreasureChestButtonField { get; } = GetField<NTreasureRoom>("_chestButton");
+    public FieldInfo? TreasureRelicCollectionField { get; } = GetField<NTreasureRoom>("_relicCollection");
 
     public MethodInfo? MainMenuContinueMethod { get; } = GetMethod<NMainMenu>("OnContinueButtonPressedAsync", 0);
     public MethodInfo? MainMenuTimelineMethod { get; } = GetMethod<NMainMenu>("OpenTimelineScreen", 1);
@@ -72,6 +78,13 @@ public sealed class Sts2Reflection
     public MethodInfo? DeckViewOnCostSortMethod { get; } = GetMethod<NDeckViewScreen>("OnCostSort", 1);
     public MethodInfo? DeckViewOnAlphabetSortMethod { get; } = GetMethod<NDeckViewScreen>("OnAlphabetSort", 1);
     public MethodInfo? CardPileReturnMethod { get; } = GetMethod<NCardPileScreen>("OnReturnButtonPressed", 1);
+    public MethodInfo? MerchantInventoryCloseMethod { get; } = GetMethod<NMerchantInventory>("Close", 0);
+    public MethodInfo? MerchantSlotOnReleasedMethod { get; } = GetMethod<NMerchantSlot>("OnReleased", 0);
+    public MethodInfo? RestSiteButtonOnReleaseMethod { get; } = GetMethod<NRestSiteButton>("OnRelease", 0);
+    public MethodInfo? RestSiteProceedMethod { get; } = GetMethod<NRestSiteRoom>("OnProceedButtonReleased", 1);
+    public MethodInfo? TreasureChestReleasedMethod { get; } = GetMethod<NTreasureRoom>("OnChestButtonReleased", 1);
+    public MethodInfo? TreasureProceedMethod { get; } = GetMethod<NTreasureRoom>("OnProceedButtonReleased", 1);
+    public MethodInfo? TreasureRelicPickMethod { get; } = GetMethod<NTreasureRoomRelicCollection>("PickRelic", 1);
     public MethodInfo? MapTravelToCoordMethod { get; } = GetMethod<NMapScreen>("TravelToMapCoord", 1);
     public MethodInfo? TopBarMapButtonOnReleaseMethod { get; } = GetMethod<NTopBarMapButton>("OnRelease", 0);
     public MethodInfo? TopBarMapButtonIsOpenMethod { get; } = GetMethod<NTopBarMapButton>("IsOpen", 0);
@@ -119,6 +132,8 @@ public sealed class Sts2Reflection
         RequireField(DeckViewAlphabetSorterField, nameof(DeckViewAlphabetSorterField));
         RequireField(RewardsProceedButtonField, nameof(RewardsProceedButtonField));
         RequireField(CardPileBackButtonField, nameof(CardPileBackButtonField));
+        RequireField(TreasureChestButtonField, nameof(TreasureChestButtonField));
+        RequireField(TreasureRelicCollectionField, nameof(TreasureRelicCollectionField));
         RequireProperty(MapPointIsTravelableProperty, nameof(MapPointIsTravelableProperty));
         RequireProperty(TopBarMapButtonHotkeysProperty, nameof(TopBarMapButtonHotkeysProperty));
         RequireProperty(TopBarDeckButtonHotkeysProperty, nameof(TopBarDeckButtonHotkeysProperty));
@@ -139,6 +154,13 @@ public sealed class Sts2Reflection
         RequireMethod(DeckViewOnCostSortMethod, nameof(DeckViewOnCostSortMethod));
         RequireMethod(DeckViewOnAlphabetSortMethod, nameof(DeckViewOnAlphabetSortMethod));
         RequireMethod(CardPileReturnMethod, nameof(CardPileReturnMethod));
+        RequireMethod(MerchantInventoryCloseMethod, nameof(MerchantInventoryCloseMethod));
+        RequireMethod(MerchantSlotOnReleasedMethod, nameof(MerchantSlotOnReleasedMethod));
+        RequireMethod(RestSiteButtonOnReleaseMethod, nameof(RestSiteButtonOnReleaseMethod));
+        RequireMethod(RestSiteProceedMethod, nameof(RestSiteProceedMethod));
+        RequireMethod(TreasureChestReleasedMethod, nameof(TreasureChestReleasedMethod));
+        RequireMethod(TreasureProceedMethod, nameof(TreasureProceedMethod));
+        RequireMethod(TreasureRelicPickMethod, nameof(TreasureRelicPickMethod));
         RequireMethod(MapTravelToCoordMethod, nameof(MapTravelToCoordMethod));
         RequireMethod(TopBarMapButtonOnReleaseMethod, nameof(TopBarMapButtonOnReleaseMethod));
         RequireMethod(TopBarMapButtonIsOpenMethod, nameof(TopBarMapButtonIsOpenMethod));

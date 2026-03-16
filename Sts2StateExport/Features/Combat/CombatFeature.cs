@@ -26,7 +26,10 @@ public sealed class CombatFeature : IAgentFeature
         // Reward overlays sit on top of the combat room, so combat must yield
         // whenever one of those higher-level screens is currently visible.
         if (SceneTraversal.FindFirstVisible<NCardRewardSelectionScreen>(context.Root) is not null
-            || SceneTraversal.FindFirstVisible<NRewardsScreen>(context.Root) is not null)
+            || SceneTraversal.FindFirstVisible<NRewardsScreen>(context.Root) is not null
+            || SceneTraversal.FindFirstVisible<NMerchantRoom>(context.Root) is not null
+            || SceneTraversal.FindFirstVisible<NRestSiteRoom>(context.Root) is not null
+            || SceneTraversal.FindFirstVisible<NTreasureRoom>(context.Root) is not null)
         {
             return false;
         }
@@ -39,7 +42,11 @@ public sealed class CombatFeature : IAgentFeature
 
         NCombatUi ui = room.Ui ?? throw new InvalidOperationException("Combat room did not expose its combat UI.");
         NPlayerHand hand = ui.Hand ?? throw new InvalidOperationException("Combat UI did not expose the player hand.");
-        CombatState combatState = ReadCombatState(hand);
+        CombatState? combatState = TryReadCombatState(hand);
+        if (combatState is null)
+        {
+            return false;
+        }
 
         List<ExportCombatCard> handCards = hand.ActiveHolders
             .Select(holder => BuildHandCard(holder))
@@ -214,15 +221,10 @@ public sealed class CombatFeature : IAgentFeature
         RuntimeInvoker.Invoke(pileButton, context.Reflection.CombatPileOnReleaseMethod);
     }
 
-    private static CombatState ReadCombatState(NPlayerHand hand)
+    private static CombatState? TryReadCombatState(NPlayerHand hand)
     {
         FieldInfo? combatStateField = hand.GetType().GetField("_combatState", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (combatStateField?.GetValue(hand) is not CombatState combatState)
-        {
-            throw new InvalidOperationException("Player hand does not expose the current combat state.");
-        }
-
-        return combatState;
+        return combatStateField?.GetValue(hand) as CombatState;
     }
 
     private static ExportCombatCard BuildHandCard(NHandCardHolder holder)

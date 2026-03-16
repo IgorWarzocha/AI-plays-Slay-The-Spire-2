@@ -27,6 +27,10 @@ This mod exposes Slay the Spire 2 state and commands through JSON files in
   - Map export and coordinate-based travel commands.
 - `Features/CardViews/`
   - Deck-view and generic card-pile overlays, including sort/close commands.
+- `Features/Merchant/`
+  - Merchant room and inventory surfaces, including native purchase commands.
+- `Features/Rooms/`
+  - Rest-site and treasure-room state machines, including treasure relic picks.
 - `Features/Combat/`
   - Combat state export and model-backed play/end-turn commands.
 - `Features/Rewards/`

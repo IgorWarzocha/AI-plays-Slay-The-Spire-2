@@ -22,13 +22,7 @@ public static class AgentText
             return null;
         }
 
-        try
-        {
-            return value.GetFormattedText();
-        }
-        catch
-        {
-            return null;
-        }
+        string? raw = value.GetRawText();
+        return string.IsNullOrWhiteSpace(raw) ? null : raw;
     }
 }
