@@ -218,6 +218,7 @@ function summarizeRun(run, savePath, screenState) {
           topBar: screenState.topBar ?? null,
           relics: Array.isArray(screenState.relics) ? screenState.relics : [],
           map: screenState.map ?? null,
+          combat: screenState.combat ?? null,
         }
       : null,
   };
@@ -318,6 +319,36 @@ function printText(summary) {
       console.log(
         `Map: travelEnabled=${Boolean(summary.screen.map.travelEnabled)}, traveling=${Boolean(summary.screen.map.traveling)}${travelable ? `, Travelable ${travelable}` : ""}`,
       );
+    }
+
+    if (summary.screen.combat) {
+      const creatures = Array.isArray(summary.screen.combat.creatures)
+        ? summary.screen.combat.creatures
+          .map((creature) => {
+            const intentText = Array.isArray(creature.intents) && creature.intents.length > 0
+              ? ` -> ${creature.intents.map((intent) => intent.kind).join(", ")}`
+              : "";
+            return `${creature.name} ${creature.currentHp}/${creature.maxHp}${creature.block ? ` +${creature.block}` : ""}${intentText}`;
+          })
+          .join(" | ")
+        : "";
+      const hand = Array.isArray(summary.screen.combat.hand)
+        ? summary.screen.combat.hand
+          .map((card) => `${card.title}${card.costText ? `(${card.costText})` : ""}${card.isPlayable ? "" : " [locked]"}`)
+          .join(" | ")
+        : "";
+
+      console.log(
+        `Combat: round=${summary.screen.combat.roundNumber ?? "?"}, side=${summary.screen.combat.currentSide ?? "?"}, energy=${summary.screen.combat.energy ?? "?"}, draw=${summary.screen.combat.drawPileCount ?? "?"}, discard=${summary.screen.combat.discardPileCount ?? "?"}, exhaust=${summary.screen.combat.exhaustPileCount ?? "?"}, endTurn=${Boolean(summary.screen.combat.canEndTurn)}`,
+      );
+
+      if (creatures) {
+        console.log(`Creatures: ${creatures}`);
+      }
+
+      if (hand) {
+        console.log(`Hand: ${hand}`);
+      }
     }
 
     if (summary.screen.characters.length > 0) {

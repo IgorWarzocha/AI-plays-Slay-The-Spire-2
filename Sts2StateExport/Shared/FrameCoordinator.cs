@@ -47,8 +47,11 @@ public sealed class FrameCoordinator
                 new CharacterSelectFeature(),
                 new SingleplayerSubmenuFeature(),
                 new DeckCardSelectFeature(),
+                new CardRewardFeature(),
                 new EventFeature(),
                 new MapFeature(),
+                new CombatFeature(),
+                new RewardsFeature(),
                 new RunPresenceFeature(),
                 new MainMenuFeature()
             ],

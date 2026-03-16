@@ -25,6 +25,10 @@ This mod exposes Slay the Spire 2 state and commands through JSON files in
   - Cross-cutting top bar and relic inventory export/commands.
 - `Features/Map/`
   - Map export and coordinate-based travel commands.
+- `Features/Combat/`
+  - Combat state export and model-backed play/end-turn commands.
+- `Features/Rewards/`
+  - Combat rewards and card-reward selection.
 
 ## Runtime Contract
 
