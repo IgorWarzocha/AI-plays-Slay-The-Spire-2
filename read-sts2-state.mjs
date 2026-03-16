@@ -215,6 +215,9 @@ function summarizeRun(run, savePath, screenState) {
             : [],
           characters: Array.isArray(screenState.characters) ? screenState.characters : [],
           characterSelection: screenState.characterSelection ?? null,
+          topBar: screenState.topBar ?? null,
+          relics: Array.isArray(screenState.relics) ? screenState.relics : [],
+          map: screenState.map ?? null,
         }
       : null,
   };
@@ -283,6 +286,37 @@ function printText(summary) {
             return `${title}${flags ? ` [${flags}]` : ""}`;
           })
           .join(" | ")}`,
+      );
+    }
+
+    if (summary.screen.topBar?.visible) {
+      const buttonText = Array.isArray(summary.screen.topBar.buttons)
+        ? summary.screen.topBar.buttons
+          .map((button) => `${button.label}${button.selected ? " [open]" : ""}`)
+          .join(" | ")
+        : "";
+      console.log(
+        `Top bar: HP ${summary.screen.topBar.currentHp ?? "?"}/${summary.screen.topBar.maxHp ?? "?"}, Gold ${summary.screen.topBar.gold ?? "?"}${buttonText ? `, Buttons ${buttonText}` : ""}`,
+      );
+    }
+
+    if (summary.screen.relics.length > 0) {
+      console.log(
+        `Runtime relics: ${summary.screen.relics
+          .map((relic) => `${relic.label}${Number.isFinite(relic.count) ? ` x${relic.count}` : ""}`)
+          .join(" | ")}`,
+      );
+    }
+
+    if (summary.screen.map?.visible) {
+      const travelable = Array.isArray(summary.screen.map.points)
+        ? summary.screen.map.points
+          .filter((point) => point.travelable)
+          .map((point) => `${point.type} @ (${point.col},${point.row})`)
+          .join(" | ")
+        : "";
+      console.log(
+        `Map: travelEnabled=${Boolean(summary.screen.map.travelEnabled)}, traveling=${Boolean(summary.screen.map.traveling)}${travelable ? `, Travelable ${travelable}` : ""}`,
       );
     }
 

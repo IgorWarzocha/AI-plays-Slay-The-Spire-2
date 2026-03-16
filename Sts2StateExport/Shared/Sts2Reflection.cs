@@ -7,7 +7,9 @@ using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.CustomRun;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
+using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.ProfileScreen;
+using MegaCrit.Sts2.Core.Nodes.TopBar;
 
 namespace Sts2StateExport;
 
@@ -55,6 +57,18 @@ public sealed class Sts2Reflection
     public MethodInfo? EventFallbackDescriptionMethod { get; } = GetMethod<NEventRoom>("GetDescriptionOrFallback", 0);
     public MethodInfo? CardGridOnCardClickedMethod { get; } = GetMethod<NCardGridSelectionScreen>("OnCardClicked", 1);
     public MethodInfo? CardGridConfirmSelectionMethod { get; } = GetMethod<NCardGridSelectionScreen>("ConfirmSelection", 0);
+    public MethodInfo? MapTravelToCoordMethod { get; } = GetMethod<NMapScreen>("TravelToMapCoord", 1);
+    public MethodInfo? TopBarMapButtonOnReleaseMethod { get; } = GetMethod<NTopBarMapButton>("OnRelease", 0);
+    public MethodInfo? TopBarMapButtonIsOpenMethod { get; } = GetMethod<NTopBarMapButton>("IsOpen", 0);
+    public MethodInfo? TopBarDeckButtonOnReleaseMethod { get; } = GetMethod<NTopBarDeckButton>("OnRelease", 0);
+    public MethodInfo? TopBarDeckButtonIsOpenMethod { get; } = GetMethod<NTopBarDeckButton>("IsOpen", 0);
+    public MethodInfo? TopBarPauseButtonOnReleaseMethod { get; } = GetMethod<NTopBarPauseButton>("OnRelease", 0);
+    public MethodInfo? TopBarPauseButtonIsOpenMethod { get; } = GetMethod<NTopBarPauseButton>("IsOpen", 0);
+
+    public PropertyInfo? MapPointIsTravelableProperty { get; } = GetProperty<NMapPoint>("IsTravelable");
+    public PropertyInfo? TopBarMapButtonHotkeysProperty { get; } = GetProperty<NTopBarMapButton>("Hotkeys");
+    public PropertyInfo? TopBarDeckButtonHotkeysProperty { get; } = GetProperty<NTopBarDeckButton>("Hotkeys");
+    public PropertyInfo? TopBarPauseButtonHotkeysProperty { get; } = GetProperty<NTopBarPauseButton>("Hotkeys");
 
     public void ValidateOrThrow()
     {
@@ -77,6 +91,10 @@ public sealed class Sts2Reflection
         RequireField(CustomConfirmButtonField, nameof(CustomConfirmButtonField));
         RequireField(EventField, nameof(EventField));
         RequireField(ConnectedOptionsField, nameof(ConnectedOptionsField));
+        RequireProperty(MapPointIsTravelableProperty, nameof(MapPointIsTravelableProperty));
+        RequireProperty(TopBarMapButtonHotkeysProperty, nameof(TopBarMapButtonHotkeysProperty));
+        RequireProperty(TopBarDeckButtonHotkeysProperty, nameof(TopBarDeckButtonHotkeysProperty));
+        RequireProperty(TopBarPauseButtonHotkeysProperty, nameof(TopBarPauseButtonHotkeysProperty));
 
         RequireMethod(MainMenuContinueMethod, nameof(MainMenuContinueMethod));
         RequireMethod(MainMenuTimelineMethod, nameof(MainMenuTimelineMethod));
@@ -88,6 +106,13 @@ public sealed class Sts2Reflection
         RequireMethod(CharacterEmbarkMethod, nameof(CharacterEmbarkMethod));
         RequireMethod(CustomEmbarkMethod, nameof(CustomEmbarkMethod));
         RequireMethod(EventFallbackDescriptionMethod, nameof(EventFallbackDescriptionMethod));
+        RequireMethod(MapTravelToCoordMethod, nameof(MapTravelToCoordMethod));
+        RequireMethod(TopBarMapButtonOnReleaseMethod, nameof(TopBarMapButtonOnReleaseMethod));
+        RequireMethod(TopBarMapButtonIsOpenMethod, nameof(TopBarMapButtonIsOpenMethod));
+        RequireMethod(TopBarDeckButtonOnReleaseMethod, nameof(TopBarDeckButtonOnReleaseMethod));
+        RequireMethod(TopBarDeckButtonIsOpenMethod, nameof(TopBarDeckButtonIsOpenMethod));
+        RequireMethod(TopBarPauseButtonOnReleaseMethod, nameof(TopBarPauseButtonOnReleaseMethod));
+        RequireMethod(TopBarPauseButtonIsOpenMethod, nameof(TopBarPauseButtonIsOpenMethod));
     }
 
     public T? ReadField<T>(object instance, FieldInfo? fieldInfo)
@@ -100,9 +125,24 @@ public sealed class Sts2Reflection
         return value;
     }
 
+    public T? ReadProperty<T>(object instance, PropertyInfo? propertyInfo)
+    {
+        if (propertyInfo?.GetValue(instance) is not T value)
+        {
+            return default;
+        }
+
+        return value;
+    }
+
     private static FieldInfo? GetField<T>(string name)
     {
         return typeof(T).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+    }
+
+    private static PropertyInfo? GetProperty<T>(string name)
+    {
+        return typeof(T).GetProperty(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
     }
 
     private static MethodInfo? GetMethod<T>(string name, int parameterCount)
@@ -134,6 +174,14 @@ public sealed class Sts2Reflection
         if (methodInfo is null)
         {
             throw new InvalidOperationException($"Required reflected method '{propertyName}' is missing.");
+        }
+    }
+
+    private static void RequireProperty(PropertyInfo? propertyInfo, string propertyName)
+    {
+        if (propertyInfo is null)
+        {
+            throw new InvalidOperationException($"Required reflected property '{propertyName}' is missing.");
         }
     }
 }

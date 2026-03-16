@@ -9,7 +9,8 @@ public sealed class FrameCoordinator
     private readonly MegaCrit.Sts2.Core.Logging.Logger _logger;
     private readonly JsonFileStore _fileStore;
     private readonly Sts2Reflection _reflection;
-    private readonly IReadOnlyList<IAgentFeature> _features;
+    private readonly IReadOnlyList<IAgentFeature> _primaryFeatures;
+    private readonly IReadOnlyList<IAgentOverlayFeature> _overlayFeatures;
 
     private ulong _lastTickMs;
     private string? _lastStateJson;
@@ -21,12 +22,14 @@ public sealed class FrameCoordinator
         MegaCrit.Sts2.Core.Logging.Logger logger,
         JsonFileStore fileStore,
         Sts2Reflection reflection,
-        IReadOnlyList<IAgentFeature> features)
+        IReadOnlyList<IAgentFeature> primaryFeatures,
+        IReadOnlyList<IAgentOverlayFeature> overlayFeatures)
     {
         _logger = logger;
         _fileStore = fileStore;
         _reflection = reflection;
-        _features = features.OrderBy(feature => feature.Order).ToList();
+        _primaryFeatures = primaryFeatures.OrderBy(feature => feature.Order).ToList();
+        _overlayFeatures = overlayFeatures.OrderBy(feature => feature.Order).ToList();
     }
 
     public static FrameCoordinator CreateDefault(MegaCrit.Sts2.Core.Logging.Logger logger)
@@ -45,8 +48,12 @@ public sealed class FrameCoordinator
                 new SingleplayerSubmenuFeature(),
                 new DeckCardSelectFeature(),
                 new EventFeature(),
+                new MapFeature(),
                 new RunPresenceFeature(),
                 new MainMenuFeature()
+            ],
+            [
+                new TopBarOverlayFeature()
             ]);
     }
 
@@ -104,10 +111,11 @@ public sealed class FrameCoordinator
             LastCommandAck = _lastAck
         };
 
-        foreach (IAgentFeature feature in _features)
+        foreach (IAgentFeature feature in _primaryFeatures)
         {
             if (feature.TryPopulate(context, state))
             {
+                AugmentState(context, state);
                 return state;
             }
         }
@@ -118,6 +126,7 @@ public sealed class FrameCoordinator
             "No supported screen is currently visible.",
             $"Visible node types: {string.Join(", ", SceneTraversal.ListVisibleTypeNames(tree.Root, 14))}"
         ];
+        AugmentState(context, state);
         return state;
     }
 
@@ -152,7 +161,28 @@ public sealed class FrameCoordinator
             SceneTree tree = (SceneTree)Engine.GetMainLoop();
             FeatureContext context = new(tree.Root, _reflection);
 
-            foreach (IAgentFeature feature in _features)
+            foreach (IAgentFeature feature in _primaryFeatures)
+            {
+                if (!feature.TryExecute(context, command))
+                {
+                    continue;
+                }
+
+                _lastHandledCommandId = command.Id;
+                _lastCommandFingerprint = commandJson;
+
+                if (context.ScheduledTasks.Count == 0)
+                {
+                    WriteCommandAck(command.Id, command.RawAction, "completed", null);
+                    return;
+                }
+
+                WriteCommandAck(command.Id, command.RawAction, "pending", "Awaiting async completion.");
+                ObserveScheduledCommand(command, context.ScheduledTasks);
+                return;
+            }
+
+            foreach (IAgentOverlayFeature feature in _overlayFeatures)
             {
                 if (!feature.TryExecute(context, command))
                 {
@@ -228,5 +258,13 @@ public sealed class FrameCoordinator
         };
         _fileStore.WriteAtomic(AgentPaths.AckPath, _lastAck);
         _fileStore.DeleteIfExists(AgentPaths.CommandPath);
+    }
+
+    private void AugmentState(FeatureContext context, ExportState state)
+    {
+        foreach (IAgentOverlayFeature overlayFeature in _overlayFeatures)
+        {
+            overlayFeature.Augment(context, state);
+        }
     }
 }

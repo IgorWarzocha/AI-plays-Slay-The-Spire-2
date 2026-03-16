@@ -27,10 +27,3 @@ public sealed class FeatureContext
         _scheduledTasks.Add(new ScheduledCommandTask(task, actionName));
     }
 }
-
-public interface IAgentFeature
-{
-    int Order { get; }
-    bool TryPopulate(FeatureContext context, ExportState state);
-    bool TryExecute(FeatureContext context, ParsedCommand command);
-}

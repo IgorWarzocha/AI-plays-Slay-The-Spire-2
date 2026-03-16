@@ -20,36 +20,23 @@ public sealed class EventFeature : IAgentFeature
 
         Sts2Reflection reflection = context.Reflection;
         EventModel? eventModel = reflection.ReadField<EventModel>(eventRoom, reflection.EventField);
-        List<NEventOptionButton> buttons = ReadOptionButtons(context, eventRoom);
+        List<ResolvedEventOption> options = ReadResolvedOptions(context, eventRoom);
 
         state.ScreenType = "event";
         state.EventTitle = AgentText.SafeText(eventModel?.Title);
         LocString? fallbackDescription = RuntimeInvoker.Invoke<LocString>(eventRoom, reflection.EventFallbackDescriptionMethod);
         state.EventDescription = AgentText.SafeText(eventModel?.Description)
             ?? AgentText.SafeText(fallbackDescription);
-        state.MenuItems = buttons
+        state.MenuItems = options
             .Select(
-                (button, index) =>
+                resolved => new ExportMenuItem
                 {
-                    EventOption? option = button.Option;
-                    List<string> visibleTexts = NodeTextReader.ReadVisibleTexts(button);
-                    string label = AgentText.SafeText(option?.Title)
-                        ?? option?.TextKey
-                        ?? visibleTexts.FirstOrDefault()
-                        ?? $"Option {index + 1}";
-                    string? description = visibleTexts
-                        .Where(text => !string.Equals(text, label, StringComparison.Ordinal))
-                        .FirstOrDefault();
-
-                    return new ExportMenuItem
-                    {
-                        Id = index.ToString(),
-                        Label = label,
-                        Description = description,
-                        Visible = true,
-                        Enabled = option is not null && !option.IsLocked,
-                        Selected = option?.WasChosen ?? false
-                    };
+                    Id = resolved.Id,
+                    Label = resolved.Binding.Label,
+                    Description = resolved.Binding.Description,
+                    Visible = true,
+                    Enabled = !resolved.Binding.Option.IsLocked,
+                    Selected = resolved.Binding.Option.WasChosen
                 })
             .ToList();
         state.Actions = state.MenuItems
@@ -68,45 +55,81 @@ public sealed class EventFeature : IAgentFeature
             return false;
         }
 
-        if (!int.TryParse(command.Argument, out int optionIndex))
-        {
-            throw new InvalidOperationException($"Event option '{command.Argument}' is not a valid integer.");
-        }
-
         NEventRoom eventRoom = NEventRoom.Instance ?? throw new InvalidOperationException("No event room is active.");
-        List<NEventOptionButton> buttons = ReadOptionButtons(context, eventRoom);
-        if (buttons.Count == 0)
+        List<ResolvedEventOption> options = ReadResolvedOptions(context, eventRoom);
+        if (options.Count == 0)
         {
             throw new InvalidOperationException("No visible event options were found.");
         }
 
-        if (optionIndex < 0 || optionIndex >= buttons.Count)
+        ResolvedEventOption? match = options.FirstOrDefault(option => string.Equals(option.Id, command.Argument, StringComparison.Ordinal));
+        if (match is null)
         {
-            throw new InvalidOperationException($"Event option {optionIndex} is out of range.");
+            string knownIds = string.Join(", ", options.Select(static option => option.Id));
+            throw new InvalidOperationException($"Event option '{command.Argument}' was not found. Known ids: {knownIds}");
         }
 
-        EventOption? option = buttons[optionIndex].Option;
-        if (option is null || option.IsLocked)
+        if (match.Binding.Option.IsLocked)
         {
-            throw new InvalidOperationException($"Event option {optionIndex} is not selectable.");
+            throw new InvalidOperationException($"Event option '{command.Argument}' is locked.");
         }
 
-        eventRoom.OptionButtonClicked(option, optionIndex);
+        eventRoom.OptionButtonClicked(match.Binding.Option, match.Binding.OptionIndex);
         return true;
     }
 
-    private static List<NEventOptionButton> ReadOptionButtons(FeatureContext context, NEventRoom eventRoom)
+    private static List<ResolvedEventOption> ReadResolvedOptions(FeatureContext context, NEventRoom eventRoom)
+    {
+        return EventOptionIdentity.Resolve(ReadOptionBindings(context, eventRoom));
+    }
+
+    private static List<EventOptionButtonBinding> ReadOptionBindings(FeatureContext context, NEventRoom eventRoom)
     {
         List<NEventOptionButton> buttons = SceneTraversal.FindAllVisible<NEventOptionButton>(eventRoom)
             .Where(static button => button.Option is not null)
             .ToList();
+        List<NEventOptionButton> connectedOptions = context.Reflection.ReadField<List<NEventOptionButton>>(eventRoom, context.Reflection.ConnectedOptionsField)
+            ?.Where(static button => button.Option is not null)
+            .ToList()
+            ?? [];
 
-        if (buttons.Count > 0)
+        if (connectedOptions.Count > 0)
         {
-            return buttons;
+            return connectedOptions
+                .Select(
+                    (button, index) =>
+                    {
+                        NEventOptionButton textSource = buttons.FirstOrDefault(visible => ReferenceEquals(visible.Option, button.Option))
+                            ?? button;
+                        EventOption option = button.Option ?? throw new InvalidOperationException("Connected event option had no option model.");
+                        List<string> visibleTexts = NodeTextReader.ReadVisibleTexts(textSource);
+                        string label = AgentText.SafeText(option.Title)
+                            ?? option.TextKey
+                            ?? visibleTexts.FirstOrDefault()
+                            ?? $"Option {index + 1}";
+                        string? description = AgentText.SafeText(option.Description)
+                            ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal));
+
+                        return new EventOptionButtonBinding(index, option, label, description);
+                    })
+                .ToList();
         }
 
-        return context.Reflection.ReadField<List<NEventOptionButton>>(eventRoom, context.Reflection.ConnectedOptionsField)
-            ?? [];
+        return buttons
+            .Select(
+                (button, index) =>
+                {
+                    EventOption option = button.Option ?? throw new InvalidOperationException("Visible event button had no option model.");
+                    List<string> visibleTexts = NodeTextReader.ReadVisibleTexts(button);
+                    string label = AgentText.SafeText(option.Title)
+                        ?? option.TextKey
+                        ?? visibleTexts.FirstOrDefault()
+                        ?? $"Option {index + 1}";
+                    string? description = AgentText.SafeText(option.Description)
+                        ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal));
+
+                    return new EventOptionButtonBinding(index, option, label, description);
+                })
+            .ToList();
     }
 }

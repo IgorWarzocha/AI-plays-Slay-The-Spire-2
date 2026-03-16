@@ -21,6 +21,10 @@ This mod exposes Slay the Spire 2 state and commands through JSON files in
   - Generic event export/selection.
 - `Features/Events/Neow/`
   - Neow-specific notes and future specialization.
+- `Features/TopBar/`
+  - Cross-cutting top bar and relic inventory export/commands.
+- `Features/Map/`
+  - Map export and coordinate-based travel commands.
 
 ## Runtime Contract
 
@@ -39,3 +43,5 @@ This mod exposes Slay the Spire 2 state and commands through JSON files in
   can evolve independently.
 - Reflection is centralized in one catalog to avoid hidden private-API lookups
   across the codebase.
+- Cross-cutting surfaces use overlay features so the top bar and relics stay
+  exported while the primary screen changes.
