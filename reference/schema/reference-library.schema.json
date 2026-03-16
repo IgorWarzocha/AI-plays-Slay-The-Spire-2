@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.sts2/reference-library.schema.json",
+  "title": "STS2 Reference Library",
+  "type": "object",
+  "required": [
+    "metadata",
+    "cards",
+    "relics",
+    "events"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "builtAtUtc",
+        "counts",
+        "sources"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "type": "string"
+        },
+        "builtAtUtc": {
+          "type": "string"
+        },
+        "counts": {
+          "type": "object",
+          "required": [
+            "cards",
+            "relics",
+            "events"
+          ],
+          "properties": {
+            "cards": { "type": "integer" },
+            "relics": { "type": "integer" },
+            "events": { "type": "integer" }
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "kind",
+              "status"
+            ],
+            "properties": {
+              "id": { "type": "string" },
+              "kind": { "type": "string" },
+              "status": { "type": "string" },
+              "detail": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "cards": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/card" }
+    },
+    "relics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/relic" }
+    },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/event" }
+    }
+  },
+  "$defs": {
+    "entityState": {
+      "type": "object",
+      "required": [
+        "discovered",
+        "inCurrentRun"
+      ],
+      "properties": {
+        "discovered": { "type": "boolean" },
+        "inCurrentRun": { "type": "boolean" },
+        "runCount": { "type": ["integer", "null"] },
+        "isCurrentEvent": { "type": ["boolean", "null"] }
+      }
+    },
+    "commonEntity": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "gameId",
+        "name",
+        "description",
+        "source",
+        "state"
+      ],
+      "properties": {
+        "kind": { "type": "string" },
+        "id": { "type": "string" },
+        "gameId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "descriptionRaw": { "type": ["string", "null"] },
+        "imageUrl": { "type": ["string", "null"] },
+        "source": { "type": "string" },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "state": { "$ref": "#/$defs/entityState" }
+      }
+    },
+    "card": {
+      "allOf": [
+        { "$ref": "#/$defs/commonEntity" },
+        {
+          "type": "object",
+          "properties": {
+            "cost": { "type": ["integer", "null"] },
+            "type": { "type": ["string", "null"] },
+            "rarity": { "type": ["string", "null"] },
+            "color": { "type": ["string", "null"] },
+            "target": { "type": ["string", "null"] },
+            "keywords": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "tags": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "upgrade": { "type": ["object", "null"] }
+          }
+        }
+      ]
+    },
+    "relic": {
+      "allOf": [
+        { "$ref": "#/$defs/commonEntity" },
+        {
+          "type": "object",
+          "properties": {
+            "rarity": { "type": ["string", "null"] },
+            "pool": { "type": ["string", "null"] },
+            "flavor": { "type": ["string", "null"] }
+          }
+        }
+      ]
+    },
+    "event": {
+      "allOf": [
+        { "$ref": "#/$defs/commonEntity" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "type": ["string", "null"] },
+            "act": { "type": ["string", "null"] },
+            "epithet": { "type": ["string", "null"] },
+            "options": { "type": ["array", "null"] },
+            "pages": { "type": ["array", "null"] },
+            "relics": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

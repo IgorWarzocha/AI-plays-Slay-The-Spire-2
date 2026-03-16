@@ -1,0 +1,16 @@
+{
+  "builtAtUtc": "2026-03-16T21:06:00.725Z",
+  "bootstrapSource": {
+    "id": "spire-codex-bootstrap",
+    "kind": "bootstrap"
+  },
+  "augmentSource": {
+    "id": "local-save-augment",
+    "kind": "augment",
+    "paths": {
+      "progressPath": "/home/igorw/.local/share/SlayTheSpire2/steam/76561198178272743/modded/profile1/saves/progress.save",
+      "currentRunPath": "/home/igorw/.local/share/SlayTheSpire2/steam/76561198178272743/modded/profile1/saves/current_run.save"
+    },
+    "currentEventTitle": "neow"
+  }
+}

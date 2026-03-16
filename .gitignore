@@ -1,0 +1,15 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# Local/runtime state
+runtime/guide-scratch/
+runtime/sts2-live.json
+runtime/sts2-events.ndjson
+runtime/sts2-monitor.pid
+
+# Large local tool downloads
+tools/godot451/
+
+# Nested template repo metadata
+ModTemplate-StS2/.git/
