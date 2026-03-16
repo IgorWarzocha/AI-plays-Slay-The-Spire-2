@@ -2,7 +2,7 @@
 
 Act 1 elite note captured from a live Ironclad run.
 
-## Core Identity
+## What It Is
 
 - Elite encounter
 - First observed act:
@@ -56,9 +56,16 @@ Observed intent patterns after spawn:
 - `Havoc` is strong here when the top draw is known, because it can convert into a high-impact attack before the parasite’s first real damage turn.
 - Killing the parasite too casually can be dangerous if the resulting `Wriggler` board is not already represented correctly in state.
 - `Infection` clutter materially changes hand quality, so exhausting real cards has extra cost.
+- The real danger is tempo loss after the split. A deck that only plans around the main body can get rolled by the remaining wriggler turns.
 
 ## Learned From This Run
 
 - `True Grit+` forced the discovery of [[mechanics/combat-hand-selection]].
 - The spawn board confirmed that combat export can survive enemy replacement and still expose correct target ids.
 - This encounter should be treated as a “documentation mandatory” elite because it has a real phase transition, not just bigger numbers.
+
+## Related
+
+- [[encounters/README]]
+- [[mechanics/combat-hand-selection]]
+- [[strategy/ironclad-core-plan]]

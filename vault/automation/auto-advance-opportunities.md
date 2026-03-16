@@ -14,6 +14,8 @@ Use this note for deterministic “no-thought” follow-ups that are safe to aut
   - Safe after the chosen rest-site action resolves.
 - `combat_card_select.confirm`
   - Safe once exported selection progress reaches the required minimum.
+- `merchant.proceed`
+  - Safe after a finished merchant visit when the room is already resolved and no further buy decision is pending.
 
 ## Rule
 
@@ -31,3 +33,8 @@ Not safe:
 - map branching
 - merchant buys
 - event options with different strategic value
+
+## Related
+
+- [[automation/README]]
+- [[mechanics/combat-hand-selection]]

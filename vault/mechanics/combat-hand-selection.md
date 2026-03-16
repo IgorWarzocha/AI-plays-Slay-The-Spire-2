@@ -2,9 +2,14 @@
 
 This note covers combat states where the game is waiting for a card choice inside the hand itself, rather than opening a standalone overlay screen.
 
-## Why It Matters
+## What It Is
 
 This was first verified through `True Grit+`, but the pattern is likely reusable for other “choose a card from hand” effects.
+
+## Why It Matters For Play
+
+- These cards are stronger once the selector is understood and controllable.
+- Effects that look awkward for automation stop being special cases once this pattern is handled.
 
 ## Runtime Shape
 
@@ -45,7 +50,9 @@ This is not an overlay-screen problem.
 
 It is a combat submode problem, so it must be handled before generic combat actions like `end_turn` or targeted attacks.
 
-Related:
+## Related
 
+- [[mechanics/README]]
 - [[encounters/act1/phrog-parasite]]
 - [[automation/auto-advance-opportunities]]
+- [[strategy/ironclad-core-plan]]

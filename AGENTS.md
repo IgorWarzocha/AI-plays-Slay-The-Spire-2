@@ -63,10 +63,12 @@ Minimal repo-local reference for the commands and paths this workspace uses most
 
 - Maintain the Obsidian-style learning vault under `/home/igorw/Work/STS2/vault`.
 - After any new encounter, mechanic, or reusable control pattern appears, add or update a vault note before continuing normal play.
+- Treat the vault as the long-lived learning surface for STS2. Generated runtime pages in `runtime/` are reference material, not the final memory layer.
 - Prefer one note per concept:
   - encounter
   - mechanic
   - automation pattern
+  - strategy heuristic
 - Every note should capture:
   - what was observed
   - why it matters for play
@@ -74,3 +76,10 @@ Minimal repo-local reference for the commands and paths this workspace uses most
 - Start from:
   - `/home/igorw/Work/STS2/vault/README.md`
   - `/home/igorw/Work/STS2/vault/automation/auto-advance-opportunities.md`
+- For new notes, copy the shape from:
+  - `/home/igorw/Work/STS2/vault/templates/note-template.md`
+- Keep the section indexes updated when adding notes:
+  - `/home/igorw/Work/STS2/vault/encounters/README.md`
+  - `/home/igorw/Work/STS2/vault/mechanics/README.md`
+  - `/home/igorw/Work/STS2/vault/automation/README.md`
+  - `/home/igorw/Work/STS2/vault/strategy/README.md`

@@ -1,32 +1,42 @@
 # STS2 Vault
 
-This is the persistent markdown knowledge base for Slay the Spire 2 automation.
+This is the persistent handwritten knowledge base for Slay the Spire 2.
 
-It is intentionally Obsidian-friendly:
+Use it like an Obsidian vault:
 
-- one note per encounter, mechanic, or reusable automation pattern
-- wiki-style links between related notes
-- practical emphasis on what matters during play and control
+- one note per concept
+- wiki links between notes
+- concise writeups that help both play and automation
+- notes should survive across runs instead of being tied to one exporter snapshot
 
-## Structure
+The generated reference library in `runtime/` is separate. That is raw searchable data. This vault is where learned judgment lives.
 
-- `encounters/`
-  - Enemy and event notes gathered from live runs.
-- `mechanics/`
-  - Control and rules notes that affect automation.
-- `automation/`
-  - Deterministic follow-ups and “safe to auto-advance” patterns.
+## Start Here
 
-## Operating Rule
+- [[encounters/README]]
+- [[mechanics/README]]
+- [[automation/README]]
+- [[strategy/README]]
+
+## Note Standard
+
+Each note should answer four questions:
+
+1. What is it?
+2. What did we observe?
+3. Why does it matter for play?
+4. Why does it matter for automation?
 
 When a new encounter, mechanic, or screen appears:
 
-1. add or update a vault note
-2. capture the automation implication
-3. only then continue as normal
+1. add or update the relevant note
+2. link it from the appropriate index
+3. record any safe auto-advance or control implication
+4. only then continue normal play
 
-Relevant notes:
+## Seed Notes
 
 - [[encounters/act1/phrog-parasite]]
 - [[mechanics/combat-hand-selection]]
 - [[automation/auto-advance-opportunities]]
+- [[strategy/ironclad-core-plan]]
