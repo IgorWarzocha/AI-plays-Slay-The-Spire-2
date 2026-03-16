@@ -26,7 +26,10 @@ public static class CardSelectionScreenResolver
                 "deck")
             ?? Resolve<NSimpleCardSelectScreen>(
                 context,
-                "simple");
+                "simple")
+            ?? Resolve<NCardGridSelectionScreen>(
+                context,
+                "grid");
     }
 
     private static CardSelectionScreenBinding? Resolve<TScreen>(FeatureContext context, string kind) where TScreen : Control
@@ -59,7 +62,17 @@ public static class CardSelectionScreenResolver
     private static string? ReadLabelText(Control screen, string fieldName)
     {
         Node? node = ReadNode(screen, fieldName);
-        return node is null ? null : NodeTextReader.ReadVisibleTexts(node, 1).FirstOrDefault();
+        if (node is not null)
+        {
+            return NodeTextReader.ReadVisibleTexts(node, 1).FirstOrDefault();
+        }
+
+        // Some in-combat selectors use the shared grid screen without a dedicated
+        // info-label field. Falling back to the first non-empty visible text lets
+        // us still classify prompts such as "Choose a card to Exhaust."
+        return NodeTextReader.ReadVisibleTexts(screen)
+            .Select(static text => text.Trim())
+            .FirstOrDefault(static text => !string.IsNullOrWhiteSpace(text));
     }
 
     private static Node? ReadNode(Control screen, string fieldName)

@@ -158,6 +158,8 @@ public sealed class ExportCombatState
     public int? DiscardPileCount { get; set; }
     public int? ExhaustPileCount { get; set; }
     public bool CanEndTurn { get; set; }
+    public string? SelectionMode { get; set; }
+    public string? SelectionPrompt { get; set; }
     public List<ExportCombatCard> Hand { get; set; } = [];
     public List<ExportCombatCreature> Creatures { get; set; } = [];
 }

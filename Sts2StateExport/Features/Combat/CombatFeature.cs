@@ -295,11 +295,26 @@ public sealed class CombatFeature : IAgentFeature
             Block = creature.Block,
             IsPlayer = creature.IsPlayer,
             IsEnemy = creature.IsEnemy,
-            IsHittable = creature.IsHittable,
-            IsStunned = creature.IsStunned,
+            // Combat objects can briefly outlive the underlying combat state during
+            // room transitions. These flags are useful when available, but they
+            // must never be allowed to crash frame export.
+            IsHittable = SafeReadFlag(static candidate => candidate.IsHittable, creature),
+            IsStunned = SafeReadFlag(static candidate => candidate.IsStunned, creature),
             Powers = creature.Powers.Select(BuildPower).ToList(),
             Intents = intents
         };
+    }
+
+    private static bool SafeReadFlag(Func<Creature, bool> reader, Creature creature)
+    {
+        try
+        {
+            return reader(creature);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static ExportCombatIntent BuildIntent(NCreature ownerNode, NIntent intentNode)

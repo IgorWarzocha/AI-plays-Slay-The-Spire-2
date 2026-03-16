@@ -159,6 +159,14 @@ function readAck() {
   return readLiveStatus()?.ack ?? readOptionalJson(ACK_PATH);
 }
 
+function stableJson(value) {
+  return JSON.stringify(value ?? null);
+}
+
+function isExplicitFalse(value) {
+  return value === false || value === "false" || value === "0";
+}
+
 function writeCommand(command) {
   fs.mkdirSync(AGENT_DIR, { recursive: true });
   fs.writeFileSync(COMMAND_PATH, `${JSON.stringify(command, null, 2)}\n`);
@@ -237,6 +245,34 @@ function waitForAck(id, { timeoutMs = 10000 } = {}) {
   );
 }
 
+function waitForCommandSettlement(id, beforeState, { timeoutMs = 6000 } = {}) {
+  const beforeJson = stableJson(beforeState);
+  const beforeUpdatedAt = beforeState?.updatedAtUtc ?? null;
+
+  return waitFor(
+    () => {
+      const ack = readAck();
+      if (ack?.id === id && ack.status === "error") {
+        throw new Error(ack.message ?? `Command ${id} failed.`);
+      }
+
+      const state = readState();
+      if (!state || state.lastHandledCommandId !== id) {
+        return null;
+      }
+
+      const afterJson = stableJson(state);
+      const updatedChanged = state.updatedAtUtc && state.updatedAtUtc !== beforeUpdatedAt;
+      if (updatedChanged && afterJson !== beforeJson) {
+        return { ack, state };
+      }
+
+      return null;
+    },
+    { timeoutMs, intervalMs: 150, description: `command ${id} state mutation` },
+  );
+}
+
 function waitForScreen(screenType, { timeoutMs = 15000 } = {}) {
   return waitFor(
     () => {
@@ -249,6 +285,7 @@ function waitForScreen(screenType, { timeoutMs = 15000 } = {}) {
 
 function sendAction(action, options = {}) {
   const id = options.id ?? `cmd-${Date.now()}`;
+  const beforeState = readState();
   const payload = {
     id,
     action,
@@ -258,7 +295,24 @@ function sendAction(action, options = {}) {
   };
 
   writeCommand(payload);
-  return waitForAck(id);
+  const ack = waitForAck(id);
+  if (isExplicitFalse(options.strict)) {
+    return ack;
+  }
+
+  if (ack.status === "error") {
+    return ack;
+  }
+
+  const result = waitForCommandSettlement(id, beforeState, {
+    timeoutMs: Number(options["settle-timeout-ms"] ?? options.settleTimeoutMs ?? 6000),
+  });
+
+  return {
+    ...ack,
+    settled: true,
+    screenType: result.state?.screenType ?? null,
+  };
 }
 
 function printStatus() {
@@ -314,7 +368,7 @@ function usage() {
   sts2ctl.mjs monitor-start
   sts2ctl.mjs monitor-stop
   sts2ctl.mjs monitor-status
-  sts2ctl.mjs command <action> [--character <id>] [--seed <seed>] [--act1 <act>]
+  sts2ctl.mjs command <action> [--character <id>] [--seed <seed>] [--act1 <act>] [--strict false] [--settle-timeout-ms <ms>]
   sts2ctl.mjs wait-screen <screenType>
   sts2ctl.mjs start-standard [--character <id>] [--seed <seed>] [--act1 <act>]
 `);

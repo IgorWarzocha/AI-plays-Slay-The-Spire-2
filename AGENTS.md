@@ -14,6 +14,9 @@ Minimal repo-local reference for the commands and paths this workspace uses most
   - Close STS2.
 - `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs command <action>`
   - Send one exported action such as `main_menu.continue`, `map.travel:0,3`, or `merchant.open`.
+  - Default mode is strict: the command waits for a real exported state mutation instead of trusting the first ack blindly.
+- `node /home/igorw/Work/STS2/scripts/sts2-log-tail.mjs`
+  - Show an agent-focused tail of `godot.log` with exporter errors and command-relevant gameplay lines only.
 - `node /home/igorw/Work/STS2/read-sts2-state.mjs`
   - Compact human-readable state dump.
 
