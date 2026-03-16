@@ -8,6 +8,7 @@ Use it like an Obsidian vault:
 - wiki links between notes
 - concise writeups that help both play and automation
 - notes should survive across runs instead of being tied to one exporter snapshot
+- every run gets its own append-only markdown log
 
 The generated reference library in `runtime/` is separate. That is raw searchable data. This vault is where learned judgment lives.
 
@@ -17,6 +18,7 @@ The generated reference library in `runtime/` is separate. That is raw searchabl
 - [[mechanics/README]]
 - [[automation/README]]
 - [[strategy/README]]
+- [[runs/README]]
 
 ## Note Standard
 
@@ -34,9 +36,16 @@ When a new encounter, mechanic, or screen appears:
 3. record any safe auto-advance or control implication
 4. only then continue normal play
 
+During a run:
+
+1. create one run log in `vault/runs/`
+2. append after every floor
+3. turn repeated lessons into encounter, mechanic, automation, or strategy notes
+
 ## Seed Notes
 
 - [[encounters/act1/phrog-parasite]]
 - [[mechanics/combat-hand-selection]]
 - [[automation/auto-advance-opportunities]]
 - [[strategy/ironclad-core-plan]]
+- [[runs/README]]

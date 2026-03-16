@@ -62,24 +62,38 @@ Minimal repo-local reference for the commands and paths this workspace uses most
 ## Documentation Loop
 
 - Maintain the Obsidian-style learning vault under `/home/igorw/Work/STS2/vault`.
+- This repo is not only for mod development. It is also the long-lived STS2 learning repo for the agent.
 - After any new encounter, mechanic, or reusable control pattern appears, add or update a vault note before continuing normal play.
 - Treat the vault as the long-lived learning surface for STS2. Generated runtime pages in `runtime/` are reference material, not the final memory layer.
+- Every run must also have its own markdown log under `/home/igorw/Work/STS2/vault/runs`.
+- Use one file per run and append to it after every floor, not just at the end of the run.
+- Floor logging is mandatory. Do not skip quiet floors.
 - Prefer one note per concept:
   - encounter
   - mechanic
   - automation pattern
   - strategy heuristic
+  - run log
 - Every note should capture:
   - what was observed
   - why it matters for play
   - why it matters for automation
+- Every run log entry should capture:
+  - floor number and room type
+  - state before the floor if relevant
+  - the decision taken
+  - the outcome
+  - any lesson or hypothesis worth keeping
+- Treat run logs as fake reinforcement learning data. They should be usable later to distill skills and strategy notes.
 - Start from:
   - `/home/igorw/Work/STS2/vault/README.md`
   - `/home/igorw/Work/STS2/vault/automation/auto-advance-opportunities.md`
 - For new notes, copy the shape from:
   - `/home/igorw/Work/STS2/vault/templates/note-template.md`
+  - `/home/igorw/Work/STS2/vault/templates/run-log-template.md`
 - Keep the section indexes updated when adding notes:
   - `/home/igorw/Work/STS2/vault/encounters/README.md`
   - `/home/igorw/Work/STS2/vault/mechanics/README.md`
   - `/home/igorw/Work/STS2/vault/automation/README.md`
   - `/home/igorw/Work/STS2/vault/strategy/README.md`
+  - `/home/igorw/Work/STS2/vault/runs/README.md`
