@@ -1,0 +1,7 @@
+{
+  "pck_name": "Sts2StateExport",
+  "name": "Sts2StateExport",
+  "author": "Codex",
+  "description": "Exports live Slay the Spire 2 screen state for agent tooling.",
+  "version": "1.0.0"
+}

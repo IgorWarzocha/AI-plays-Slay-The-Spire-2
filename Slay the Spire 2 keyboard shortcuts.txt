@@ -1,0 +1,66 @@
+===================================
+Slay the Spire 2 keyboard shortcuts
+===================================
+
+First published at 3/13/2026 on
+https://defkey.com/slay-the-spire-2-shortcuts
+
+Slay the Spire 2 is a roguelike deck-building game where players craft a
+unique deck and discover powerful relics to climb a dangerous spire. It is
+a direct sequel featuring new characters and mechanics. It was released on
+March 5, 2026.
+
+Slay the Spire 2 has 39 shortcuts and we have listed all of them below.
+
+
+
+Keyboard
+--------
+
+Enter                   Confirm card
+Backspace               Cancel
+Esc                     Exit
+M                       View map
+D                       View deck
+A                       View draw
+S                       View discard
+X                       View exhaust
+E                       End turn
+Space                   Peek
+Up arrow                Up
+Down arrow              Down
+Left arrow              Left
+Right arrow             Right
+Num 1                   Select card 1
+Num 2                   Select card 2
+Num 3                   Select card 3
+Num 4                   Select card 4
+Num 5                   Select card 5
+Num 6                   Select card 6
+Num 7                   Select card 7
+Num 8                   Select card 8
+Num 9                   Select card 9
+Num 0                   Select card 10
+Down arrow              Release
+
+
+Xbox gamepad
+------------
+
+A button                Confirm card
+B button                Cancel
+B button                Exit
+View button             View map
+X button                Top panel
+LB (left bumper) button View deck
+LT (left trigger) button View draw
+RT (right trigger)      View discard
+RB (right bumper)       View exhaust
+Y button                End turn
+D-pad up                Up
+D-pad down              Down
+D-pad left              Left
+D-pad right             Right
+
+Last modified on (UTC): Friday, March 13, 2026
+Defkey © All rights reserved.

@@ -13,3 +13,10 @@ tools/godot451/
 
 # Nested template repo metadata
 ModTemplate-StS2/.git/
+
+# Imported upstream reference repos kept local-only
+EarlyStS2ModdingGuides/
+ModTemplate-StS2/
+
+# Machine-local convenience symlinks
+links/
