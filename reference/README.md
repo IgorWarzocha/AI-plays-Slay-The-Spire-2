@@ -12,6 +12,10 @@ It is intentionally split into:
   - Rebuilds the local runtime library.
 - `scripts/sts2-reference-query.mjs`
   - Queries the generated library by exact id or fuzzy text.
+- `scripts/sts2-vault-build.mjs`
+  - Builds local per-entity markdown pages under `runtime/vault/`.
+- `scripts/sts2-vault-query.mjs`
+  - Resolves an entity and prints its generated vault page.
 - `runtime/reference-library.json`
   - Generated runtime artifact used during play.
 - `runtime/reference-source-summary.json`
@@ -49,6 +53,20 @@ node /home/igorw/Work/STS2/scripts/sts2-reference-query.mjs bash
 node /home/igorw/Work/STS2/scripts/sts2-reference-query.mjs "burning blood"
 node /home/igorw/Work/STS2/scripts/sts2-reference-query.mjs neow --kind event
 node /home/igorw/Work/STS2/scripts/sts2-reference-query.mjs CARD.BASH --exact
+```
+
+Build the operational vault:
+
+```bash
+node /home/igorw/Work/STS2/scripts/sts2-vault-build.mjs
+```
+
+Query a generated vault page:
+
+```bash
+node /home/igorw/Work/STS2/scripts/sts2-vault-query.mjs bash --kind card
+node /home/igorw/Work/STS2/scripts/sts2-vault-query.mjs "burning blood" --kind relic
+node /home/igorw/Work/STS2/scripts/sts2-vault-query.mjs neow --kind event
 ```
 
 Return machine-readable JSON:

@@ -17,6 +17,14 @@ Minimal repo-local reference for the commands and paths this workspace uses most
   - Default mode is strict: the command waits for a real exported state mutation instead of trusting the first ack blindly.
 - `node /home/igorw/Work/STS2/scripts/sts2-log-tail.mjs`
   - Show an agent-focused tail of `godot.log` with exporter errors and command-relevant gameplay lines only.
+- `node /home/igorw/Work/STS2/scripts/sts2-reference-build.mjs`
+  - Rebuild the local card/relic/event reference library.
+- `node /home/igorw/Work/STS2/scripts/sts2-reference-query.mjs <query>`
+  - Query the reference library directly.
+- `node /home/igorw/Work/STS2/scripts/sts2-vault-build.mjs`
+  - Build local markdown vault pages in `/home/igorw/Work/STS2/runtime/vault`.
+- `node /home/igorw/Work/STS2/scripts/sts2-vault-query.mjs <query>`
+  - Resolve an entity and print its generated vault page.
 - `node /home/igorw/Work/STS2/read-sts2-state.mjs`
   - Compact human-readable state dump.
 
@@ -50,3 +58,19 @@ Minimal repo-local reference for the commands and paths this workspace uses most
 - Restart after every mod DLL change. Mods are not hot-reload.
 - Use screenshots only to validate genuinely unknown screens; normal control should stay model-backed.
 - Treat new console errors in `godot.log` as real bugs and fix them before continuing.
+
+## Documentation Loop
+
+- Maintain the Obsidian-style learning vault under `/home/igorw/Work/STS2/vault`.
+- After any new encounter, mechanic, or reusable control pattern appears, add or update a vault note before continuing normal play.
+- Prefer one note per concept:
+  - encounter
+  - mechanic
+  - automation pattern
+- Every note should capture:
+  - what was observed
+  - why it matters for play
+  - why it matters for automation
+- Start from:
+  - `/home/igorw/Work/STS2/vault/README.md`
+  - `/home/igorw/Work/STS2/vault/automation/auto-advance-opportunities.md`
