@@ -45,6 +45,13 @@ public static class SceneTraversal
         return node is Control control && control.HasFocus();
     }
 
+    public static List<T> FindAllVisibleAssignableTo<T>(Node root) where T : Node
+    {
+        List<T> items = [];
+        FindAllVisibleAssignableRecursive(root, items);
+        return items;
+    }
+
     public static List<string> ListVisibleTypeNames(Node root, int limit)
     {
         List<string> items = [];
@@ -62,6 +69,19 @@ public static class SceneTraversal
         foreach (Node child in node.GetChildren())
         {
             FindAllVisibleRecursive(child, items);
+        }
+    }
+
+    private static void FindAllVisibleAssignableRecursive<T>(Node node, List<T> items) where T : Node
+    {
+        if (typeof(T).IsAssignableFrom(node.GetType()) && IsNodeVisible(node))
+        {
+            items.Add((T)node);
+        }
+
+        foreach (Node child in node.GetChildren())
+        {
+            FindAllVisibleAssignableRecursive(child, items);
         }
     }
 

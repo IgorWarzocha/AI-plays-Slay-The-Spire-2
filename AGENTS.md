@@ -43,6 +43,7 @@ Minimal repo-local reference for the commands and paths this workspace uses most
 ## Working Pattern
 
 - Prefer `sts2ctl.mjs command ...` over synthetic input.
+- Send gameplay commands sequentially. `sts2ctl.mjs` uses a single command file, so parallel action writes will race and lose a command.
 - Restart after every mod DLL change. Mods are not hot-reload.
 - Use screenshots only to validate genuinely unknown screens; normal control should stay model-backed.
 - Treat new console errors in `godot.log` as real bugs and fix them before continuing.

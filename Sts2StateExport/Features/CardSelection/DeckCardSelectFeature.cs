@@ -2,7 +2,6 @@ using Godot;
 using System.Collections;
 using System.Reflection;
 using MegaCrit.Sts2.Core.Nodes.Cards;
-using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 
 namespace Sts2StateExport;
 
@@ -15,36 +14,25 @@ public sealed class DeckCardSelectFeature : IAgentFeature
 
     public bool TryPopulate(FeatureContext context, ExportState state)
     {
-        NDeckCardSelectScreen? screen = SceneTraversal.FindFirstVisible<NDeckCardSelectScreen>(context.Root);
-        if (screen is null)
+        CardSelectionScreenBinding? binding = CardSelectionScreenResolver.TryResolve(context);
+        if (binding is null)
         {
             return false;
         }
 
-        List<NCard> cards = SceneTraversal.FindAllVisible<NCard>(screen);
-        Node? confirmButton = context.Reflection.ReadField<Node>(screen, context.Reflection.CardGridConfirmButtonField);
+        List<CardSelectionOption> options = BuildOptions(binding.Screen);
 
         state.ScreenType = "deck_card_select";
-        state.MenuItems = cards
+        state.MenuItems = options
             .Select(
-                (card, index) =>
+                option => new ExportMenuItem
                 {
-                    List<string> visibleTexts = NodeTextReader.ReadVisibleTexts(card);
-                    string label = ReadCardText(card, "_titleLabel")
-                        ?? visibleTexts.FirstOrDefault()
-                        ?? $"Card {index + 1}";
-                    string? description = ReadCardText(card, "_descriptionLabel")
-                        ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal));
-
-                    return new ExportMenuItem
-                    {
-                        Id = index.ToString(),
-                        Label = label,
-                        Description = description,
-                        Visible = true,
-                        Enabled = true,
-                        Selected = false
-                    };
+                    Id = option.Id,
+                    Label = option.Label,
+                    Description = option.Description,
+                    Visible = true,
+                    Enabled = true,
+                    Selected = false
                 })
             .ToList();
         state.Actions =
@@ -52,12 +40,26 @@ public sealed class DeckCardSelectFeature : IAgentFeature
             .. state.MenuItems.Select(item => $"deck_card_select.select:{item.Id}")
         ];
 
-        if (confirmButton is not null && SceneTraversal.IsNodeVisible(confirmButton))
+        if (binding.CanConfirm)
         {
             state.Actions.Add("deck_card_select.confirm");
         }
 
-        state.Notes = ["Programmatic deck-card selection is active for this overlay screen."];
+        if (binding.CanClose)
+        {
+            state.Actions.Add("deck_card_select.close");
+        }
+
+        List<string> notes =
+        [
+            $"Programmatic deck-card selection is active for this overlay screen ({binding.Kind})."
+        ];
+        if (!string.IsNullOrWhiteSpace(binding.Prompt))
+        {
+            notes.Add($"Prompt: {binding.Prompt}");
+        }
+
+        state.Notes = notes.ToArray();
         return true;
     }
 
@@ -68,30 +70,124 @@ public sealed class DeckCardSelectFeature : IAgentFeature
             return false;
         }
 
-        NDeckCardSelectScreen screen = context.RequireVisible<NDeckCardSelectScreen>();
-        List<NCard> cards = SceneTraversal.FindAllVisible<NCard>(screen);
+        CardSelectionScreenBinding binding = CardSelectionScreenResolver.TryResolve(context)
+            ?? throw new InvalidOperationException("No supported card-selection screen is currently visible.");
+        List<CardSelectionOption> options = BuildOptions(binding.Screen);
 
         switch (command.Verb)
         {
             case "select":
-                if (!int.TryParse(command.Argument, out int cardIndex))
+                CardSelectionOption? option = options.FirstOrDefault(
+                    option => string.Equals(option.Id, command.Argument, StringComparison.Ordinal));
+                if (option is null)
                 {
-                    throw new InvalidOperationException($"Card selection argument '{command.Argument}' is not a valid integer index.");
+                    string knownIds = string.Join(", ", options.Select(static option => option.Id));
+                    throw new InvalidOperationException($"Card option '{command.Argument}' was not found. Known ids: {knownIds}");
                 }
 
-                if (cardIndex < 0 || cardIndex >= cards.Count)
-                {
-                    throw new InvalidOperationException($"Card index {cardIndex} is out of range.");
-                }
-
-                RuntimeInvoker.Invoke(screen, context.Reflection.CardGridOnCardClickedMethod, new object?[] { ReadSelectableCardModel(cards[cardIndex]) });
+                SelectCard(binding, option);
                 return true;
             case "confirm":
-                RuntimeInvoker.Invoke(screen, context.Reflection.CardGridConfirmSelectionMethod);
+                if (!binding.CanConfirm || binding.ConfirmSelectionMethod is null)
+                {
+                    throw new InvalidOperationException("This card-selection screen does not currently expose a confirm action.");
+                }
+
+                InvokeButtonHandler(binding.Screen, binding.ConfirmSelectionMethod);
+                return true;
+            case "close":
+                if (!binding.CanClose || binding.CloseSelectionMethod is null)
+                {
+                    throw new InvalidOperationException("This card-selection screen does not currently expose a close action.");
+                }
+
+                InvokeButtonHandler(binding.Screen, binding.CloseSelectionMethod);
                 return true;
             default:
                 throw new InvalidOperationException($"Unsupported deck card select action '{command.RawAction}'.");
         }
+    }
+
+    private static List<CardSelectionOption> BuildOptions(Control screen)
+    {
+        Dictionary<string, int> titleCounts = new(StringComparer.Ordinal);
+        return ReadDisplayedGridEntries(screen)
+            .Select(
+                entry =>
+                {
+                    NCard card = entry.CardNode;
+                    List<string> visibleTexts = NodeTextReader.ReadVisibleTexts(card);
+                    string label = ReadCardText(card, "_titleLabel")
+                        ?? visibleTexts.FirstOrDefault()
+                        ?? "Unknown Card";
+                    string? description = ReadCardText(card, "_descriptionLabel")
+                        ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal));
+                    int occurrence = titleCounts.GetValueOrDefault(label, 0) + 1;
+                    titleCounts[label] = occurrence;
+
+                    return new CardSelectionOption
+                    {
+                        Id = CardSelectionIdentity.Create(label, occurrence),
+                        Label = label,
+                        Description = description,
+                        Holder = entry.Holder,
+                        CardNode = card
+                    };
+                })
+            .ToList();
+    }
+
+    private static List<CardSelectionEntry> ReadDisplayedGridEntries(Control screen)
+    {
+        object? grid = GetFieldValue(screen, "_grid");
+        if (grid is not null)
+        {
+            PropertyInfo? holdersProperty = grid.GetType().GetProperty(
+                "CurrentlyDisplayedCardHolders",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (holdersProperty?.GetValue(grid) is IEnumerable holders)
+            {
+                List<CardSelectionEntry> entries = [];
+                foreach (object holder in holders)
+                {
+                    PropertyInfo? cardNodeProperty = holder.GetType().GetProperty(
+                        "CardNode",
+                        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (cardNodeProperty?.GetValue(holder) is NCard card && SceneTraversal.IsNodeVisible(card))
+                    {
+                        entries.Add(new CardSelectionEntry(holder, card));
+                    }
+                }
+
+                if (entries.Count > 0)
+                {
+                    return entries;
+                }
+            }
+        }
+
+        return SceneTraversal.FindAllVisible<NCard>(screen)
+            .Select(card => new CardSelectionEntry(card, card))
+            .ToList();
+    }
+
+    private static object? GetFieldValue(object instance, string fieldName)
+    {
+        Type? currentType = instance.GetType();
+        while (currentType is not null)
+        {
+            FieldInfo? field = currentType.GetField(
+                fieldName,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (field is not null)
+            {
+                return field.GetValue(instance);
+            }
+
+            currentType = currentType.BaseType;
+        }
+
+        return null;
     }
 
     private static object ReadSelectableCardModel(NCard card)
@@ -135,6 +231,92 @@ public sealed class DeckCardSelectFeature : IAgentFeature
 
         throw new InvalidOperationException(
             $"Visible card node does not expose a selectable card model. Properties=[{properties}] Fields=[{fields}]");
+    }
+
+    private static void SelectCard(CardSelectionScreenBinding binding, CardSelectionOption option)
+    {
+        object selectableCardModel = ReadSelectableCardModel(option.CardNode);
+        if (TryCompleteSelectionThroughState(binding, selectableCardModel))
+        {
+            return;
+        }
+
+        object? grid = GetFieldValue(binding.Screen, "_grid");
+        if (grid is not null && !ReferenceEquals(option.Holder, option.CardNode))
+        {
+            MethodInfo? emitSignalPressedMethod = option.Holder.GetType().GetMethods(
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .SingleOrDefault(method => method.Name == "EmitSignalPressed" && method.GetParameters().Length == 1);
+            if (emitSignalPressedMethod is not null)
+            {
+                RuntimeInvoker.Invoke(option.Holder, emitSignalPressedMethod, [option.Holder]);
+                return;
+            }
+
+            MethodInfo? onHolderPressedMethod = grid.GetType().GetMethods(
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .SingleOrDefault(method => method.Name == "OnHolderPressed" && method.GetParameters().Length == 1);
+            if (onHolderPressedMethod is not null)
+            {
+                RuntimeInvoker.Invoke(grid, onHolderPressedMethod, [option.Holder]);
+                return;
+            }
+        }
+
+        RuntimeInvoker.Invoke(
+            binding.Screen,
+            binding.OnCardClickedMethod,
+            new object?[] { selectableCardModel });
+    }
+
+    private static bool TryCompleteSelectionThroughState(CardSelectionScreenBinding binding, object selectableCardModel)
+    {
+        object? selectedCards = GetFieldValue(binding.Screen, "_selectedCards");
+        if (selectedCards is null)
+        {
+            return false;
+        }
+
+        MethodInfo? addMethod = selectedCards.GetType().GetMethods(
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .SingleOrDefault(method => method.Name == "Add" && method.GetParameters().Length == 1);
+        if (addMethod is null)
+        {
+            return false;
+        }
+
+        addMethod.Invoke(selectedCards, [selectableCardModel]);
+
+        MethodInfo? checkIfSelectionCompleteMethod = binding.Screen.GetType().GetMethods(
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .SingleOrDefault(method => method.Name == "CheckIfSelectionComplete" && method.GetParameters().Length == 0);
+        if (checkIfSelectionCompleteMethod is not null)
+        {
+            RuntimeInvoker.Invoke(binding.Screen, checkIfSelectionCompleteMethod);
+        }
+
+        if (binding.ConfirmSelectionMethod is not null && !binding.CanConfirm)
+        {
+            InvokeButtonHandler(binding.Screen, binding.ConfirmSelectionMethod);
+        }
+
+        return true;
+    }
+
+    private sealed record CardSelectionEntry(object Holder, NCard CardNode);
+
+    private static void InvokeButtonHandler(Control screen, MethodInfo methodInfo)
+    {
+        ParameterInfo[] parameters = methodInfo.GetParameters();
+        object?[]? args = parameters.Length switch
+        {
+            0 => [],
+            1 => [null],
+            _ => throw new InvalidOperationException(
+                $"Selection handler '{screen.GetType().Name}.{methodInfo.Name}' had an unsupported arity of {parameters.Length}.")
+        };
+
+        RuntimeInvoker.Invoke(screen, methodInfo, args);
     }
 
     private static string? ReadCardText(NCard card, string fieldName)
