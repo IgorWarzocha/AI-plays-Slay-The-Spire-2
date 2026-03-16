@@ -57,12 +57,15 @@ Observed intent patterns after spawn:
 - Killing the parasite too casually can be dangerous if the resulting `Wriggler` board is not already represented correctly in state.
 - `Infection` clutter materially changes hand quality, so exhausting real cards has extra cost.
 - The real danger is tempo loss after the split. A deck that only plans around the main body can get rolled by the remaining wriggler turns.
+- This encounter can produce near-dead turns where the hand is mostly or entirely `Infection`. That sharply increases the value of draw quality, exhaust control, and any line that prevents the fight from dragging.
 
 ## Learned From This Run
 
 - `True Grit+` forced the discovery of [[mechanics/combat-hand-selection]].
 - The spawn board confirmed that combat export can survive enemy replacement and still expose correct target ids.
 - This encounter should be treated as a “documentation mandatory” elite because it has a real phase transition, not just bigger numbers.
+- A seemingly safe line can become lethal if the post-split board survives long enough to stuff the hand with status cards.
+- The run ended with the final wriggler not attacking. Two `Infection` cards in hand at `2 HP` were enough to kill the player on end turn. This fight absolutely punishes “I stabilized the board” thinking if the hand is still clogged.
 
 ## Related
 

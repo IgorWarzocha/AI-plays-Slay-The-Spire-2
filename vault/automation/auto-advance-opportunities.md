@@ -21,6 +21,8 @@ Use this note for deterministic “no-thought” follow-ups that are safe to aut
 
 Do not auto-advance across meaningful choices.
 
+Gameplay commands must also stay serialized. Do not send two action commands at once. The later ack can win and leave the earlier action unresolved.
+
 Safe:
 
 - proceed screens
