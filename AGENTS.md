@@ -9,7 +9,7 @@
 
 ## Core Commands
 
-- Prefer `npm run <surface> -- ...` over raw `node scripts/...`.
+- Use `npm run <surface> -- ...`. Do not manually invoke repo scripts with raw `node scripts/...` unless you are explicitly fixing the npm wiring.
 - `npm run build`, `npm test`, `npm run restart`, `npm run continue`, `npm run reload`
 - `npm run run -- start-standard`
 - `npm run ctl -- status`

@@ -1,6 +1,7 @@
 # Build outputs
 **/bin/
 **/obj/
+node_modules/
 
 # Local/runtime state
 runtime/guide-scratch/

@@ -8,13 +8,13 @@ It is intentionally split into:
   - Source adapters, normalization, and query helpers.
 - `reference/schema/`
   - The runtime JSON schema for the generated library.
-- `scripts/sts2-reference-build.mjs`
+- `npm run reference:build`
   - Rebuilds the local runtime library.
-- `scripts/sts2-reference-query.mjs`
+- `npm run reference:query -- <query>`
   - Queries the generated library by exact id or fuzzy text.
-- `scripts/sts2-vault-build.mjs`
+- `npm run reference:vault:build`
   - Builds local per-entity markdown pages under `runtime/vault/`.
-- `scripts/sts2-vault-query.mjs`
+- `npm run reference:vault:query -- <query>`
   - Resolves an entity and prints its generated vault page.
 - `runtime/reference-library.json`
   - Generated runtime artifact used during play.
@@ -43,36 +43,36 @@ directly without rewriting the query layer.
 Build the runtime library:
 
 ```bash
-node /home/igorw/Work/STS2/scripts/sts2-reference-build.mjs
+npm run reference:build
 ```
 
 Query by exact or fuzzy match:
 
 ```bash
-node /home/igorw/Work/STS2/scripts/sts2-reference-query.mjs bash
-node /home/igorw/Work/STS2/scripts/sts2-reference-query.mjs "burning blood"
-node /home/igorw/Work/STS2/scripts/sts2-reference-query.mjs neow --kind event
-node /home/igorw/Work/STS2/scripts/sts2-reference-query.mjs CARD.BASH --exact
+npm run reference:query -- bash
+npm run reference:query -- "burning blood"
+npm run reference:query -- neow --kind event
+npm run reference:query -- CARD.BASH --exact
 ```
 
 Build the operational vault:
 
 ```bash
-node /home/igorw/Work/STS2/scripts/sts2-vault-build.mjs
+npm run reference:vault:build
 ```
 
 Query a generated vault page:
 
 ```bash
-node /home/igorw/Work/STS2/scripts/sts2-vault-query.mjs bash --kind card
-node /home/igorw/Work/STS2/scripts/sts2-vault-query.mjs "burning blood" --kind relic
-node /home/igorw/Work/STS2/scripts/sts2-vault-query.mjs neow --kind event
+npm run reference:vault:query -- bash --kind card
+npm run reference:vault:query -- "burning blood" --kind relic
+npm run reference:vault:query -- neow --kind event
 ```
 
 Return machine-readable JSON:
 
 ```bash
-node /home/igorw/Work/STS2/scripts/sts2-reference-query.mjs neow --kind event --json
+npm run reference:query -- neow --kind event --json
 ```
 
 ## Runtime Notes

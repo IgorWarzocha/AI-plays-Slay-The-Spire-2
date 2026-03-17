@@ -44,9 +44,9 @@ Suggested floor template:
 Before the rewrite, reconcile final facts against `Compendium -> Run History` via:
 
 - `npm run history`
-- or `node /home/igorw/Work/STS2/scripts/sts2history.mjs latest`
+- or `npm run history:status` if you need to inspect the current menu state first
 
-Use `--raw` only when the full floor payload is needed.
+Use `npm run history:raw` only when the full floor payload is needed.
 
 The finished run file should include:
 

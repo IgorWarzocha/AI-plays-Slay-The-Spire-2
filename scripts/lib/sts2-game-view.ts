@@ -1,3 +1,4 @@
+import type { DisplayState, RuntimeCommandOptions, RunActionsResult, TopBarState } from './types.ts';
 import {
   summarizeButton,
   summarizeCardBrowse,
@@ -12,9 +13,11 @@ import {
   summarizeRelic,
   summarizeRelicLabel,
   summarizeRunHistory,
-} from "./game-view-summarizers.mjs";
+} from './game-view-summarizers.ts';
 
-function buildTopBarView(topBar) {
+type AnyRecord = Record<string, any>;
+
+function buildTopBarView(topBar: TopBarState | null | undefined): AnyRecord | null {
   if (!topBar) {
     return null;
   }
@@ -33,7 +36,7 @@ function buildTopBarView(topBar) {
   };
 }
 
-function buildCombatTopBarView(topBar) {
+function buildCombatTopBarView(topBar: TopBarState | null | undefined): AnyRecord | null {
   if (!topBar) {
     return null;
   }
@@ -46,7 +49,7 @@ function buildCombatTopBarView(topBar) {
   };
 }
 
-export function buildGameplayView(state, options = {}) {
+export function buildGameplayView(state: DisplayState | null | undefined, options: RuntimeCommandOptions = {}): AnyRecord {
   if (!state) {
     return {
       screenType: null,
@@ -59,18 +62,19 @@ export function buildGameplayView(state, options = {}) {
     };
   }
 
-  if (options.raw) {
-    return state;
+  if (options.raw === true || options.raw === 'true') {
+    return state as Record<string, unknown>;
   }
 
-  const includeActions = options.actions !== false;
-  const includeMenuItems = options.menu === true;
-  const includeNotes = options.notes === true;
+  const includeActions = options.actions !== false && options.actions !== 'false';
+  const includeMenuItems = options.menu === true || options.menu === 'true';
+  const includeNotes = options.notes === true || options.notes === 'true';
   const includeRelicDetails = options.relics === true
-    || state.screenType === "merchant_room"
-    || state.screenType === "merchant_inventory";
+    || options.relics === 'true'
+    || state.screenType === 'merchant_room'
+    || state.screenType === 'merchant_inventory';
 
-  const view = {
+  const view: AnyRecord = {
     screenType: state.screenType ?? null,
     updatedAtUtc: state.updatedAtUtc ?? null,
     topBar: buildTopBarView(state.topBar),
@@ -88,48 +92,45 @@ export function buildGameplayView(state, options = {}) {
     view.notes = state.notes ?? [];
   }
 
-  // The gameplay builder owns screen-level composition only. Per-surface field
-  // shaping lives in game-view-summarizers.mjs so each surface can evolve
-  // without turning this entrypoint into another monolith.
   switch (state.screenType) {
-    case "profile":
+    case 'profile':
       view.profiles = (state.profiles ?? []).map(summarizeProfile);
       break;
-    case "character_select":
-    case "custom_run":
+    case 'character_select':
+    case 'custom_run':
       view.characters = (state.characters ?? []).map(summarizeCharacter);
       view.characterSelection = state.characterSelection ?? null;
       break;
-    case "event":
+    case 'event':
       view.event = {
         title: state.eventTitle ?? null,
         description: state.eventDescription ?? null,
         options: (state.menuItems ?? []).map(summarizeMenuItem),
       };
       break;
-    case "map":
+    case 'map':
       view.map = state.map ? summarizeMap(state.map) : null;
       break;
-    case "combat_room":
-    case "combat_card_select":
-    case "combat_choice_select":
+    case 'combat_room':
+    case 'combat_card_select':
+    case 'combat_choice_select':
       view.combat = state.combat ? summarizeCombat(state.combat) : null;
       if ((state.menuItems ?? []).length > 0) {
         view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
       }
       break;
-    case "deck_view":
-    case "card_pile":
+    case 'deck_view':
+    case 'card_pile':
       view.cardBrowse = state.cardBrowse ? summarizeCardBrowse(state.cardBrowse) : null;
       break;
-    case "run_history":
+    case 'run_history':
       view.runHistory = state.runHistory ? summarizeRunHistory(state.runHistory) : null;
       if (includeMenuItems || (state.menuItems ?? []).length > 0) {
         view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
       }
       break;
-    case "merchant_room":
-    case "merchant_inventory":
+    case 'merchant_room':
+    case 'merchant_inventory':
       view.cardBrowse = state.cardBrowse ? summarizeCardBrowse(state.cardBrowse) : null;
       if (includeMenuItems || (state.menuItems ?? []).length > 0) {
         view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
@@ -145,9 +146,9 @@ export function buildGameplayView(state, options = {}) {
   return view;
 }
 
-export function buildCommandView(result, options = {}) {
-  if (options.raw) {
-    return result;
+export function buildCommandView(result: RunActionsResult, options: RuntimeCommandOptions = {}): AnyRecord {
+  if (options.raw === true || options.raw === 'true') {
+    return result as unknown as Record<string, unknown>;
   }
 
   return {
@@ -159,13 +160,13 @@ export function buildCommandView(result, options = {}) {
       ackStatus: entry.ackStatus ?? entry.ack?.status ?? null,
       screenType: entry.screenType ?? null,
       costChanges: (entry.costChanges ?? []).map(summarizeCostChange),
-      combatAfter: summarizeCombatActionState(entry.state),
+      combatAfter: summarizeCombatActionState(entry.state ?? null),
     })),
     state: buildGameplayView(result.state, options),
   };
 }
 
-export function buildCombatView(state, options = {}) {
+export function buildCombatView(state: DisplayState | null | undefined, options: RuntimeCommandOptions = {}): AnyRecord {
   if (!state) {
     return {
       screenType: null,
@@ -178,42 +179,42 @@ export function buildCombatView(state, options = {}) {
     };
   }
 
-  if (options.raw) {
-    return state;
+  if (options.raw === true || options.raw === 'true') {
+    return state as Record<string, unknown>;
   }
 
-  if (state.screenType !== "combat_room"
-    && state.screenType !== "combat_card_select"
-    && state.screenType !== "combat_choice_select") {
-    throw new Error(`Combat view requires a combat screen, received '${state.screenType ?? "unknown"}'.`);
+  if (state.screenType !== 'combat_room'
+    && state.screenType !== 'combat_card_select'
+    && state.screenType !== 'combat_choice_select') {
+    throw new Error(`Combat view requires a combat screen, received '${state.screenType ?? 'unknown'}'.`);
   }
 
   return {
     screenType: state.screenType ?? null,
     updatedAtUtc: state.updatedAtUtc ?? null,
     topBar: buildCombatTopBarView(state.topBar),
-    relics: options.relics === true
+    relics: options.relics === true || options.relics === 'true'
       ? (state.relics ?? []).map(summarizeRelic)
       : (state.relics ?? []).map(summarizeRelicLabel),
-    notes: options.notes === true ? (state.notes ?? []) : [],
+    notes: options.notes === true || options.notes === 'true' ? (state.notes ?? []) : [],
     combat: state.combat ? summarizeCombat(state.combat) : null,
     menuItems: (state.menuItems ?? []).map(summarizeMenuItem),
     actions: (state.actions ?? []).filter((action) =>
-      action.startsWith("combat.")
-      || action.startsWith("combat_card_select.")
-      || action.startsWith("combat_choice_select.")),
+      action.startsWith('combat.')
+      || action.startsWith('combat_card_select.')
+      || action.startsWith('combat_choice_select.')),
   };
 }
 
-export function buildCombatCommandView(result, options = {}) {
-  if (options.raw) {
-    return result;
+export function buildCombatCommandView(result: RunActionsResult, options: RuntimeCommandOptions = {}): AnyRecord {
+  if (options.raw === true || options.raw === 'true') {
+    return result as unknown as Record<string, unknown>;
   }
 
   const state = result.state;
-  const renderedState = state?.screenType === "combat_room"
-    || state?.screenType === "combat_card_select"
-    || state?.screenType === "combat_choice_select"
+  const renderedState = state?.screenType === 'combat_room'
+    || state?.screenType === 'combat_card_select'
+    || state?.screenType === 'combat_choice_select'
     ? buildCombatView(state, options)
     : buildGameplayView(state, options);
 
@@ -226,7 +227,7 @@ export function buildCombatCommandView(result, options = {}) {
       ackStatus: entry.ackStatus ?? entry.ack?.status ?? null,
       screenType: entry.screenType ?? null,
       costChanges: (entry.costChanges ?? []).map(summarizeCostChange),
-      combatAfter: summarizeCombatActionState(entry.state),
+      combatAfter: summarizeCombatActionState(entry.state ?? null),
     })),
     state: renderedState,
   };

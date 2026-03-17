@@ -1,35 +1,13 @@
 #!/usr/bin/env node
 
-import { RUNTIME_REFERENCE_PATH } from "/home/igorw/Work/STS2/reference/src/config.mjs";
-import { fileExists, readJson } from "/home/igorw/Work/STS2/reference/src/io/fs.mjs";
-import { searchLibrary } from "/home/igorw/Work/STS2/reference/src/query/search.mjs";
+import { RUNTIME_REFERENCE_PATH } from "/home/igorw/Work/STS2/reference/src/config.ts";
+import { fileExists, readJson } from "/home/igorw/Work/STS2/reference/src/io/fs.ts";
+import { searchLibrary } from "/home/igorw/Work/STS2/reference/src/query/search.ts";
+import type { EntityKind, ReferenceLibrary, SearchResult } from "/home/igorw/Work/STS2/reference/src/types.ts";
+import { parseArgs } from "./lib/args.ts";
+import type { ParsedArgs } from "./lib/types.ts";
 
-function parseArgs(argv) {
-  const options = {};
-  const positional = [];
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const value = argv[index];
-    if (!value.startsWith("--")) {
-      positional.push(value);
-      continue;
-    }
-
-    const key = value.slice(2);
-    const next = argv[index + 1];
-    if (!next || next.startsWith("--")) {
-      options[key] = true;
-      continue;
-    }
-
-    options[key] = next;
-    index += 1;
-  }
-
-  return { positional, options };
-}
-
-function printTextResult(results) {
+function printTextResult(results: SearchResult[]): void {
   if (results.length === 0) {
     console.log("No matches.");
     return;
@@ -51,14 +29,26 @@ function printTextResult(results) {
   }
 }
 
-function usage() {
+function usage(): void {
   console.log(`Usage:
   npm run reference:query -- <query> [--kind card|relic|event|all] [--limit N] [--exact] [--json]
 `);
 }
 
-function main() {
-  const { positional, options } = parseArgs(process.argv.slice(2));
+function readKindOption(value: ParsedArgs['options'][string] | undefined): EntityKind | 'all' {
+  return value === 'card' || value === 'relic' || value === 'event' || value === 'all' ? value : 'all';
+}
+
+function readLimitOption(value: ParsedArgs['options'][string] | undefined): number | string {
+  return typeof value === 'string' || typeof value === 'number' ? value : 5;
+}
+
+function readBooleanOption(value: ParsedArgs['options'][string] | undefined): boolean {
+  return value === true || value === 'true' || value === '1';
+}
+
+function main(): void {
+  const { positional, options }: ParsedArgs = parseArgs(process.argv.slice(2));
   const query = positional.join(" ").trim();
 
   if (!query) {
@@ -71,11 +61,11 @@ function main() {
     throw new Error(`Reference library not found at '${RUNTIME_REFERENCE_PATH}'. Run 'npm run reference:build' first.`);
   }
 
-  const library = readJson(RUNTIME_REFERENCE_PATH);
+  const library = readJson<ReferenceLibrary>(RUNTIME_REFERENCE_PATH);
   const results = searchLibrary(library, query, {
-    kind: options.kind ?? "all",
-    limit: options.limit ?? 5,
-    exact: options.exact ?? false,
+    kind: readKindOption(options.kind),
+    limit: readLimitOption(options.limit),
+    exact: readBooleanOption(options.exact),
   });
 
   if (options.json) {

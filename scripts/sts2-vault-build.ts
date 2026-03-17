@@ -3,26 +3,40 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { RUNTIME_REFERENCE_PATH, RUNTIME_SOURCE_SUMMARY_PATH } from "/home/igorw/Work/STS2/reference/src/config.mjs";
-import { fileExists, readJson, writeJson } from "/home/igorw/Work/STS2/reference/src/io/fs.mjs";
+import { RUNTIME_REFERENCE_PATH, RUNTIME_SOURCE_SUMMARY_PATH } from "/home/igorw/Work/STS2/reference/src/config.ts";
+import { fileExists, readJson, writeJson } from "/home/igorw/Work/STS2/reference/src/io/fs.ts";
+import type { BaseEntity, CardEntity, EventEntity, ReferenceLibrary, RelicEntity, SourceSummary } from "/home/igorw/Work/STS2/reference/src/types.ts";
 
 const VAULT_DIR = "/home/igorw/Work/STS2/runtime/vault";
 const INDEX_PATH = path.join(VAULT_DIR, "index.json");
 
-function slugify(value) {
+type ReferenceEntity = CardEntity | RelicEntity | EventEntity;
+
+interface VaultIndexEntry {
+  kind: ReferenceEntity['kind'];
+  id: string;
+  name: string;
+  gameId: string;
+  path: string;
+  relativePath: string;
+  inCurrentRun: boolean;
+  discovered: boolean;
+}
+
+function slugify(value: string): string {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-function ensureDir(dirPath) {
+function ensureDir(dirPath: string): void {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
-function writeText(filePath, text) {
+function writeText(filePath: string, text: string): void {
   ensureDir(path.dirname(filePath));
   fs.writeFileSync(filePath, text.endsWith("\n") ? text : `${text}\n`);
 }
 
-function renderHeader(entity) {
+function renderHeader(entity: BaseEntity): string[] {
   return [
     `# ${entity.name}`,
     "",
@@ -35,7 +49,7 @@ function renderHeader(entity) {
   ];
 }
 
-function renderCommon(entity) {
+function renderCommon(entity: BaseEntity): string[] {
   return [
     "",
     "## Description",
@@ -45,7 +59,7 @@ function renderCommon(entity) {
   ];
 }
 
-function renderCard(entity) {
+function renderCard(entity: CardEntity): string[] {
   return [
     "## Card Data",
     "",
@@ -61,7 +75,7 @@ function renderCard(entity) {
   ];
 }
 
-function renderRelic(entity) {
+function renderRelic(entity: RelicEntity): string[] {
   return [
     "## Relic Data",
     "",
@@ -72,7 +86,11 @@ function renderRelic(entity) {
   ];
 }
 
-function renderEvent(entity) {
+function renderEvent(entity: EventEntity): string[] {
+  const optionList = Array.isArray(entity.options)
+    ? entity.options.map((value) => String(value))
+    : [];
+
   return [
     "## Event Data",
     "",
@@ -80,12 +98,12 @@ function renderEvent(entity) {
     `- Act: ${entity.act ?? "?"}`,
     `- Epithet: ${entity.epithet ?? "none"}`,
     entity.relics?.length ? `- Related relics: ${entity.relics.join(", ")}` : "- Related relics: none",
-    entity.options?.length ? `- Options: ${entity.options.join(", ")}` : "- Options: none exported",
+    optionList.length ? `- Options: ${optionList.join(", ")}` : "- Options: none exported",
     "",
   ];
 }
 
-function renderAliases(entity) {
+function renderAliases(entity: BaseEntity): string[] {
   return [
     "## Aliases",
     "",
@@ -94,7 +112,7 @@ function renderAliases(entity) {
   ];
 }
 
-function renderEntity(entity) {
+function renderEntity(entity: ReferenceEntity): string {
   const lines = [
     ...renderHeader(entity),
     ...renderCommon(entity),
@@ -107,7 +125,7 @@ function renderEntity(entity) {
   return lines.join("\n");
 }
 
-function buildEntityEntry(entity) {
+function buildEntityEntry(entity: ReferenceEntity): VaultIndexEntry {
   const dirName = `${entity.kind}s`;
   const fileName = `${slugify(entity.id)}.md`;
   const relativePath = path.join("entities", dirName, fileName);
@@ -127,14 +145,14 @@ function buildEntityEntry(entity) {
   };
 }
 
-function main() {
+function main(): void {
   if (!fileExists(RUNTIME_REFERENCE_PATH)) {
     throw new Error(`Reference library not found at '${RUNTIME_REFERENCE_PATH}'. Run 'npm run reference:build' first.`);
   }
 
-  const library = readJson(RUNTIME_REFERENCE_PATH);
+  const library = readJson<ReferenceLibrary>(RUNTIME_REFERENCE_PATH);
   const sourceSummary = fileExists(RUNTIME_SOURCE_SUMMARY_PATH)
-    ? readJson(RUNTIME_SOURCE_SUMMARY_PATH)
+    ? readJson<SourceSummary>(RUNTIME_SOURCE_SUMMARY_PATH)
     : null;
 
   ensureDir(VAULT_DIR);

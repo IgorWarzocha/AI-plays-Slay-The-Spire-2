@@ -35,7 +35,7 @@ function parseArgs(argv) {
 
 function usage() {
   console.log(`Usage:
-  node /home/igorw/Work/STS2/scripts/sts2-vault-query.mjs <query> [--kind card|relic|event|all] [--limit N] [--exact] [--json]
+  npm run reference:vault:query -- <query> [--kind card|relic|event|all] [--limit N] [--exact] [--json]
 `);
 }
 
@@ -50,11 +50,11 @@ function main() {
   }
 
   if (!fileExists(RUNTIME_REFERENCE_PATH)) {
-    throw new Error(`Reference library not found at '${RUNTIME_REFERENCE_PATH}'. Run sts2-reference-build first.`);
+    throw new Error(`Reference library not found at '${RUNTIME_REFERENCE_PATH}'. Run 'npm run reference:build' first.`);
   }
 
   if (!fileExists(VAULT_INDEX_PATH)) {
-    throw new Error(`Vault index not found at '${VAULT_INDEX_PATH}'. Run sts2-vault-build first.`);
+    throw new Error(`Vault index not found at '${VAULT_INDEX_PATH}'. Run 'npm run reference:vault:build' first.`);
   }
 
   const library = readJson(RUNTIME_REFERENCE_PATH);

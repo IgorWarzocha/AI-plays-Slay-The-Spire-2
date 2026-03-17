@@ -72,8 +72,8 @@ Read these before doing learning-loop maintenance:
 - Use `/home/igorw/Work/STS2/.agents/skills/learning-loop/references/run-log-standard.md`.
 - Floor notes are for live context compression.
 - Final run notes are for learning.
-- End-of-run facts should be reconciled against `node /home/igorw/Work/STS2/scripts/sts2history.mjs latest` or `npm run history`.
-- If you need the full floor payload, use `node /home/igorw/Work/STS2/scripts/sts2history.mjs latest --raw`.
+- End-of-run facts should be reconciled against `npm run history`.
+- If you need the full floor payload, use `npm run history:raw`.
 - The finished version must include:
   - final deck
   - relics
