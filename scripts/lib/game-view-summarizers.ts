@@ -1,26 +1,35 @@
 import type {
   CardBrowseState,
+  CardBrowseView,
+  CombatActionStateView,
   CharacterState,
   CombatCardState,
+  CombatCardView,
   CombatCostChange,
   CombatState,
+  CombatViewData,
   CreatureIntentState,
   CreatureState,
+  CreatureView,
   DisplayState,
   MapPointState,
   MapState,
+  MapView,
   MenuItemState,
+  MenuItemView,
+  PotionView,
   PotionState,
   ProfileState,
   RelicState,
   RunHistoryCardRecord,
   RunHistoryChoice,
   RunHistoryFloor,
+  RunHistoryFloorView,
   RunHistoryFloorRoom,
   RunHistoryState,
+  RunHistoryDeckCardView,
+  RunHistoryView,
 } from './types.ts';
-
-type AnyRecord = Record<string, any>;
 
 // This module stays intentionally pure: it only reshapes exporter payloads into
 // compact, human-readable summaries. Screen-level decisions belong in
@@ -48,12 +57,7 @@ export function summarizeRelic(relic: RelicState): RelicState {
   };
 }
 
-export function summarizeMenuItem(item: MenuItemState): Required<Pick<MenuItemState, 'id'>> & {
-  label: string | undefined;
-  description: string | null;
-  enabled: boolean | undefined;
-  selected: boolean | undefined;
-} {
+export function summarizeMenuItem(item: MenuItemState): MenuItemView {
   return {
     id: item.id,
     label: item.label,
@@ -63,13 +67,14 @@ export function summarizeMenuItem(item: MenuItemState): Required<Pick<MenuItemSt
   };
 }
 
-export function summarizeCombatCard(card: CombatCardState): AnyRecord {
+export function summarizeCombatCard(card: CombatCardState): CombatCardView {
   return {
     id: card.id,
     title: card.title,
     cost: card.costText ?? null,
     description: card.description ?? null,
     playable: card.isPlayable,
+    upgraded: card.upgraded,
     affliction: card.affliction ? {
       kind: card.affliction.kind,
       type: card.affliction.typeName ?? null,
@@ -115,7 +120,7 @@ export function summarizeCostChange(change: CombatCostChange): CombatCostChange 
   };
 }
 
-export function summarizePotion(potion: PotionState): AnyRecord {
+export function summarizePotion(potion: PotionState): PotionView {
   return {
     id: potion.id,
     slot: potion.slotIndex ?? null,
@@ -129,7 +134,7 @@ export function summarizePotion(potion: PotionState): AnyRecord {
   };
 }
 
-export function summarizeCreature(creature: CreatureState): AnyRecord {
+export function summarizeCreature(creature: CreatureState): CreatureView {
   return {
     id: creature.id,
     name: creature.name,
@@ -148,7 +153,7 @@ export function summarizeCreature(creature: CreatureState): AnyRecord {
   };
 }
 
-export function summarizeCombat(combat: CombatState): AnyRecord {
+export function summarizeCombat(combat: CombatState): CombatViewData {
   return {
     roundNumber: combat.roundNumber ?? null,
     currentSide: combat.currentSide ?? null,
@@ -175,7 +180,7 @@ export function summarizeCombat(combat: CombatState): AnyRecord {
   };
 }
 
-export function summarizeCombatActionState(state: DisplayState | null | undefined): AnyRecord | null {
+export function summarizeCombatActionState(state: DisplayState | null | undefined): CombatActionStateView | null {
   if (!state) {
     return null;
   }
@@ -210,7 +215,7 @@ export function summarizeCombatActionState(state: DisplayState | null | undefine
   };
 }
 
-export function summarizeMap(map: MapState): AnyRecord {
+export function summarizeMap(map: MapState): MapView {
   return {
     visible: map.visible,
     travelEnabled: map.travelEnabled,
@@ -225,24 +230,31 @@ export function summarizeMap(map: MapState): AnyRecord {
   };
 }
 
-export function summarizeCardBrowse(cardBrowse: CardBrowseState): AnyRecord {
+export function summarizeCardBrowse(cardBrowse: CardBrowseState): CardBrowseView {
   return {
     kind: cardBrowse.kind,
     title: cardBrowse.title,
     pileType: cardBrowse.pileType ?? null,
     cardCount: cardBrowse.cardCount,
     canClose: cardBrowse.canClose,
-    cards: (cardBrowse.cards ?? []).map((card: CombatCardState) => ({
+    cards: (cardBrowse.cards ?? []).map((card: CombatCardState): CombatCardView => ({
       id: card.id,
       title: card.title,
       cost: card.costText ?? null,
       upgraded: card.upgraded,
       description: card.description ?? null,
+      playable: card.isPlayable,
+      affliction: null,
+      enchantment: null,
+      unplayable: null,
+      glowsGold: card.glowsGold ?? false,
+      glowsRed: card.glowsRed ?? false,
+      targets: card.validTargetIds ?? [],
     })),
   };
 }
 
-export function summarizeRunHistory(runHistory: RunHistoryState): AnyRecord {
+export function summarizeRunHistory(runHistory: RunHistoryState): RunHistoryView {
   return {
     fileName: runHistory.fileName ?? null,
     selectedIndex: runHistory.selectedIndex ?? null,
@@ -266,7 +278,7 @@ export function summarizeRunHistory(runHistory: RunHistoryState): AnyRecord {
       : `${runHistory.currentHp}/${runHistory.maxHp}`,
     gold: runHistory.currentGold ?? null,
     potionSlotCount: runHistory.potionSlotCount ?? null,
-    floors: (runHistory.floors ?? []).map((floor: RunHistoryFloor) => ({
+    floors: (runHistory.floors ?? []).map((floor: RunHistoryFloor): RunHistoryFloorView => ({
       floor: floor.floor,
       mapPointType: floor.mapPointType ?? null,
       hp: floor.currentHp == null || floor.maxHp == null ? null : `${floor.currentHp}/${floor.maxHp}`,
@@ -300,7 +312,7 @@ export function summarizeRunHistory(runHistory: RunHistoryState): AnyRecord {
       ancientChoices: (floor.ancientChoices ?? []).map((choice: RunHistoryChoice) => ({ label: choice.label, picked: choice.picked })),
       eventChoices: floor.eventChoices ?? [],
     })),
-    deck: (runHistory.deck ?? []).map((card: RunHistoryCardRecord) => ({
+    deck: (runHistory.deck ?? []).map((card: RunHistoryCardRecord): RunHistoryDeckCardView => ({
       id: card.id,
       title: card.title,
       cost: card.costText ?? null,

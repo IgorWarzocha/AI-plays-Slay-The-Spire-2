@@ -1,4 +1,14 @@
-import type { DisplayState, RuntimeCommandOptions, RunActionsResult, TopBarState } from './types.ts';
+import type {
+  CombatCommandView,
+  CombatViewScreen,
+  CommandView,
+  DisplayState,
+  GameplayView,
+  RuntimeCommandOptions,
+  RunActionsResult,
+  TopBarState,
+  TopBarView,
+} from './types.ts';
 import {
   summarizeButton,
   summarizeCardBrowse,
@@ -15,9 +25,7 @@ import {
   summarizeRunHistory,
 } from './game-view-summarizers.ts';
 
-type AnyRecord = Record<string, any>;
-
-function buildTopBarView(topBar: TopBarState | null | undefined): AnyRecord | null {
+function buildTopBarView(topBar: TopBarState | null | undefined): TopBarView | null {
   if (!topBar) {
     return null;
   }
@@ -36,7 +44,7 @@ function buildTopBarView(topBar: TopBarState | null | undefined): AnyRecord | nu
   };
 }
 
-function buildCombatTopBarView(topBar: TopBarState | null | undefined): AnyRecord | null {
+function buildCombatTopBarView(topBar: TopBarState | null | undefined): Pick<TopBarView, 'hp' | 'gold'> | null {
   if (!topBar) {
     return null;
   }
@@ -49,7 +57,7 @@ function buildCombatTopBarView(topBar: TopBarState | null | undefined): AnyRecor
   };
 }
 
-export function buildGameplayView(state: DisplayState | null | undefined, options: RuntimeCommandOptions = {}): AnyRecord {
+export function buildGameplayView(state: DisplayState | null | undefined, options: RuntimeCommandOptions = {}): GameplayView {
   if (!state) {
     return {
       screenType: null,
@@ -63,7 +71,7 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
   }
 
   if (options.raw === true || options.raw === 'true') {
-    return state as Record<string, unknown>;
+    return state as unknown as GameplayView;
   }
 
   const includeActions = options.actions !== false && options.actions !== 'false';
@@ -74,7 +82,7 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
     || state.screenType === 'merchant_room'
     || state.screenType === 'merchant_inventory';
 
-  const view: AnyRecord = {
+  const view: GameplayView = {
     screenType: state.screenType ?? null,
     updatedAtUtc: state.updatedAtUtc ?? null,
     topBar: buildTopBarView(state.topBar),
@@ -146,9 +154,9 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
   return view;
 }
 
-export function buildCommandView(result: RunActionsResult, options: RuntimeCommandOptions = {}): AnyRecord {
+export function buildCommandView(result: RunActionsResult, options: RuntimeCommandOptions = {}): CommandView {
   if (options.raw === true || options.raw === 'true') {
-    return result as unknown as Record<string, unknown>;
+    return result as unknown as CommandView;
   }
 
   return {
@@ -166,7 +174,7 @@ export function buildCommandView(result: RunActionsResult, options: RuntimeComma
   };
 }
 
-export function buildCombatView(state: DisplayState | null | undefined, options: RuntimeCommandOptions = {}): AnyRecord {
+export function buildCombatView(state: DisplayState | null | undefined, options: RuntimeCommandOptions = {}): CombatViewScreen {
   if (!state) {
     return {
       screenType: null,
@@ -175,12 +183,13 @@ export function buildCombatView(state: DisplayState | null | undefined, options:
       relics: [],
       notes: [],
       combat: null,
+      menuItems: [],
       actions: [],
     };
   }
 
   if (options.raw === true || options.raw === 'true') {
-    return state as Record<string, unknown>;
+    return state as unknown as CombatViewScreen;
   }
 
   if (state.screenType !== 'combat_room'
@@ -206,9 +215,9 @@ export function buildCombatView(state: DisplayState | null | undefined, options:
   };
 }
 
-export function buildCombatCommandView(result: RunActionsResult, options: RuntimeCommandOptions = {}): AnyRecord {
+export function buildCombatCommandView(result: RunActionsResult, options: RuntimeCommandOptions = {}): CombatCommandView {
   if (options.raw === true || options.raw === 'true') {
-    return result as unknown as Record<string, unknown>;
+    return result as unknown as CombatCommandView;
   }
 
   const state = result.state;

@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 
 import { buildCombatCommandView, buildCombatView, buildGameplayView } from "./sts2-game-view.ts";
 
+function expectDefined<T>(value: T): NonNullable<T> {
+  assert.notEqual(value, null);
+  assert.notEqual(value, undefined);
+  return value as NonNullable<T>;
+}
+
 test("buildCombatCommandView falls back to gameplay view when combat actions exit combat", () => {
   const result = {
     ok: true,
@@ -50,7 +56,7 @@ test("buildCombatView supports modal combat card choice overlays", () => {
 
   const view = buildCombatView(state, { notes: true });
   assert.equal(view.notes[0], "Choose a card to exhaust.");
-  assert.equal(view.combat.selectionPrompt, "Choose a card to Exhaust.");
+  assert.equal(expectDefined(view.combat).selectionPrompt, "Choose a card to Exhaust.");
   assert.deepEqual(view.actions, ["combat_card_select.select:strike-01", "combat_card_select.confirm"]);
 });
 
@@ -102,8 +108,8 @@ test("buildCombatCommandView surfaces combat cost changes per action", () => {
   };
 
   const view = buildCombatCommandView(result);
-  assert.equal(view.actions[0].costChanges[0].afterCost, "1");
-  assert.equal(view.actions[0].combatAfter.combat.hand[0].cost, "1");
+  assert.equal(expectDefined(expectDefined(view.actions[0]).costChanges[0]).afterCost, "1");
+  assert.equal(expectDefined(expectDefined(expectDefined(view.actions[0]).combatAfter).combat).hand[0]?.cost, "1");
 });
 
 test("buildGameplayView surfaces combat card transient states and unplayable causes", () => {
@@ -166,10 +172,10 @@ test("buildGameplayView surfaces combat card transient states and unplayable cau
   };
 
   const view = buildGameplayView(state);
-  const card = view.combat.hand[0];
-  assert.equal(card.affliction.title, "Bound");
-  assert.equal(card.enchantment.title, "Empowered");
-  assert.equal(card.unplayable.reason, "Already played a Bound card this turn.");
+  const card = expectDefined(expectDefined(view.combat).hand[0]);
+  assert.equal(expectDefined(card.affliction).title, "Bound");
+  assert.equal(expectDefined(card.enchantment).title, "Empowered");
+  assert.equal(expectDefined(card.unplayable).reason, "Already played a Bound card this turn.");
   assert.equal(card.glowsGold, true);
   assert.equal(card.glowsRed, true);
 });

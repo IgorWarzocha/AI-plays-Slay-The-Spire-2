@@ -2,6 +2,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildGameplayView } from "./sts2-game-view.ts";
+import type { RelicState } from "./types.ts";
+
+function expectDefined<T>(value: T): NonNullable<T> {
+  assert.notEqual(value, null);
+  assert.notEqual(value, undefined);
+  return value as NonNullable<T>;
+}
+
+function expectRelic(value: string | RelicState): RelicState {
+  assert.equal(typeof value, "object");
+  return value as RelicState;
+}
 
 test("buildGameplayView hides admin noise and surfaces relic details only on demand", () => {
   const state = {
@@ -31,12 +43,12 @@ test("buildGameplayView hides admin noise and surfaces relic details only on dem
 
   const compact = buildGameplayView(state);
   assert.deepEqual(compact.relics, ["Burning Blood", "Pomander (3)"]);
-  assert.equal(compact.topBar.hp, "61/86");
+  assert.equal(expectDefined(compact.topBar).hp, "61/86");
   assert.deepEqual(compact.actions, ["combat.end_turn"]);
 
   const detailed = buildGameplayView(state, { relics: true });
-  assert.equal(detailed.relics[0].description, "Heal 6 HP.");
-  assert.equal(detailed.relics[1].count, 3);
+  assert.equal(expectRelic(expectDefined(detailed.relics[0])).description, "Heal 6 HP.");
+  assert.equal(expectRelic(expectDefined(detailed.relics[1])).count, 3);
 });
 
 test("buildGameplayView includes deck snapshot and detailed relics for merchant screens", () => {
@@ -76,12 +88,12 @@ test("buildGameplayView includes deck snapshot and detailed relics for merchant 
   };
 
   const view = buildGameplayView(state);
-  assert.equal(view.relics[0].description, "Heal 6 HP.");
-  assert.equal(view.potions[0].title, "Blood Potion");
-  assert.equal(view.potions[1].occupied, false);
-  assert.equal(view.topBar.potionSlots.total, 3);
-  assert.equal(view.cardBrowse.cards[1].upgraded, true);
-  assert.equal(view.menuItems[0].label, "Lantern");
+  assert.equal(expectRelic(expectDefined(view.relics[0])).description, "Heal 6 HP.");
+  assert.equal(expectDefined(view.potions[0]).title, "Blood Potion");
+  assert.equal(expectDefined(view.potions[1]).occupied, false);
+  assert.equal(expectDefined(expectDefined(view.topBar).potionSlots).total, 3);
+  assert.equal(expectDefined(expectDefined(view.cardBrowse).cards[1]).upgraded, true);
+  assert.equal(expectDefined(expectDefined(view.menuItems)[0]).label, "Lantern");
 });
 
 test("buildGameplayView preserves readable combat intent summaries", () => {
@@ -124,9 +136,9 @@ test("buildGameplayView preserves readable combat intent summaries", () => {
   };
 
   const view = buildGameplayView(state);
-  assert.equal(view.combat.creatures[0].intents[0].summary, "18 damage");
-  assert.equal(view.combat.creatures[0].intents[0].title, "Heavy Slam");
-  assert.equal(view.combat.creatures[0].powers[0].title, "Intangible");
+  assert.equal(expectDefined(expectDefined(expectDefined(view.combat).creatures[0]).intents[0]).summary, "18 damage");
+  assert.equal(expectDefined(expectDefined(expectDefined(view.combat).creatures[0]).intents[0]).title, "Heavy Slam");
+  assert.equal(expectDefined(expectDefined(view.combat).creatures[0]).powers[0]?.title, "Intangible");
 });
 
 test("buildGameplayView preserves card reward alternatives like skip", () => {
@@ -144,7 +156,7 @@ test("buildGameplayView preserves card reward alternatives like skip", () => {
   };
 
   const view = buildGameplayView(state);
-  assert.equal(view.menuItems[1].label, "Skip");
+  assert.equal(expectDefined(expectDefined(view.menuItems)[1]).label, "Skip");
   assert.deepEqual(view.actions, ["rewards.claim:skip"]);
 });
 
@@ -214,8 +226,8 @@ test("buildGameplayView summarizes run history without admin noise", () => {
   };
 
   const view = buildGameplayView(state);
-  assert.equal(view.runHistory.fileName, "2026-03-17-ironclad-run-003");
-  assert.equal(view.runHistory.hp, "0/92");
-  assert.equal(view.runHistory.floors[0].cardsTransformed[0].to, "Uppercut");
-  assert.equal(view.runHistory.relics[0].label, "Burning Blood");
+  assert.equal(expectDefined(view.runHistory).fileName, "2026-03-17-ironclad-run-003");
+  assert.equal(expectDefined(view.runHistory).hp, "0/92");
+  assert.equal(expectDefined(expectDefined(expectDefined(view.runHistory).floors[0]).cardsTransformed[0]).to, "Uppercut");
+  assert.equal(expectDefined(expectDefined(view.runHistory).relics[0]).label, "Burning Blood");
 });
