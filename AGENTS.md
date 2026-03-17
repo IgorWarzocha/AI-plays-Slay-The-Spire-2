@@ -9,20 +9,14 @@
 
 ## Core Commands
 
-- Prefer `sts2-dev.mjs` for build/restart flows instead of raw `dotnet build` plus manual relaunch.
-- `sts2-dev.mjs build` and `sts2-dev.mjs restart` already include the STS2 restart cooldown. Do not add manual post-build sleep/status polling unless the script itself is being fixed.
-- `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs build`
-- `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs test`
-- `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs restart`
-- `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs continue`
-- `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs reload`
-- `node /home/igorw/Work/STS2/scripts/sts2run.mjs start-standard`
-- `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs status`
-- `node /home/igorw/Work/STS2/scripts/sts2combat.mjs status`
-- `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs command <action>`
-- `node /home/igorw/Work/STS2/scripts/sts2combat.mjs command <action>`
-- `node /home/igorw/Work/STS2/scripts/sts2-log-tail.mjs`
-- `dotnet run --project /home/igorw/Work/STS2/tools/Sts2TypeInspector/Sts2TypeInspector.csproj -- <TypeFragment>`
+- Prefer `npm run <surface> -- ...` over raw `node scripts/...`.
+- `npm run build`, `npm test`, `npm run restart`, `npm run continue`, `npm run reload`
+- `npm run run -- start-standard`
+- `npm run ctl -- status`
+- `npm run combat -- status`
+- `npm run history`, `npm run history:raw`
+- `npm run log`
+- `npm run inspect -- <TypeFragment>`
 
 ## Key Paths
 
@@ -37,10 +31,10 @@
 - Keep admin, bootstrap, non-combat, and combat separate.
 - After every automated compaction summary, the first action is to re-read the live run state from the exporter and current run artifacts before making any choice. Always confirm the current floor, act, room, path, deck, relics, potions, HP, key upcoming fights, and any other immediately relevant state instead of trusting memory or the summary alone.
 - After every new run and after every automated compaction summary, re-read the repo skill that matches the current run before taking action.
-- The current character skill is mandatory re-reading after compaction. Example: if the run is Ironclad, re-read `/home/igorw/Work/STS2/.agents/skills/sts2-ironclad/SKILL.md`.
-- Re-read `/home/igorw/Work/STS2/.agents/skills/sts2-act-start/SKILL.md` at the start of every act and whenever act-level route planning resets.
-- Re-read `/home/igorw/Work/STS2/.agents/skills/sts2-boss-and-elite-fights/SKILL.md` before any elite or boss commitment, including pathing decisions that commit the run toward one.
-- Skills do not replace the vault. Each skill lists matching vault notes that are required reading for that situation, and those notes must be read before acting.
+- The current character skill is mandatory re-reading after compaction. Example: if the run is Ironclad, re-read `/home/igorw/Work/STS2/.agents/skills/ironclad/SKILL.md`.
+- Re-read `/home/igorw/Work/STS2/.agents/skills/act-start/SKILL.md` at the start of every act and whenever act-level route planning resets.
+- Re-read `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/SKILL.md` before any elite or boss commitment, including pathing decisions that commit the run toward one.
+- Skill-local `references/` folders are the primary knowledge surface. The vault is for runs, templates, and still-unowned notes.
 - Optimize for fewer tool calls. If a script can return the next usable state directly, patch it to do so.
 - Send actions sequentially. The command file is single-writer.
 - Restart after mod DLL changes. Mods are not hot-reload.

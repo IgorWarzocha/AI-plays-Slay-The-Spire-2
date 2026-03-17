@@ -1,0 +1,4 @@
+interface:
+  display_name: "Act Start"
+  short_description: "Reset act-level planning from real run state"
+  default_prompt: "Use $act-start to read the required reference notes, reassess the current act from the deck and map state, and produce the act plan."

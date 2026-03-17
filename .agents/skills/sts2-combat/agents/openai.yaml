@@ -1,4 +1,0 @@
-interface:
-  display_name: "STS2 Combat"
-  short_description: "Plan and execute ordinary STS2 fights from real combat state"
-  default_prompt: "Use $sts2-combat to read the settled STS2 combat state, classify the turn, and choose the best line with setup, cost changes, and next-cycle survival in mind."

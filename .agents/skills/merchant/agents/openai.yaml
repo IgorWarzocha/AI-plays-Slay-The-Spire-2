@@ -1,0 +1,4 @@
+interface:
+  display_name: "Merchant"
+  short_description: "Plan and execute shops from real run state"
+  default_prompt: "Use $merchant to assess the current merchant from deck, relics, potions, gold, and upcoming path pressure, then choose the highest-value shop line."

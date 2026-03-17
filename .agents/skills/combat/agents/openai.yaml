@@ -1,0 +1,4 @@
+interface:
+  display_name: "Combat"
+  short_description: "Plan and execute ordinary fights from real combat state"
+  default_prompt: "Use $combat to read the settled combat state, classify the turn, and choose the best line with setup, cost changes, and next-cycle survival in mind."

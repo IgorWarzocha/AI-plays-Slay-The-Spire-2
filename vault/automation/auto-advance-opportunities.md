@@ -38,5 +38,5 @@ Not safe:
 
 ## Related
 
-- [[automation/README]]
-- [[mechanics/combat-hand-selection]]
+- [automation index](/home/igorw/Work/STS2/vault/automation/INDEX.md)
+- [combat-hand-selection](/home/igorw/Work/STS2/vault/mechanics/combat-hand-selection.md)

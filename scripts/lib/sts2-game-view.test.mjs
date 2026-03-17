@@ -182,6 +182,101 @@ test("buildGameplayView preserves card reward alternatives like skip", () => {
   assert.deepEqual(view.menuItems.map((item) => item.label), ["Anger", "Skip"]);
 });
 
+test("buildGameplayView summarizes run history without admin noise", () => {
+  const state = {
+    screenType: "run_history",
+    updatedAtUtc: "2026-03-17T16:14:00.000Z",
+    actions: ["run_history.next", "run_history.back"],
+    relics: [],
+    menuItems: [
+      { id: "prev", label: "Previous Run", description: null, enabled: false, selected: false },
+      { id: "next", label: "Next Run", description: null, enabled: true, selected: false },
+    ],
+    runHistory: {
+      fileName: "1773707060.run",
+      selectedIndex: 0,
+      runCount: 17,
+      canGoPrevious: false,
+      canGoNext: true,
+      characterId: "CHARACTER.IRONCLAD",
+      ascension: 1,
+      seed: "0H4Q019P96",
+      gameMode: "Standard",
+      buildId: "v0.98.3",
+      win: false,
+      wasAbandoned: false,
+      killedByEncounterId: "ENCOUNTER.QUEEN_BOSS",
+      killedByEventId: "NONE.NONE",
+      runTimeSeconds: 13428,
+      startTimeUnixSeconds: 1773707060,
+      floorReached: 48,
+      currentHp: 0,
+      maxHp: 91,
+      currentGold: 176,
+      potionSlotCount: 3,
+      floors: [
+        {
+          floor: 1,
+          mapPointType: "Monster",
+          currentHp: 67,
+          maxHp: 80,
+          currentGold: 111,
+          damageTaken: 13,
+          goldGained: 12,
+          goldSpent: 0,
+          rooms: [
+            {
+              roomType: "Monster",
+              modelId: "ENCOUNTER.SLUDGE_SPINNER",
+              turnsTaken: 3,
+              monsterIds: ["ENEMY.SLUDGE_SPINNER"],
+            },
+          ],
+          cardsGained: [{ title: "Uppercut" }],
+          cardsRemoved: [],
+          cardsTransformed: [],
+          upgradedCards: [],
+          downgradedCards: [],
+          boughtRelics: [],
+          boughtPotions: [],
+          potionUsed: [],
+          potionDiscarded: [],
+          restSiteChoices: [],
+          cardChoices: [{ label: "Uppercut", picked: true }],
+          relicChoices: [],
+          potionChoices: [],
+          ancientChoices: [],
+          eventChoices: [],
+        },
+      ],
+      deck: [
+        {
+          id: "CARD.BASH",
+          title: "Bash",
+          costText: "2",
+          upgraded: true,
+          count: 1,
+          floorsAdded: [1],
+          description: "Deal 10 damage.",
+        },
+      ],
+      relics: [
+        { id: "RELIC.BURNING_BLOOD", label: "Burning Blood", description: "Heal 6 HP.", count: null, status: null },
+      ],
+    },
+  };
+
+  const view = buildGameplayView(state);
+  assert.equal(view.screenType, "run_history");
+  assert.equal(view.runHistory.seed, "0H4Q019P96");
+  assert.equal(view.runHistory.hp, "0/91");
+  assert.equal(view.runHistory.floors[0].rooms[0].modelId, "ENCOUNTER.SLUDGE_SPINNER");
+  assert.equal(view.runHistory.floors[0].cardChoices[0].label, "Uppercut");
+  assert.equal(view.runHistory.deck[0].title, "Bash");
+  assert.equal(view.runHistory.relics[0].label, "Burning Blood");
+  assert.deepEqual(view.actions, ["run_history.next", "run_history.back"]);
+});
+
 test("buildCombatView supports modal combat card choice overlays", () => {
   const state = {
     screenType: "combat_choice_select",

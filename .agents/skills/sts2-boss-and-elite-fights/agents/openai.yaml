@@ -1,4 +1,0 @@
-interface:
-  display_name: "STS2 Boss And Elite Fights"
-  short_description: "Plan and play hard fights with vault-backed prep"
-  default_prompt: "Use $sts2-boss-and-elite-fights to evaluate an elite or boss fight, read the required vault notes, and produce the safest high-value plan for this STS2 state."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Boss And Elite Fights"
+  short_description: "Plan and play hard fights with reference-backed prep"
+  default_prompt: "Use $boss-and-elite-fights to evaluate an elite or boss fight, read the required reference notes, and produce the safest high-value plan for the current state."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "STS2 Merchant"
-  short_description: "Plan and execute shops from real run state"
-  default_prompt: "Use $sts2-merchant to assess the current STS2 merchant from deck, relics, potions, gold, and upcoming path pressure, then choose the highest-value shop line."

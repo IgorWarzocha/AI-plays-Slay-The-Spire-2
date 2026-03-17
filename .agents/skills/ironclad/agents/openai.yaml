@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ironclad"
+  short_description: "Run Ironclad with reference-backed deck logic"
+  default_prompt: "Use $ironclad to read the required Ironclad reference notes and guide the run's deck, combat, route, and reward decisions."

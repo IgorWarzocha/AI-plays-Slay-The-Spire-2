@@ -1,0 +1,4 @@
+interface:
+  display_name: "Learning Loop"
+  short_description: "Keep play knowledge updated"
+  default_prompt: "Use $learning-loop to update the run log, encounter notes, and strategy notes from this session."

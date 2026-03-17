@@ -209,6 +209,89 @@ function summarizeCardBrowse(cardBrowse) {
   };
 }
 
+function summarizeRunHistory(runHistory) {
+  return {
+    fileName: runHistory.fileName ?? null,
+    selectedIndex: runHistory.selectedIndex ?? null,
+    runCount: runHistory.runCount ?? null,
+    canGoPrevious: runHistory.canGoPrevious ?? false,
+    canGoNext: runHistory.canGoNext ?? false,
+    characterId: runHistory.characterId ?? null,
+    ascension: runHistory.ascension ?? null,
+    seed: runHistory.seed ?? null,
+    gameMode: runHistory.gameMode ?? null,
+    buildId: runHistory.buildId ?? null,
+    win: runHistory.win ?? null,
+    wasAbandoned: runHistory.wasAbandoned ?? null,
+    killedByEncounterId: runHistory.killedByEncounterId ?? null,
+    killedByEventId: runHistory.killedByEventId ?? null,
+    runTimeSeconds: runHistory.runTimeSeconds ?? null,
+    startTimeUnixSeconds: runHistory.startTimeUnixSeconds ?? null,
+    floorReached: runHistory.floorReached ?? null,
+    hp: runHistory.currentHp == null || runHistory.maxHp == null
+      ? null
+      : `${runHistory.currentHp}/${runHistory.maxHp}`,
+    gold: runHistory.currentGold ?? null,
+    potionSlotCount: runHistory.potionSlotCount ?? null,
+    floors: (runHistory.floors ?? []).map((floor) => ({
+      floor: floor.floor,
+      mapPointType: floor.mapPointType ?? null,
+      hp: floor.currentHp == null || floor.maxHp == null ? null : `${floor.currentHp}/${floor.maxHp}`,
+      gold: floor.currentGold ?? null,
+      damageTaken: floor.damageTaken ?? null,
+      hpHealed: floor.hpHealed ?? null,
+      goldGained: floor.goldGained ?? null,
+      goldSpent: floor.goldSpent ?? null,
+      rooms: (floor.rooms ?? []).map((room) => ({
+        roomType: room.roomType ?? null,
+        modelId: room.modelId ?? null,
+        turnsTaken: room.turnsTaken ?? null,
+        monsterIds: room.monsterIds ?? [],
+      })),
+      cardsGained: (floor.cardsGained ?? []).map((card) => card.title),
+      cardsRemoved: (floor.cardsRemoved ?? []).map((card) => card.title),
+      cardsTransformed: (floor.cardsTransformed ?? []).map((entry) => ({
+        from: entry.originalCard?.title ?? null,
+        to: entry.finalCard?.title ?? null,
+      })),
+      upgradedCards: floor.upgradedCards ?? [],
+      downgradedCards: floor.downgradedCards ?? [],
+      boughtRelics: floor.boughtRelics ?? [],
+      boughtPotions: floor.boughtPotions ?? [],
+      potionUsed: floor.potionUsed ?? [],
+      potionDiscarded: floor.potionDiscarded ?? [],
+      restSiteChoices: floor.restSiteChoices ?? [],
+      cardChoices: (floor.cardChoices ?? []).map((choice) => ({
+        label: choice.label,
+        picked: choice.picked,
+      })),
+      relicChoices: (floor.relicChoices ?? []).map((choice) => ({
+        label: choice.label,
+        picked: choice.picked,
+      })),
+      potionChoices: (floor.potionChoices ?? []).map((choice) => ({
+        label: choice.label,
+        picked: choice.picked,
+      })),
+      ancientChoices: (floor.ancientChoices ?? []).map((choice) => ({
+        label: choice.label,
+        picked: choice.picked,
+      })),
+      eventChoices: floor.eventChoices ?? [],
+    })),
+    deck: (runHistory.deck ?? []).map((card) => ({
+      id: card.id,
+      title: card.title,
+      cost: card.costText ?? null,
+      upgraded: card.upgraded ?? false,
+      count: card.count ?? 1,
+      floorsAdded: card.floorsAdded ?? [],
+      description: card.description ?? null,
+    })),
+    relics: (runHistory.relics ?? []).map(summarizeRelic),
+  };
+}
+
 function summarizeCharacter(character) {
   return {
     id: character.id,
@@ -310,6 +393,12 @@ export function buildGameplayView(state, options = {}) {
     case "deck_view":
     case "card_pile":
       view.cardBrowse = state.cardBrowse ? summarizeCardBrowse(state.cardBrowse) : null;
+      break;
+    case "run_history":
+      view.runHistory = state.runHistory ? summarizeRunHistory(state.runHistory) : null;
+      if (includeMenuItems || (state.menuItems ?? []).length > 0) {
+        view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
+      }
       break;
     case "merchant_room":
     case "merchant_inventory":

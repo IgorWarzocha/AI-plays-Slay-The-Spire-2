@@ -1,4 +1,0 @@
-interface:
-  display_name: "STS2 Learning Loop"
-  short_description: "Keep STS2 play knowledge updated"
-  default_prompt: "Use $sts2-learning-loop to update the run log, encounter notes, and strategy vault from this Slay the Spire 2 session."

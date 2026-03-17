@@ -1,4 +1,0 @@
-interface:
-  display_name: "STS2 Events"
-  short_description: "Context-driven STS2 event decisions"
-  default_prompt: "Use $sts2-events to evaluate this Slay the Spire 2 event from the current run state before choosing."

@@ -3,7 +3,7 @@
 ## What It Is
 
 - Type: exporter/runtime edge case
-- First observed: live Ironclad death inside [[encounters/act1/phrog-parasite]]
+- First observed: live Ironclad death inside [phrog-parasite](/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/act1/elites/phrog-parasite.md)
 
 ## What We Observed
 
@@ -24,5 +24,5 @@
 
 ## Related
 
-- [[mechanics/README]]
-- [[encounters/act1/phrog-parasite]]
+- [mechanics index](/home/igorw/Work/STS2/vault/mechanics/INDEX.md)
+- [phrog-parasite](/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/act1/elites/phrog-parasite.md)

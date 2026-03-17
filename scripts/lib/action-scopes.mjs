@@ -5,6 +5,11 @@ const BOOTSTRAP_SCOPES = new Set([
   "character",
   "custom_run",
 ]);
+const HISTORY_SCOPES = new Set([
+  "main_menu",
+  "compendium",
+  "run_history",
+]);
 const SHARED_IN_RUN_SCOPES = new Set(["card_pile"]);
 const COMBAT_SCOPES = new Set([
   "combat",
@@ -23,6 +28,10 @@ export function isBootstrapAction(action) {
 
 export function isCombatAction(action) {
   return COMBAT_SCOPES.has(getActionScope(action));
+}
+
+export function isHistoryAction(action) {
+  return HISTORY_SCOPES.has(getActionScope(action));
 }
 
 export function isSharedInRunAction(action) {
@@ -54,6 +63,15 @@ export function assertCombatActions(actions) {
   if (invalid.length > 0) {
     throw new Error(
       `sts2combat.mjs only accepts combat actions. Use sts2ctl.mjs for non-combat in-run actions or sts2run.mjs for bootstrap actions: ${invalid.join(", ")}`,
+    );
+  }
+}
+
+export function assertHistoryActions(actions) {
+  const invalid = actions.filter((action) => !isHistoryAction(action));
+  if (invalid.length > 0) {
+    throw new Error(
+      `sts2history.mjs only accepts compendium/run-history actions: ${invalid.join(", ")}`,
     );
   }
 }

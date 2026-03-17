@@ -88,8 +88,16 @@ function isLoadedRunSurface(state) {
 function waitForLoadedRunSurface(timeoutMs) {
   return waitFor(
     () => {
-      const state = readDisplayState({ timeoutMs: Math.min(timeoutMs, 2500) });
-      return isLoadedRunSurface(state) ? state : null;
+      try {
+        const state = readDisplayState({ timeoutMs: Math.min(timeoutMs, 5000) });
+        return isLoadedRunSurface(state) ? state : null;
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("stable combat state")) {
+          return null;
+        }
+
+        throw error;
+      }
     },
     { timeoutMs, intervalMs: 150, description: "usable resumed run surface" },
   );

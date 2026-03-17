@@ -1,4 +1,0 @@
-interface:
-  display_name: "STS2 Ironclad"
-  short_description: "Run Ironclad with vault-backed deck logic"
-  default_prompt: "Use $sts2-ironclad to read the required Ironclad vault notes and guide this STS2 run's deck, combat, route, and reward decisions."

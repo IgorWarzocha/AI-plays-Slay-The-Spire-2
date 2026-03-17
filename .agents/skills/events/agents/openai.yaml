@@ -1,0 +1,4 @@
+interface:
+  display_name: "Events"
+  short_description: "Context-driven event decisions"
+  default_prompt: "Use $events to evaluate this event from the current run state before choosing."

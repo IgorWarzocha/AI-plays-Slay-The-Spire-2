@@ -52,7 +52,7 @@ It is a combat submode problem, so it must be handled before generic combat acti
 
 ## Related
 
-- [[mechanics/README]]
-- [[encounters/act1/phrog-parasite]]
-- [[automation/auto-advance-opportunities]]
-- [[strategy/ironclad-core-plan]]
+- [mechanics index](/home/igorw/Work/STS2/vault/mechanics/INDEX.md)
+- [phrog-parasite](/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/act1/elites/phrog-parasite.md)
+- [auto-advance-opportunities](/home/igorw/Work/STS2/vault/automation/auto-advance-opportunities.md)
+- [ironclad-core-plan](/home/igorw/Work/STS2/.agents/skills/ironclad/references/strategy/ironclad-core-plan.md)

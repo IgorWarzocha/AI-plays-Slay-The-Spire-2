@@ -46,6 +46,8 @@ public sealed class FrameCoordinator
                 new CustomRunFeature(),
                 new CharacterSelectFeature(),
                 new SingleplayerSubmenuFeature(),
+                new RunHistoryFeature(),
+                new CompendiumSubmenuFeature(),
                 new DeckViewFeature(),
                 new CardPileFeature(),
                 new DeckCardSelectFeature(),

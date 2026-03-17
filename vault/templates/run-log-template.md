@@ -18,6 +18,7 @@ Append compact floor notes while the run is live.
 ## End Of Run Rewrite
 
 When the run ends, rewrite the markdown into this shape.
+Before the rewrite, reconcile the final facts against `Compendium -> Run History` via `node /home/igorw/Work/STS2/scripts/sts2history.mjs latest` or `npm run history`.
 
 ## Run Summary
 

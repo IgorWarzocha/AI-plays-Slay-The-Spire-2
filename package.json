@@ -3,11 +3,24 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "admin": "node scripts/sts2admin.mjs",
+    "run": "node scripts/sts2run.mjs",
+    "ctl": "node scripts/sts2ctl.mjs",
+    "combat": "node scripts/sts2combat.mjs",
+    "reload:status": "node scripts/sts2reload.mjs status",
+    "reload:continue": "node scripts/sts2reload.mjs continue --menu",
+    "reload:save-quit": "node scripts/sts2reload.mjs save-quit --menu",
+    "reload:cycle": "node scripts/sts2reload.mjs reload --menu",
     "build": "node scripts/sts2-dev.mjs build",
     "build:no-restart": "node scripts/sts2-dev.mjs build-no-restart",
     "test": "node scripts/sts2-dev.mjs test",
     "restart": "node scripts/sts2-dev.mjs restart",
     "continue": "node scripts/sts2-dev.mjs continue",
-    "reload": "node scripts/sts2-dev.mjs reload"
+    "reload": "node scripts/sts2-dev.mjs reload",
+    "history": "node scripts/sts2history.mjs latest",
+    "history:status": "node scripts/sts2history.mjs status",
+    "history:raw": "node scripts/sts2history.mjs latest --raw",
+    "log": "node scripts/sts2-log-tail.mjs",
+    "inspect": "dotnet run --project tools/Sts2TypeInspector/Sts2TypeInspector.csproj --"
   }
 }

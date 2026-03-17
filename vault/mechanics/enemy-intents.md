@@ -79,6 +79,6 @@ That should trigger one of two actions:
 
 ## Related
 
-- [[mechanics/README]]
-- [[encounters/act1/phrog-parasite]]
-- [[encounters/act1/soul-fysh]]
+- [mechanics index](/home/igorw/Work/STS2/vault/mechanics/INDEX.md)
+- [phrog-parasite](/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/act1/elites/phrog-parasite.md)
+- [soul-fysh](/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/act1/bosses/soul-fysh.md)

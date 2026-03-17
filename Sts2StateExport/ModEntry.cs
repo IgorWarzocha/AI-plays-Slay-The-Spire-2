@@ -1,5 +1,6 @@
 using Godot;
 using MegaCrit.Sts2.Core.Modding;
+using MegaCrit.Sts2.Core.Saves;
 
 namespace Sts2StateExport;
 
@@ -24,6 +25,7 @@ public static class ModEntry
                 throw new InvalidOperationException("SceneTree is not available during mod initialization.");
             }
 
+            EnableFastStartup();
             _coordinator = FrameCoordinator.CreateDefault(Logger);
             _coordinator.ValidateOrThrow();
             _coordinator.WriteBootstrapState();
@@ -40,5 +42,34 @@ public static class ModEntry
     private static void OnProcessFrame()
     {
         _coordinator?.Tick();
+    }
+
+    private static void EnableFastStartup()
+    {
+        SaveManager saveManager = SaveManager.Instance;
+        saveManager.InitSettingsData();
+
+        MegaCrit.Sts2.Core.Saves.SettingsSave settings = saveManager.SettingsSave;
+        bool changed = false;
+
+        if (!settings.SkipIntroLogo)
+        {
+            settings.SkipIntroLogo = true;
+            changed = true;
+        }
+
+        if (!settings.SeenEaDisclaimer)
+        {
+            settings.SeenEaDisclaimer = true;
+            changed = true;
+        }
+
+        if (!changed)
+        {
+            return;
+        }
+
+        saveManager.SaveSettings();
+        Logger.Info("Enabled fast startup by skipping intro logo and early access disclaimer.", 0);
     }
 }
