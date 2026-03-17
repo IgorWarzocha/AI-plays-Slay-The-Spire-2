@@ -5,12 +5,20 @@ Minimal repo-local reference for the commands and paths this workspace uses most
 ## Core Commands
 
 - `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs status`
-  - Show compact gameplay state only. No window/process/monitor metadata.
+  - Show compact non-combat run state only. No window/process/monitor metadata.
 - `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs status --relics`
   - Show full relic state with descriptions and counters.
 - `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs command <action>`
-  - Send one exported action such as `main_menu.continue`, `map.travel:0,3`, or `merchant.open`.
+  - Send one non-combat in-run exported action such as `map.travel:0,3`, `merchant.open`, or `event.choose:textkey:proceed`.
   - Default mode is strict: the command waits for a real exported state mutation instead of trusting the first ack blindly.
+- `node /home/igorw/Work/STS2/scripts/sts2combat.mjs status`
+  - Show compact combat-only state with hand, energy, potions, enemies, and combat actions only.
+- `node /home/igorw/Work/STS2/scripts/sts2combat.mjs command <action>`
+  - Send combat-only actions such as `combat.play:...`, `combat.use_potion:...`, or `combat.end_turn`.
+- `node /home/igorw/Work/STS2/scripts/sts2run.mjs command <action>`
+  - Send bootstrap actions such as `main_menu.continue`, `singleplayer.standard`, or `character.start_run`.
+- `node /home/igorw/Work/STS2/scripts/sts2run.mjs start-standard`
+  - Launch STS2 and drive a standard run start through the bootstrap flow.
 - `node /home/igorw/Work/STS2/scripts/sts2admin.mjs launch`
   - Launch STS2 and wait for a fresh exporter heartbeat.
 - `node /home/igorw/Work/STS2/scripts/sts2admin.mjs restart`
@@ -59,7 +67,9 @@ Minimal repo-local reference for the commands and paths this workspace uses most
 
 - Prefer `sts2ctl.mjs command ...` over synthetic input.
 - Keep gameplay and admin concerns separate.
-- `sts2ctl.mjs` is the gameplay surface.
+- `sts2ctl.mjs` is the non-combat in-run surface.
+- `sts2combat.mjs` is the combat surface.
+- `sts2run.mjs` is the bootstrap/run-start surface.
 - `sts2admin.mjs` is the process/window/monitor surface.
 - Send gameplay commands sequentially. `sts2ctl.mjs` uses a single command file, so parallel action writes will race and lose a command.
 - Restart after every mod DLL change. Mods are not hot-reload.

@@ -27,7 +27,7 @@ function isCombatStateSettled(state) {
     return false;
   }
 
-  return combat.handIsSettled !== false;
+  return combat.handIsSettled === true;
 }
 
 function waitForSettledCombatState({ timeoutMs = 2500 } = {}) {
@@ -38,6 +38,23 @@ function waitForSettledCombatState({ timeoutMs = 2500 } = {}) {
     },
     { timeoutMs, intervalMs: 120, description: "settled combat state" },
   );
+}
+
+export function readDisplayState({ timeoutMs = 2500 } = {}) {
+  const state = readState();
+  if (!state) {
+    return null;
+  }
+
+  if (state.screenType !== "combat_room" && state.screenType !== "combat_card_select") {
+    return state;
+  }
+
+  if (isCombatStateSettled(state)) {
+    return state;
+  }
+
+  return waitForSettledCombatState({ timeoutMs });
 }
 
 export function writeCommand(command) {
@@ -173,13 +190,14 @@ export function sendAction(action, options = {}) {
         return readState();
       }
     })();
+  const finalAck = readAck();
 
   return {
     action,
     id,
-    ack,
+    ack: finalAck?.id === id ? finalAck : ack,
     settled: true,
-    ackStatus: ack.status,
+    ackStatus: finalAck?.id === id ? finalAck.status : ack.status,
     screenType: finalState?.screenType ?? null,
     state: finalState,
   };
@@ -210,7 +228,7 @@ export function startStandardRun(options = {}) {
   waitForScreen("singleplayer_submenu");
   sendAction("singleplayer.standard", { id: `cmd-${Date.now()}-singleplayer` });
   waitForScreen("character_select");
-  const ack = sendAction("character.start_run", {
+  sendAction("character.start_run", {
     id: `cmd-${Date.now()}-start`,
     character: options.character ?? "ironclad",
     seed: options.seed,
@@ -225,5 +243,5 @@ export function startStandardRun(options = {}) {
     { timeoutMs: 20000, intervalMs: 250, description: "run to leave character select" },
   );
 
-  return ack;
+  return readState();
 }

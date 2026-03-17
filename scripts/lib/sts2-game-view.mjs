@@ -240,3 +240,61 @@ export function buildCommandView(result, options = {}) {
     state: buildGameplayView(result.state, options),
   };
 }
+
+export function buildCombatView(state, options = {}) {
+  if (!state) {
+    return {
+      screenType: null,
+      updatedAtUtc: null,
+      topBar: null,
+      relics: [],
+      notes: [],
+      combat: null,
+      actions: [],
+    };
+  }
+
+  if (options.raw) {
+    return state;
+  }
+
+  if (state.screenType !== "combat_room" && state.screenType !== "combat_card_select") {
+    throw new Error(`Combat view requires a combat screen, received '${state.screenType ?? "unknown"}'.`);
+  }
+
+  return {
+    screenType: state.screenType ?? null,
+    updatedAtUtc: state.updatedAtUtc ?? null,
+    topBar: state.topBar ? {
+      hp: state.topBar.currentHp == null || state.topBar.maxHp == null
+        ? null
+        : `${state.topBar.currentHp}/${state.topBar.maxHp}`,
+      gold: state.topBar.gold ?? null,
+    } : null,
+    relics: options.relics === true
+      ? (state.relics ?? []).map(summarizeRelic)
+      : (state.relics ?? []).map(summarizeRelicLabel),
+    notes: options.notes === true ? (state.notes ?? []) : [],
+    combat: state.combat ? summarizeCombat(state.combat) : null,
+    actions: (state.actions ?? []).filter((action) =>
+      action.startsWith("combat.") || action.startsWith("combat_card_select.")),
+  };
+}
+
+export function buildCombatCommandView(result, options = {}) {
+  if (options.raw) {
+    return result;
+  }
+
+  return {
+    ok: result.ok,
+    actionCount: result.actionCount,
+    actions: (result.results ?? []).map((entry) => ({
+      action: entry.action,
+      id: entry.id,
+      ackStatus: entry.ackStatus ?? entry.ack?.status ?? null,
+      screenType: entry.screenType ?? null,
+    })),
+    state: buildCombatView(result.state, options),
+  };
+}

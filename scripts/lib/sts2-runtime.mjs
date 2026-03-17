@@ -4,7 +4,7 @@ export { readLiveStatus, readMonitorPid, isMonitorRunning, startMonitor, stopMon
 export { readState, readAck } from "./game-state.mjs";
 export { getWindow, isRunning } from "./window-detector.mjs";
 export { launchGame, quitGame, restartGame } from "./process-manager.mjs";
-export { waitForAck, waitForCommandSettlement, waitForFollowThrough, waitForScreen, sendAction, runActions, startStandardRun } from "./command-client.mjs";
+export { waitForAck, waitForCommandSettlement, waitForFollowThrough, waitForScreen, sendAction, runActions, startStandardRun, readDisplayState } from "./command-client.mjs";
 
 import { readAck, readState } from "./game-state.mjs";
 import { readLiveStatus, isMonitorRunning, readMonitorPid } from "./monitor-client.mjs";

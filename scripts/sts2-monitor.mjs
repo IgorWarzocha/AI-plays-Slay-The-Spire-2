@@ -30,33 +30,41 @@ function writeLiveStatus(snapshot) {
 }
 
 function pollOnce() {
-  const window = getWindow();
-  const running = Boolean(window);
-  const state = readOptionalJson(STS2_RUNTIME_PATHS.statePath);
-  const ack = readOptionalJson(STS2_RUNTIME_PATHS.ackPath);
+  try {
+    const window = getWindow();
+    const running = Boolean(window);
+    const state = readOptionalJson(STS2_RUNTIME_PATHS.statePath);
+    const ack = readOptionalJson(STS2_RUNTIME_PATHS.ackPath);
 
-  writeLiveStatus({
-    capturedAtUtc: new Date().toISOString(),
-    running,
-    window,
-    state,
-    ack,
-  });
+    writeLiveStatus({
+      capturedAtUtc: new Date().toISOString(),
+      running,
+      window,
+      state,
+      ack,
+    });
 
-  if (running !== lastRunning) {
-    appendEvent({ type: "running", at: new Date().toISOString(), running });
-    lastRunning = running;
-  }
+    if (running !== lastRunning) {
+      appendEvent({ type: "running", at: new Date().toISOString(), running });
+      lastRunning = running;
+    }
 
-  if (state?.screenType && state.screenType !== lastScreenType) {
-    appendEvent({ type: "screen", at: new Date().toISOString(), screenType: state.screenType });
-    lastScreenType = state.screenType;
-  }
+    if (state?.screenType && state.screenType !== lastScreenType) {
+      appendEvent({ type: "screen", at: new Date().toISOString(), screenType: state.screenType });
+      lastScreenType = state.screenType;
+    }
 
-  const ackSignature = ack ? `${ack.id}:${ack.status}:${ack.message ?? ""}` : null;
-  if (ackSignature && ackSignature !== lastAckSignature) {
-    appendEvent({ type: "ack", at: new Date().toISOString(), ack });
-    lastAckSignature = ackSignature;
+    const ackSignature = ack ? `${ack.id}:${ack.status}:${ack.message ?? ""}` : null;
+    if (ackSignature && ackSignature !== lastAckSignature) {
+      appendEvent({ type: "ack", at: new Date().toISOString(), ack });
+      lastAckSignature = ackSignature;
+    }
+  } catch (error) {
+    appendEvent({
+      type: "monitor_error",
+      at: new Date().toISOString(),
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 

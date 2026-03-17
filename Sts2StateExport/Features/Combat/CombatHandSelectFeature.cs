@@ -190,11 +190,12 @@ public sealed class CombatHandSelectFeature : IAgentFeature
                 holder =>
                 {
                     CardModel card = holder.CardModel!;
+                    string title = CardTextResolver.ResolveLabel(holder.CardNode, card);
                     return new ExportCombatCard
                     {
                         Id = CombatCardIdentity.FromCard(card),
-                        Title = AgentText.SafeText(card.TitleLocString) ?? card.Title,
-                        Description = AgentText.SafeText(card.Description),
+                        Title = title,
+                        Description = CardTextResolver.ResolveDescription(holder.CardNode, card, title),
                         CostText = ReadCardCost(holder),
                         TargetType = card.TargetType.ToString(),
                         IsPlayable = true,
