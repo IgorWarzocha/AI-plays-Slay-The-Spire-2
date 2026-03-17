@@ -403,21 +403,15 @@ public sealed class CombatFeature : IAgentFeature
 
     private static string? ReadCardCost(NCard? cardNode, CardModel card)
     {
-        if (cardNode is not null)
+        object? energyCost = ReadObjectProperty(card, "EnergyCost");
+        if (energyCost is not null)
         {
-            foreach (string fieldName in new[] { "_energyLabel", "_costLabel", "_starCostLabel" })
+            MethodInfo? getResolvedMethod = energyCost.GetType().GetMethod(
+                "GetResolved",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (getResolvedMethod?.Invoke(energyCost, null) is int resolvedCost && resolvedCost >= 0)
             {
-                FieldInfo? field = cardNode.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                if (field?.GetValue(cardNode) is not Node node)
-                {
-                    continue;
-                }
-
-                string? text = NodeTextReader.ReadVisibleTexts(node, 1).FirstOrDefault();
-                if (!string.IsNullOrWhiteSpace(text))
-                {
-                    return text;
-                }
+                return resolvedCost.ToString();
             }
         }
 
@@ -591,6 +585,14 @@ public sealed class CombatFeature : IAgentFeature
     private static int? ReadIntProperty(object instance, string propertyName)
     {
         return ReadIntProperty(instance, instance.GetType(), propertyName);
+    }
+
+    private static object? ReadObjectProperty(object instance, string propertyName)
+    {
+        PropertyInfo? property = instance.GetType().GetProperty(
+            propertyName,
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        return property?.GetValue(instance);
     }
 
     private static bool? ReadBoolProperty(object instance, string propertyName)

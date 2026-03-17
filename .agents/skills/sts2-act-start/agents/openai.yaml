@@ -1,0 +1,4 @@
+interface:
+  display_name: "STS2 Act Start"
+  short_description: "Reset act-level planning from real run state"
+  default_prompt: "Use $sts2-act-start to read the required vault notes, reassess this STS2 act from the current deck and map state, and produce the act plan."

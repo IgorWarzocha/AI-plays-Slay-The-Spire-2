@@ -1,6 +1,6 @@
 ---
 name: sts2-learning-loop
-description: Use this when playing Slay the Spire 2 in this repo and you need to keep the run log, encounter notes, mechanic notes, and strategy vault updated as durable learning. Trigger it during live runs, after meaningful floors, when a new boss/elite/event/mechanic appears, and when rewriting the finished run into a compact gameplay post mortem.
+description: Use this when playing Slay the Spire 2 in this repo and you need to keep the run log, encounter notes, mechanic notes, and strategy vault updated as durable learning. Trigger it during live runs, immediately after meaningful floors, immediately after elite or boss fights and boss rewards, when a new boss/elite/event/mechanic appears, and when rewriting the finished run into a compact gameplay post mortem.
 ---
 
 # STS2 Learning Loop
@@ -25,6 +25,7 @@ Keep long-lived game knowledge in the repo while the run is happening. The goal 
    - write a short fight post mortem, even if the fight was won
    - keep it to the smallest durable lesson set: what the fight tested, what line was wrong or right, and what changes next attempt
    - update the encounter or strategy vault note only if the lesson is reusable beyond this one run
+   - do this before resuming normal play, not later from memory
 6. When the run ends:
    - rewrite the run log into a compact summary
    - end with a post mortem

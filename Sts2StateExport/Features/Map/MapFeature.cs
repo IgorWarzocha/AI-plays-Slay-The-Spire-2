@@ -1,5 +1,6 @@
 using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
+using MegaCrit.Sts2.Core.Runs;
 
 namespace Sts2StateExport;
 
@@ -17,8 +18,9 @@ public sealed class MapFeature : IAgentFeature
             return false;
         }
 
+        HashSet<string>? legalTravelCoords = ReadLegalTravelCoords(screen);
         List<ExportMapPoint> points = SceneTraversal.FindAllVisible<NMapPoint>(screen)
-            .Select(point => BuildPoint(context, point))
+            .Select(point => BuildPoint(context, point, legalTravelCoords))
             .OrderBy(point => point.Row)
             .ThenBy(point => point.Col)
             .ToList();
@@ -76,8 +78,9 @@ public sealed class MapFeature : IAgentFeature
         }
 
         MapCoord coord = ParseCoord(command.Argument);
+        HashSet<string>? legalTravelCoords = ReadLegalTravelCoords(screen);
         ExportMapPoint? point = SceneTraversal.FindAllVisible<NMapPoint>(screen)
-            .Select(node => BuildPoint(context, node))
+            .Select(node => BuildPoint(context, node, legalTravelCoords))
             .FirstOrDefault(point => point.Col == coord.col && point.Row == coord.row);
         if (point is null)
         {
@@ -93,12 +96,13 @@ public sealed class MapFeature : IAgentFeature
         return true;
     }
 
-    private static ExportMapPoint BuildPoint(FeatureContext context, NMapPoint point)
+    private static ExportMapPoint BuildPoint(FeatureContext context, NMapPoint point, HashSet<string>? legalTravelCoords)
     {
         MapPoint model = point.Point;
         string state = point.State.ToString();
-        bool isTravelable = context.Reflection.ReadProperty<bool>(point, context.Reflection.MapPointIsTravelableProperty)
+        bool fallbackTravelable = context.Reflection.ReadProperty<bool>(point, context.Reflection.MapPointIsTravelableProperty)
             || string.Equals(state, "Travelable", StringComparison.Ordinal);
+        bool isTravelable = legalTravelCoords?.Contains($"{model.coord.col},{model.coord.row}") ?? fallbackTravelable;
         return new ExportMapPoint
         {
             Id = $"{model.coord.col},{model.coord.row}",
@@ -109,6 +113,21 @@ public sealed class MapFeature : IAgentFeature
             Travelable = isTravelable,
             CanModify = model.CanBeModified
         };
+    }
+
+    private static HashSet<string>? ReadLegalTravelCoords(NMapScreen screen)
+    {
+        IRunState? runState = screen.GetType()
+            .GetField("_runState", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?.GetValue(screen) as IRunState;
+        if (runState?.CurrentMapPoint is not MapPoint currentMapPoint)
+        {
+            return null;
+        }
+
+        return currentMapPoint.Children
+            .Select(static child => $"{child.coord.col},{child.coord.row}")
+            .ToHashSet(StringComparer.Ordinal);
     }
 
     private static MapCoord ParseCoord(string raw)

@@ -108,6 +108,41 @@ function summarizeCombat(combat) {
   };
 }
 
+function summarizeCombatActionState(state) {
+  if (!state) {
+    return null;
+  }
+
+  if (state.screenType !== "combat_room"
+    && state.screenType !== "combat_card_select"
+    && state.screenType !== "combat_choice_select") {
+    return null;
+  }
+
+  const combat = state.combat ?? null;
+  if (!combat) {
+    return {
+      screenType: state.screenType ?? null,
+      updatedAtUtc: state.updatedAtUtc ?? null,
+      combat: null,
+    };
+  }
+
+  return {
+    screenType: state.screenType ?? null,
+    updatedAtUtc: state.updatedAtUtc ?? null,
+    combat: {
+      roundNumber: combat.roundNumber ?? null,
+      currentSide: combat.currentSide ?? null,
+      energy: combat.energy ?? null,
+      canEndTurn: combat.canEndTurn ?? null,
+      selectionMode: combat.selectionMode ?? null,
+      selectionPrompt: combat.selectionPrompt ?? null,
+      hand: (combat.hand ?? []).map(summarizeCombatCard),
+    },
+  };
+}
+
 function summarizeMap(map) {
   return {
     visible: map.visible,
@@ -268,6 +303,7 @@ export function buildCommandView(result, options = {}) {
       ackStatus: entry.ackStatus ?? entry.ack?.status ?? null,
       screenType: entry.screenType ?? null,
       costChanges: (entry.costChanges ?? []).map(summarizeCostChange),
+      combatAfter: summarizeCombatActionState(entry.state),
     })),
     state: buildGameplayView(result.state, options),
   };
@@ -339,6 +375,7 @@ export function buildCombatCommandView(result, options = {}) {
       ackStatus: entry.ackStatus ?? entry.ack?.status ?? null,
       screenType: entry.screenType ?? null,
       costChanges: (entry.costChanges ?? []).map(summarizeCostChange),
+      combatAfter: summarizeCombatActionState(entry.state),
     })),
     state: renderedState,
   };

@@ -149,6 +149,32 @@ test("buildGameplayView preserves readable combat intent summaries", () => {
   );
 });
 
+test("buildGameplayView preserves card reward alternatives like skip", () => {
+  const state = {
+    screenType: "card_reward_selection",
+    updatedAtUtc: "2026-03-17T12:25:00.000Z",
+    topBar: { currentHp: 77, maxHp: 89, gold: 53, buttons: [] },
+    relics: [],
+    actions: [
+      "card_reward.select:reward-card-a1",
+      "card_reward.alternate:skip",
+      "card_reward.skip",
+    ],
+    menuItems: [
+      { id: "reward-card-a1", label: "Anger", description: "Deal 6 damage.", enabled: true, selected: false },
+      { id: "skip", label: "Skip", description: "Hotkey: S", enabled: true, selected: false },
+    ],
+  };
+
+  const view = buildGameplayView(state);
+  assert.deepEqual(view.actions, [
+    "card_reward.select:reward-card-a1",
+    "card_reward.alternate:skip",
+    "card_reward.skip",
+  ]);
+  assert.deepEqual(view.menuItems.map((item) => item.label), ["Anger", "Skip"]);
+});
+
 test("buildCombatView supports modal combat card choice overlays", () => {
   const state = {
     screenType: "combat_choice_select",

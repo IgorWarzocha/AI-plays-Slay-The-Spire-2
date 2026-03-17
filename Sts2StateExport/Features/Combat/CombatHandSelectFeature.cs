@@ -205,7 +205,7 @@ public sealed class CombatHandSelectFeature : IAgentFeature
                         Id = CombatCardIdentity.FromCard(card),
                         Title = title,
                         Description = CardTextResolver.ResolveDescription(holder.CardNode, card, title),
-                        CostText = ReadCardCost(holder),
+                        CostText = ReadCardCost(card),
                         TargetType = card.TargetType.ToString(),
                         IsPlayable = true,
                         GlowsGold = ReadBoolProperty(holder, "ShouldGlowGold") ?? false,
@@ -253,19 +253,23 @@ public sealed class CombatHandSelectFeature : IAgentFeature
         return button is Control control && SceneTraversal.IsNodeVisible(control);
     }
 
-    private static string? ReadCardCost(NHandCardHolder holder)
+    private static string? ReadCardCost(CardModel card)
     {
-        if (holder.CardNode is null)
+        PropertyInfo? energyCostProperty = card.GetType().GetProperty(
+            "EnergyCost",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        object? energyCost = energyCostProperty?.GetValue(card);
+        if (energyCost is null)
         {
             return null;
         }
 
-        foreach (string text in NodeTextReader.ReadVisibleTexts(holder.CardNode, 4))
+        MethodInfo? getResolvedMethod = energyCost.GetType().GetMethod(
+            "GetResolved",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (getResolvedMethod?.Invoke(energyCost, null) is int resolvedCost && resolvedCost >= 0)
         {
-            if (text.All(static character => char.IsDigit(character)))
-            {
-                return text;
-            }
+            return resolvedCost.ToString();
         }
 
         return null;

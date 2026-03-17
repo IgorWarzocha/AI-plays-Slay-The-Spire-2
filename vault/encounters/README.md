@@ -11,6 +11,7 @@ Use encounter notes for enemies, elites, bosses, and important events that chang
 ## Hive
 
 - [[encounters/hive/decimillipede]]
+- [[encounters/hive/the-insatiable]]
 
 ## Writing Rule
 

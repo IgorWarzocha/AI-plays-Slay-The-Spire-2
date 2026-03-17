@@ -70,18 +70,28 @@ function reloadRun(options) {
 }
 
 function waitForLoadedRun(options) {
-  return waitForScreenChangeFrom("main_menu", options.waitTimeoutMs ?? 25000);
+  return waitForLoadedRunSurface(options.waitTimeoutMs ?? 25000);
 }
 
-function waitForScreenChangeFrom(screenType, timeoutMs) {
+function isLoadedRunSurface(state) {
+  if (!state?.screenType) {
+    return false;
+  }
+
+  if (state.screenType === "booting" || state.screenType === "main_menu" || state.screenType === "run_active") {
+    return false;
+  }
+
+  return true;
+}
+
+function waitForLoadedRunSurface(timeoutMs) {
   return waitFor(
     () => {
       const state = readDisplayState();
-      return state?.screenType && state.screenType !== screenType && state.screenType !== "booting"
-        ? state
-        : null;
+      return isLoadedRunSurface(state) ? state : null;
     },
-    { timeoutMs, intervalMs: 150, description: `leave screen ${screenType}` },
+    { timeoutMs, intervalMs: 150, description: "usable resumed run surface" },
   );
 }
 
