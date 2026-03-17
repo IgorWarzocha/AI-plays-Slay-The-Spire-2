@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { chooseNewestAck, chooseNewestState } from "./game-state.ts";
+import { chooseNewestAck, chooseNewestState } from "../lib/game-state.ts";
 
 test("chooseNewestState prefers the fresher file-backed state over stale monitor state", () => {
   const liveState = {

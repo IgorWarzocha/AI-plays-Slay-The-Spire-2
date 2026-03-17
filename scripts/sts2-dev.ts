@@ -10,7 +10,7 @@ const repoRoot = path.resolve(scriptDir, "..");
 const modProjectPath = path.join(repoRoot, "Sts2StateExport", "Sts2StateExport.csproj");
 const adminCliPath = path.join(repoRoot, "scripts", "sts2admin.ts");
 const reloadCliPath = path.join(repoRoot, "scripts", "sts2reload.ts");
-const libDir = path.join(repoRoot, "scripts", "lib");
+const testDir = path.join(repoRoot, "scripts", "tests");
 
 function usage(): void {
   console.log(`Usage:
@@ -37,10 +37,10 @@ function runOrThrow(command: string, args: readonly string[]): void {
 }
 
 function listTestFiles(): string[] {
-  return fs.readdirSync(libDir)
+  return fs.readdirSync(testDir)
     .filter((entry) => entry.endsWith(".test.ts"))
     .sort()
-    .map((entry) => path.join(libDir, entry));
+    .map((entry) => path.join(testDir, entry));
 }
 
 function main(): void {

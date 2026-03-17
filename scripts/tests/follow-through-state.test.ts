@@ -9,7 +9,7 @@ import {
   isMerchantInventoryConsistent,
   isPotionUseFollowThroughState,
   isRewardPotionClaimFollowThroughState,
-} from "./follow-through-state.ts";
+} from "../lib/follow-through-state.ts";
 
 test("interactive follow-up transitions settle even while ack stays pending", () => {
   const beforeState = {

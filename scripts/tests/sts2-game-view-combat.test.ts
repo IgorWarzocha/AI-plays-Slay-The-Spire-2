@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildCombatCommandView, buildCombatView, buildGameplayView } from "./sts2-game-view.ts";
+import { buildCombatCommandView, buildCombatView, buildGameplayView } from "../lib/sts2-game-view.ts";
 
 function expectDefined<T>(value: T): NonNullable<T> {
   assert.notEqual(value, null);

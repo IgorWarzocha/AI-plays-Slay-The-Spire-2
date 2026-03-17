@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildCombatStabilityKey, detectCombatCostChanges, isCombatDisplayStable } from "./combat-stability.ts";
+import { buildCombatStabilityKey, detectCombatCostChanges, isCombatDisplayStable } from "../lib/combat-stability.ts";
 
 test("combat stability key changes when hand membership changes", () => {
   const partial = {

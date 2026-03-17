@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { normalizeActionForCurrentState } from "./action-normalization.ts";
+import { normalizeActionForCurrentState } from "../lib/action-normalization.ts";
 
 test("merchant actions re-resolve when slot indices shift after a purchase", () => {
   const state = {

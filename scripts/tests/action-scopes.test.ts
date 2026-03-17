@@ -10,7 +10,7 @@ import {
   isBootstrapAction,
   isHistoryAction,
   isSharedInRunAction,
-} from "./action-scopes.ts";
+} from "../lib/action-scopes.ts";
 
 test("bootstrap and gameplay action scopes stay separated", () => {
   assert.equal(isBootstrapAction("main_menu.continue"), true);

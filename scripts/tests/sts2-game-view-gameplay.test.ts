@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildGameplayView } from "./sts2-game-view.ts";
-import type { RelicState } from "./types.ts";
+import { buildGameplayView } from "../lib/sts2-game-view.ts";
+import type { RelicState } from "../lib/types.ts";
 
 function expectDefined<T>(value: T): NonNullable<T> {
   assert.notEqual(value, null);
