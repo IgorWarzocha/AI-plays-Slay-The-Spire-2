@@ -7,6 +7,7 @@ These notes should be shorter and more operational than the long-form source gui
 ## Current Notes
 
 - [[strategy/ironclad-core-plan]]
+- [[strategy/pathing-and-planning]]
 
 ## Source Rule
 

@@ -57,6 +57,7 @@ Minimal repo-local reference for the commands and paths this workspace uses most
 - Send gameplay commands sequentially. `sts2ctl.mjs` uses a single command file, so parallel action writes will race and lose a command.
 - Restart after every mod DLL change. Mods are not hot-reload.
 - Use screenshots only to validate genuinely unknown screens; normal control should stay model-backed.
+- If a screen cannot be read or operated programmatically, take a validation screenshot immediately before making further assumptions.
 - Treat new console errors in `godot.log` as real bugs and fix them before continuing.
 
 ## Documentation Loop
@@ -68,6 +69,17 @@ Minimal repo-local reference for the commands and paths this workspace uses most
 - Every run must also have its own markdown log under `/home/igorw/Work/STS2/vault/runs`.
 - Use one file per run and append to it after every floor, not just at the end of the run.
 - Floor logging is mandatory. Do not skip quiet floors.
+- Floor-by-floor logging exists for live context management, not as the final artifact.
+- When a run ends, rewrite the run markdown into a gameplay-focused summary.
+- The final run markdown must not read like a technical log.
+- Every completed run markdown must end with a post mortem that covers:
+  - final deck
+  - relics
+  - path taken
+  - what went right
+  - what went wrong
+  - what to change next run
+- Post mortems must focus on gameplay and decision quality, not exporter internals or tooling noise unless a tooling failure directly changed gameplay.
 - Prefer one note per concept:
   - encounter
   - mechanic
@@ -84,6 +96,12 @@ Minimal repo-local reference for the commands and paths this workspace uses most
   - the decision taken
   - the outcome
   - any lesson or hypothesis worth keeping
+- At run end, compress those floor notes into a human-usable summary:
+  - opening state
+  - major pickups
+  - route and pathing logic
+  - key fights/events
+  - post mortem
 - Treat run logs as fake reinforcement learning data. They should be usable later to distill skills and strategy notes.
 - Start from:
   - `/home/igorw/Work/STS2/vault/README.md`

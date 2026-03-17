@@ -8,7 +8,7 @@ namespace Sts2StateExport;
 // the outer rewards screen, so it gets an explicit screen feature.
 public sealed class CardRewardFeature : IAgentFeature
 {
-    public int Order => 455;
+    public int Order => 440;
 
     public bool TryPopulate(FeatureContext context, ExportState state)
     {

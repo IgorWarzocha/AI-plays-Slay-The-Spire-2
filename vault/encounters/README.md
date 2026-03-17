@@ -5,6 +5,7 @@ Use encounter notes for enemies, elites, bosses, and important events that chang
 ## Act 1
 
 - [[encounters/act1/phrog-parasite]]
+- [[encounters/act1/sunken-statue]]
 
 ## Writing Rule
 

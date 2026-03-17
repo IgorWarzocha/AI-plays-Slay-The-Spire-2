@@ -11,6 +11,15 @@ The purpose is not archival fluff. These files are the training corpus for later
 - Do not wait until the run ends.
 - Quiet floors still get logged.
 - If a floor teaches a reusable lesson, link the relevant vault note and update that note too.
+- Once the run ends, rewrite the file into a gameplay summary and post mortem.
+- The final file should read like a play review, not a technical trace.
+- Every finished run must explicitly record:
+  - final deck
+  - relics
+  - pathing
+  - key turning points
+  - what went wrong
+  - what to change next time
 
 ## Naming
 
@@ -38,3 +47,4 @@ Example:
 ## Current Logs
 
 - [[runs/2026-03-16-ironclad-run-001]]
+- [[runs/2026-03-16-ironclad-run-002]]

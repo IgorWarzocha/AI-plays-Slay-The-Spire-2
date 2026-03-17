@@ -9,7 +9,7 @@ namespace Sts2StateExport;
 // a separate state machine from combat and card-selection overlays.
 public sealed class RewardsFeature : IAgentFeature
 {
-    public int Order => 465;
+    public int Order => 445;
 
     public bool TryPopulate(FeatureContext context, ExportState state)
     {

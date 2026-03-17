@@ -22,7 +22,41 @@ public static class AgentText
             return null;
         }
 
-        string? raw = value.GetRawText();
-        return string.IsNullOrWhiteSpace(raw) ? null : raw;
+        if (!value.Exists())
+        {
+            return FormatMissingLoc(value);
+        }
+
+        try
+        {
+            string? raw = value.GetRawText();
+            return string.IsNullOrWhiteSpace(raw) ? null : raw;
+        }
+        catch (LocException)
+        {
+            return FormatMissingLoc(value);
+        }
+    }
+
+    private static string? FormatMissingLoc(LocString value)
+    {
+        string table = value.LocTable;
+        string key = value.LocEntryKey;
+        if (string.IsNullOrWhiteSpace(table) && string.IsNullOrWhiteSpace(key))
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(table))
+        {
+            return key;
+        }
+
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return table;
+        }
+
+        return $"{table}.{key}";
     }
 }

@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.CustomRun;
+using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.ProfileScreen;
@@ -60,6 +61,8 @@ public sealed class Sts2Reflection
     public FieldInfo? CardPileBackButtonField { get; } = GetField<NCardPileScreen>("_backButton");
     public FieldInfo? TreasureChestButtonField { get; } = GetField<NTreasureRoom>("_chestButton");
     public FieldInfo? TreasureRelicCollectionField { get; } = GetField<NTreasureRoom>("_relicCollection");
+    public FieldInfo? GameOverContinueButtonField { get; } = GetField<NGameOverScreen>("_continueButton");
+    public FieldInfo? GameOverMainMenuButtonField { get; } = GetField<NGameOverScreen>("_mainMenuButton");
 
     public MethodInfo? MainMenuContinueMethod { get; } = GetMethod<NMainMenu>("OnContinueButtonPressedAsync", 0);
     public MethodInfo? MainMenuTimelineMethod { get; } = GetMethod<NMainMenu>("OpenTimelineScreen", 1);
@@ -80,6 +83,7 @@ public sealed class Sts2Reflection
     public MethodInfo? CardPileReturnMethod { get; } = GetMethod<NCardPileScreen>("OnReturnButtonPressed", 1);
     public MethodInfo? MerchantInventoryCloseMethod { get; } = GetMethod<NMerchantInventory>("Close", 0);
     public MethodInfo? MerchantSlotOnReleasedMethod { get; } = GetMethod<NMerchantSlot>("OnReleased", 0);
+    public MethodInfo? MerchantRoomHideScreenMethod { get; } = GetMethod<NMerchantRoom>("HideScreen", 1);
     public MethodInfo? RestSiteButtonOnReleaseMethod { get; } = GetMethod<NRestSiteButton>("OnRelease", 0);
     public MethodInfo? RestSiteProceedMethod { get; } = GetMethod<NRestSiteRoom>("OnProceedButtonReleased", 1);
     public MethodInfo? TreasureChestReleasedMethod { get; } = GetMethod<NTreasureRoom>("OnChestButtonReleased", 1);
@@ -99,6 +103,8 @@ public sealed class Sts2Reflection
     public MethodInfo? ProceedButtonOnReleaseMethod { get; } = GetMethod<NProceedButton>("OnRelease", 0);
     public MethodInfo? RewardsOnProceedButtonPressedMethod { get; } = GetMethod<NRewardsScreen>("OnProceedButtonPressed", 1);
     public MethodInfo? CardRewardSelectCardMethod { get; } = GetMethod<NCardRewardSelectionScreen>("SelectCard", 1);
+    public MethodInfo? GameOverContinuePressMethod { get; } = GetMethod<NGameOverContinueButton>("OnPress", 0);
+    public MethodInfo? GameOverMainMenuPressMethod { get; } = GetMethod<NReturnToMainMenuButton>("OnPress", 0);
 
     public PropertyInfo? MapPointIsTravelableProperty { get; } = GetProperty<NMapPoint>("IsTravelable");
     public PropertyInfo? TopBarMapButtonHotkeysProperty { get; } = GetProperty<NTopBarMapButton>("Hotkeys");
@@ -134,6 +140,8 @@ public sealed class Sts2Reflection
         RequireField(CardPileBackButtonField, nameof(CardPileBackButtonField));
         RequireField(TreasureChestButtonField, nameof(TreasureChestButtonField));
         RequireField(TreasureRelicCollectionField, nameof(TreasureRelicCollectionField));
+        RequireField(GameOverContinueButtonField, nameof(GameOverContinueButtonField));
+        RequireField(GameOverMainMenuButtonField, nameof(GameOverMainMenuButtonField));
         RequireProperty(MapPointIsTravelableProperty, nameof(MapPointIsTravelableProperty));
         RequireProperty(TopBarMapButtonHotkeysProperty, nameof(TopBarMapButtonHotkeysProperty));
         RequireProperty(TopBarDeckButtonHotkeysProperty, nameof(TopBarDeckButtonHotkeysProperty));
@@ -156,6 +164,7 @@ public sealed class Sts2Reflection
         RequireMethod(CardPileReturnMethod, nameof(CardPileReturnMethod));
         RequireMethod(MerchantInventoryCloseMethod, nameof(MerchantInventoryCloseMethod));
         RequireMethod(MerchantSlotOnReleasedMethod, nameof(MerchantSlotOnReleasedMethod));
+        RequireMethod(MerchantRoomHideScreenMethod, nameof(MerchantRoomHideScreenMethod));
         RequireMethod(RestSiteButtonOnReleaseMethod, nameof(RestSiteButtonOnReleaseMethod));
         RequireMethod(RestSiteProceedMethod, nameof(RestSiteProceedMethod));
         RequireMethod(TreasureChestReleasedMethod, nameof(TreasureChestReleasedMethod));
@@ -175,6 +184,8 @@ public sealed class Sts2Reflection
         RequireMethod(ProceedButtonOnReleaseMethod, nameof(ProceedButtonOnReleaseMethod));
         RequireMethod(RewardsOnProceedButtonPressedMethod, nameof(RewardsOnProceedButtonPressedMethod));
         RequireMethod(CardRewardSelectCardMethod, nameof(CardRewardSelectCardMethod));
+        RequireMethod(GameOverContinuePressMethod, nameof(GameOverContinuePressMethod));
+        RequireMethod(GameOverMainMenuPressMethod, nameof(GameOverMainMenuPressMethod));
     }
 
     public T? ReadField<T>(object instance, FieldInfo? fieldInfo)

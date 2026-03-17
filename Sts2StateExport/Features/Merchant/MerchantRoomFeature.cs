@@ -79,7 +79,7 @@ public sealed class MerchantRoomFeature : IAgentFeature
                     throw new InvalidOperationException("Merchant proceed button is unavailable.");
                 }
 
-                RuntimeInvoker.Invoke(room.ProceedButton, context.Reflection.ProceedButtonOnReleaseMethod);
+                RuntimeInvoker.Invoke(room, context.Reflection.MerchantRoomHideScreenMethod, room.ProceedButton);
                 return true;
             default:
                 throw new InvalidOperationException($"Unsupported merchant room action '{command.RawAction}'.");

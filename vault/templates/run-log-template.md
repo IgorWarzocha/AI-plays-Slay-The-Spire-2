@@ -2,35 +2,62 @@
 
 # Run: <character> <short-id>
 
-## Run Metadata
+## During The Run
+
+Append compact floor notes while the run is live.
+
+### Floor <n>
+
+- Room:
+- State:
+- Decision:
+- Outcome:
+- Lesson:
+- Links:
+
+## End Of Run Rewrite
+
+When the run ends, rewrite the markdown into this shape.
+
+## Run Summary
 
 - Date:
 - Character:
 - Ascension:
 - Seed:
+- Result:
 - Neow choice:
-- Starting goal or hypothesis:
+- Core plan:
 
-## Floor 0
+## Final Deck
 
-- Room:
-- State:
-- Decision:
-- Outcome:
-- Lesson:
-- Links:
+- Cards:
+- Removes:
+- Upgrades:
 
-## Floor 1
+## Final Relics
 
-- Room:
-- State:
-- Decision:
-- Outcome:
-- Lesson:
-- Links:
+- Relics:
 
-## Append Rule
+## Route Summary
 
-Repeat the same floor block for every floor in the run.
+- Path taken:
+- Why this route was chosen:
 
-Do not rewrite prior entries. Append new floors as they happen so the log preserves the actual decision trail.
+## Key Turning Points
+
+- Fight, event, or shop 1:
+- Fight, event, or shop 2:
+- Fight, event, or shop 3:
+
+## Post Mortem
+
+- What went right:
+- What went wrong:
+- Real mistake in one phrase:
+- What to change next run:
+
+## Links
+
+- Related encounter notes:
+- Related strategy notes:
