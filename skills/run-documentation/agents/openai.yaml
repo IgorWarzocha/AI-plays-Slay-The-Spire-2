@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Documentation"
+  short_description: "Document STS2 runs floor-by-floor and summarize them"
+  default_prompt: "Use $run-documentation to keep the live STS2 run log updated and rewrite it into a gameplay post mortem when the run ends."

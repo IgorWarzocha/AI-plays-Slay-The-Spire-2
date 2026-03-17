@@ -53,6 +53,7 @@ public sealed class FrameCoordinator
                 new EventFeature(),
                 new MerchantInventoryFeature(),
                 new MerchantRoomFeature(),
+                new PauseMenuFeature(),
                 new RestSiteFeature(),
                 new TreasureRelicFeature(),
                 new TreasureRoomFeature(),
@@ -64,7 +65,8 @@ public sealed class FrameCoordinator
                 new MainMenuFeature()
             ],
             [
-                new TopBarOverlayFeature()
+                new TopBarOverlayFeature(),
+                new RunPotionOverlayFeature()
             ]);
     }
 

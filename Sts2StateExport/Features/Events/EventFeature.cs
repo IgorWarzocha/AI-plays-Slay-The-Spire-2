@@ -1,6 +1,7 @@
 using MegaCrit.Sts2.Core.Events;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Events;
 using MegaCrit.Sts2.Core.Nodes.Events;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 
@@ -85,6 +86,7 @@ public sealed class EventFeature : IAgentFeature
 
     private static List<EventOptionButtonBinding> ReadOptionBindings(FeatureContext context, NEventRoom eventRoom)
     {
+        EventModel? eventModel = context.Reflection.ReadField<EventModel>(eventRoom, context.Reflection.EventField);
         List<NEventOptionButton> buttons = SceneTraversal.FindAllVisible<NEventOptionButton>(eventRoom)
             .Where(static button => button.Option is not null)
             .ToList();
@@ -117,20 +119,54 @@ public sealed class EventFeature : IAgentFeature
                 .ToList();
         }
 
-        return buttons
+        if (buttons.Count > 0)
+        {
+            return buttons
+                .Select(
+                    (button, index) =>
+                    {
+                        EventOption option = button.Option ?? throw new InvalidOperationException("Visible event button had no option model.");
+                        List<string> visibleTexts = NodeTextReader.ReadVisibleTexts(button);
+                        string label = AgentText.SafeText(option.Title)
+                            ?? option.TextKey
+                            ?? visibleTexts.FirstOrDefault()
+                            ?? $"Option {index + 1}";
+                        string? description = EventOptionDetails.BuildDescription(
+                            option,
+                            AgentText.SafeText(option.Description)
+                            ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal)));
+
+                        return new EventOptionButtonBinding(index, option, label, description);
+                    })
+                .ToList();
+        }
+
+        return ReadGeneratedAncientOptions(context, eventModel);
+    }
+
+    private static List<EventOptionButtonBinding> ReadGeneratedAncientOptions(FeatureContext context, EventModel? eventModel)
+    {
+        if (eventModel is not AncientEventModel ancient)
+        {
+            return [];
+        }
+
+        List<EventOption>? generatedOptions = context.Reflection.ReadProperty<List<EventOption>>(ancient, context.Reflection.AncientGeneratedOptionsProperty);
+        if (generatedOptions is null || generatedOptions.Count == 0)
+        {
+            return [];
+        }
+
+        return generatedOptions
             .Select(
-                (button, index) =>
+                (option, index) =>
                 {
-                    EventOption option = button.Option ?? throw new InvalidOperationException("Visible event button had no option model.");
-                    List<string> visibleTexts = NodeTextReader.ReadVisibleTexts(button);
                     string label = AgentText.SafeText(option.Title)
                         ?? option.TextKey
-                        ?? visibleTexts.FirstOrDefault()
                         ?? $"Option {index + 1}";
                     string? description = EventOptionDetails.BuildDescription(
                         option,
-                        AgentText.SafeText(option.Description)
-                        ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal)));
+                        AgentText.SafeText(option.Description));
 
                     return new EventOptionButtonBinding(index, option, label, description);
                 })

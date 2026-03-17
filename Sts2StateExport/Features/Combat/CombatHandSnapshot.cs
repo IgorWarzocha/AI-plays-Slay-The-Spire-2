@@ -1,5 +1,6 @@
 using System.Reflection;
 using Godot;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 
@@ -10,6 +11,7 @@ namespace Sts2StateExport;
 public sealed record CombatHandSnapshot(
     IReadOnlyList<NHandCardHolder> ActiveHolders,
     IReadOnlyList<NHandCardHolder> AllHolders,
+    int ModelHandCount,
     int PendingHolderCount,
     bool HandAnimationActive,
     bool CardPlayInProgress,
@@ -21,6 +23,8 @@ public static class CombatHandSnapshotReader
         .GetProperty("Holders", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
     private static readonly FieldInfo? HoldersAwaitingQueueField = typeof(NPlayerHand)
         .GetField("_holdersAwaitingQueue", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly FieldInfo? CombatStateField = typeof(NPlayerHand)
+        .GetField("_combatState", BindingFlags.Instance | BindingFlags.NonPublic);
     private static readonly FieldInfo? CurrentCardPlayField = typeof(NPlayerHand)
         .GetField("_currentCardPlay", BindingFlags.Instance | BindingFlags.NonPublic);
     private static readonly FieldInfo? AnimEnableTweenField = typeof(NPlayerHand)
@@ -38,22 +42,26 @@ public static class CombatHandSnapshotReader
         IReadOnlyList<NHandCardHolder> allHolders = ReadAllHolders(hand)
             .Where(static holder => holder.CardModel is not null)
             .ToList();
+        int modelHandCount = ReadModelHandCount(hand);
         int pendingHolderCount = ReadPendingHolderCount(hand);
         bool handAnimationActive = HasRunningHandTween(hand);
         bool cardPlayInProgress = hand.InCardPlay || CurrentCardPlayField?.GetValue(hand) is not null;
-        bool holderParitySatisfied = hand.CurrentMode.ToString() is not ("None" or "Play")
+        bool activeParitySatisfied = hand.CurrentMode.ToString() is not ("None" or "Play")
             || activeHolders.Count == allHolders.Count;
+        bool modelParitySatisfied = allHolders.Count == modelHandCount;
 
         return new CombatHandSnapshot(
             ActiveHolders: activeHolders,
             AllHolders: allHolders,
+            ModelHandCount: modelHandCount,
             PendingHolderCount: pendingHolderCount,
             HandAnimationActive: handAnimationActive,
             CardPlayInProgress: cardPlayInProgress,
             IsSettled: pendingHolderCount == 0
                 && !handAnimationActive
                 && !cardPlayInProgress
-                && holderParitySatisfied);
+                && activeParitySatisfied
+                && modelParitySatisfied);
     }
 
     private static IReadOnlyList<NHandCardHolder> ReadAllHolders(NPlayerHand hand)
@@ -81,6 +89,29 @@ public static class CombatHandSnapshotReader
             int count => count,
             _ => 0
         };
+    }
+
+    private static int ReadModelHandCount(NPlayerHand hand)
+    {
+        PlayerCombatState? playerCombatState = ReadPlayerCombatState(hand);
+        return playerCombatState?.Hand?.Cards?.Count ?? hand.ActiveHolders.Count;
+    }
+
+    private static PlayerCombatState? ReadPlayerCombatState(NPlayerHand hand)
+    {
+        object? combatState = CombatStateField?.GetValue(hand);
+        if (combatState is null)
+        {
+            return null;
+        }
+
+        PropertyInfo? playersProperty = combatState.GetType().GetProperty("Players", BindingFlags.Instance | BindingFlags.Public);
+        if (playersProperty?.GetValue(combatState) is not IEnumerable<Player> players)
+        {
+            return null;
+        }
+
+        return players.FirstOrDefault()?.PlayerCombatState;
     }
 
     private static bool HasRunningHandTween(NPlayerHand hand)

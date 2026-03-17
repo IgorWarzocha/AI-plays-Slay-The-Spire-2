@@ -2,7 +2,9 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Godot;
 using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
@@ -11,6 +13,7 @@ using MegaCrit.Sts2.Core.Nodes.Potions;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
+using MegaCrit.Sts2.Core.Runs;
 
 namespace Sts2StateExport;
 
@@ -49,6 +52,8 @@ public sealed class CombatFeature : IAgentFeature
             return false;
         }
         CombatHandSnapshot handSnapshot = CombatHandSnapshotReader.Capture(hand);
+        PlayerCombatState playerCombatState = ResolvePlayerCombatState(combatState);
+        CombatRuntimePhase runtimePhase = ReadRuntimePhase();
 
         List<ExportCombatCreature> creatures = room.CreatureNodes
             .Select(BuildCreature)
@@ -56,9 +61,7 @@ public sealed class CombatFeature : IAgentFeature
             .ThenBy(creature => creature.SlotName)
             .ThenBy(creature => creature.Name)
             .ToList();
-        List<ExportCombatCard> handCards = handSnapshot.ActiveHolders
-            .Select(holder => BuildHandCard(holder))
-            .ToList();
+        List<ExportCombatCard> handCards = BuildHandCards(playerCombatState, handSnapshot);
         bool isPlayerTurn = string.Equals(combatState.CurrentSide.ToString(), "Player", StringComparison.Ordinal);
         List<ExportCombatPotion> potions = CombatPotionSupport.BuildPotions(context.Root, creatures, isPlayerTurn);
 
@@ -67,17 +70,18 @@ public sealed class CombatFeature : IAgentFeature
         {
             RoundNumber = combatState.RoundNumber,
             CurrentSide = combatState.CurrentSide.ToString(),
-            Energy = ReadCounterValue(SceneTraversal.FindFirstVisible<NEnergyCounter>(ui)),
-            HandIsSettled = handSnapshot.IsSettled,
+            Energy = playerCombatState.Energy,
+            HandIsSettled = handSnapshot.IsSettled && runtimePhase.IsReadyForPlayerInput,
             ActiveHandCount = handSnapshot.ActiveHolders.Count,
             TotalHandCount = handSnapshot.AllHolders.Count,
+            ModelHandCount = handSnapshot.ModelHandCount,
             PendingHandHolderCount = handSnapshot.PendingHolderCount,
             HandAnimationActive = handSnapshot.HandAnimationActive,
             CardPlayInProgress = handSnapshot.CardPlayInProgress,
             Hand = handCards,
-            DrawPileCount = ReadPileCount(ui.DrawPile),
-            DiscardPileCount = ReadPileCount(ui.DiscardPile),
-            ExhaustPileCount = ReadPileCount(ui.ExhaustPile),
+            DrawPileCount = playerCombatState.DrawPile.Cards.Count,
+            DiscardPileCount = playerCombatState.DiscardPile.Cards.Count,
+            ExhaustPileCount = playerCombatState.ExhaustPile.Cards.Count,
             CanEndTurn = RuntimeInvoker.Invoke<bool>(ui.EndTurnButton, context.Reflection.CombatEndTurnCanTurnBeEndedMethod),
             Potions = potions,
             Creatures = creatures
@@ -112,9 +116,17 @@ public sealed class CombatFeature : IAgentFeature
         if (!handSnapshot.IsSettled)
         {
             notes.Add(
-                $"Combat hand is still settling: active {handSnapshot.ActiveHolders.Count}/{handSnapshot.AllHolders.Count}, " +
+                $"Combat hand is still settling: active {handSnapshot.ActiveHolders.Count}/{handSnapshot.AllHolders.Count}/{handSnapshot.ModelHandCount}, " +
                 $"queued {handSnapshot.PendingHolderCount}, tween {(handSnapshot.HandAnimationActive ? "active" : "idle")}, " +
                 $"card play {(handSnapshot.CardPlayInProgress ? "active" : "idle")}.");
+        }
+        if (handSnapshot.IsSettled && !runtimePhase.IsReadyForPlayerInput)
+        {
+            notes.Add(
+                $"Combat runtime is not ready for player input yet: playPhase={runtimePhase.IsPlayPhase}, " +
+                $"actionsDisabled={runtimePhase.PlayerActionsDisabled}, enemyTurnStarted={runtimePhase.IsEnemyTurnStarted}, " +
+                $"endingP1={runtimePhase.EndingPlayerTurnPhaseOne}, endingP2={runtimePhase.EndingPlayerTurnPhaseTwo}, " +
+                $"queueEmpty={runtimePhase.ActionQueueIsEmpty}, executorRunning={runtimePhase.ActionExecutorIsRunning}.");
         }
         state.Notes = [.. notes];
 
@@ -186,15 +198,11 @@ public sealed class CombatFeature : IAgentFeature
         string? targetId = parts.Length == 2 ? parts[1] : null;
 
         NPlayerHand hand = ui.Hand ?? throw new InvalidOperationException("Combat hand is unavailable.");
-        NHandCardHolder holder = hand.ActiveHolders
-            .FirstOrDefault(candidate =>
-            {
-                CardModel? model = candidate.CardModel;
-                return model is not null
-                    && string.Equals(CombatCardIdentity.FromCard(model), cardId, StringComparison.Ordinal);
-            })
+        CombatState combatState = TryReadCombatState(hand)
+            ?? throw new InvalidOperationException("Combat hand did not expose an active combat state.");
+        CardModel card = ResolvePlayerCombatState(combatState).Hand.Cards
+            .FirstOrDefault(candidate => string.Equals(CombatCardIdentity.FromCard(candidate), cardId, StringComparison.Ordinal))
             ?? throw new InvalidOperationException($"Combat card '{cardId}' was not found in the active hand.");
-        CardModel card = holder.CardModel ?? throw new InvalidOperationException("Hand card holder did not expose a card model.");
 
         if (!card.CanPlay())
         {
@@ -273,10 +281,73 @@ public sealed class CombatFeature : IAgentFeature
         return combatStateField?.GetValue(hand) as CombatState;
     }
 
-    private static ExportCombatCard BuildHandCard(NHandCardHolder holder)
+    private static PlayerCombatState ResolvePlayerCombatState(CombatState combatState)
     {
-        CardModel card = holder.CardModel ?? throw new InvalidOperationException("Hand card holder did not expose a card model.");
-        NCard? cardNode = holder.CardNode;
+        Player? player = combatState.Players.FirstOrDefault();
+        return player?.PlayerCombatState
+            ?? throw new InvalidOperationException("Combat state did not expose a player combat state.");
+    }
+
+    private static CombatRuntimePhase ReadRuntimePhase()
+    {
+        CombatManager? combatManager = CombatManager.Instance;
+        RunManager? runManager = RunManager.Instance;
+
+        bool isPlayPhase = combatManager?.IsPlayPhase == true;
+        bool playerActionsDisabled = combatManager?.PlayerActionsDisabled == true;
+        bool isEnemyTurnStarted = combatManager?.IsEnemyTurnStarted == true;
+        bool endingPlayerTurnPhaseOne = combatManager?.EndingPlayerTurnPhaseOne == true;
+        bool endingPlayerTurnPhaseTwo = combatManager?.EndingPlayerTurnPhaseTwo == true;
+        bool actionQueueIsEmpty = runManager?.ActionQueueSet?.IsEmpty == true;
+        bool actionExecutorIsRunning = runManager?.ActionExecutor?.IsRunning == true;
+
+        return new CombatRuntimePhase(
+            IsPlayPhase: isPlayPhase,
+            PlayerActionsDisabled: playerActionsDisabled,
+            IsEnemyTurnStarted: isEnemyTurnStarted,
+            EndingPlayerTurnPhaseOne: endingPlayerTurnPhaseOne,
+            EndingPlayerTurnPhaseTwo: endingPlayerTurnPhaseTwo,
+            ActionQueueIsEmpty: actionQueueIsEmpty,
+            ActionExecutorIsRunning: actionExecutorIsRunning,
+            IsReadyForPlayerInput: isPlayPhase
+                && !playerActionsDisabled
+                && !isEnemyTurnStarted
+                && !endingPlayerTurnPhaseOne
+                && !endingPlayerTurnPhaseTwo
+                && actionQueueIsEmpty
+                && !actionExecutorIsRunning);
+    }
+
+    private readonly record struct CombatRuntimePhase(
+        bool IsPlayPhase,
+        bool PlayerActionsDisabled,
+        bool IsEnemyTurnStarted,
+        bool EndingPlayerTurnPhaseOne,
+        bool EndingPlayerTurnPhaseTwo,
+        bool ActionQueueIsEmpty,
+        bool ActionExecutorIsRunning,
+        bool IsReadyForPlayerInput);
+
+    private static List<ExportCombatCard> BuildHandCards(PlayerCombatState playerCombatState, CombatHandSnapshot handSnapshot)
+    {
+        Dictionary<string, NHandCardHolder> holdersByCardId = handSnapshot.AllHolders
+            .Where(static holder => holder.CardModel is not null)
+            .GroupBy(static holder => CombatCardIdentity.FromCard(holder.CardModel!))
+            .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.Ordinal);
+
+        return playerCombatState.Hand.Cards
+            .Select(
+                card =>
+                {
+                    holdersByCardId.TryGetValue(CombatCardIdentity.FromCard(card), out NHandCardHolder? holder);
+                    return BuildHandCard(card, holder);
+                })
+            .ToList();
+    }
+
+    private static ExportCombatCard BuildHandCard(CardModel card, NHandCardHolder? holder)
+    {
+        NCard? cardNode = holder?.CardNode;
         bool isPlayable = ReadBoolProperty(card, "IsPlayable") ?? card.CanPlay();
 
         string title = CardTextResolver.ResolveLabel(cardNode, card);
@@ -297,8 +368,8 @@ public sealed class CombatFeature : IAgentFeature
                     .Select(CombatCardIdentity.FromCreature)
                     .ToList()
                     ?? [],
-            GlowsGold = ReadBoolProperty(holder, "ShouldGlowGold") ?? false,
-            GlowsRed = ReadBoolProperty(holder, "ShouldGlowRed") ?? false
+            GlowsGold = holder is not null && (ReadBoolProperty(holder, "ShouldGlowGold") ?? false),
+            GlowsRed = holder is not null && (ReadBoolProperty(holder, "ShouldGlowRed") ?? false)
         };
     }
 

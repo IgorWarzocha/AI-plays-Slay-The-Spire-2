@@ -149,6 +149,7 @@ export function buildGameplayView(state, options = {}) {
       updatedAtUtc: null,
       topBar: null,
       relics: [],
+      potions: [],
       actions: [],
       notes: [],
     };
@@ -161,7 +162,9 @@ export function buildGameplayView(state, options = {}) {
   const includeActions = options.actions !== false;
   const includeMenuItems = options.menu === true;
   const includeNotes = options.notes === true;
-  const includeRelicDetails = options.relics === true;
+  const includeRelicDetails = options.relics === true
+    || state.screenType === "merchant_room"
+    || state.screenType === "merchant_inventory";
 
   const view = {
     screenType: state.screenType ?? null,
@@ -176,6 +179,7 @@ export function buildGameplayView(state, options = {}) {
     relics: includeRelicDetails
       ? (state.relics ?? []).map(summarizeRelic)
       : (state.relics ?? []).map(summarizeRelicLabel),
+    potions: (state.potions ?? []).map(summarizePotion),
   };
 
   if (includeActions) {
@@ -212,6 +216,13 @@ export function buildGameplayView(state, options = {}) {
     case "deck_view":
     case "card_pile":
       view.cardBrowse = state.cardBrowse ? summarizeCardBrowse(state.cardBrowse) : null;
+      break;
+    case "merchant_room":
+    case "merchant_inventory":
+      view.cardBrowse = state.cardBrowse ? summarizeCardBrowse(state.cardBrowse) : null;
+      if (includeMenuItems || (state.menuItems ?? []).length > 0) {
+        view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
+      }
       break;
     default:
       if (includeMenuItems || (state.menuItems ?? []).length > 0) {
@@ -286,6 +297,11 @@ export function buildCombatCommandView(result, options = {}) {
     return result;
   }
 
+  const state = result.state;
+  const renderedState = state?.screenType === "combat_room" || state?.screenType === "combat_card_select"
+    ? buildCombatView(state, options)
+    : buildGameplayView(state, options);
+
   return {
     ok: result.ok,
     actionCount: result.actionCount,
@@ -295,6 +311,6 @@ export function buildCombatCommandView(result, options = {}) {
       ackStatus: entry.ackStatus ?? entry.ack?.status ?? null,
       screenType: entry.screenType ?? null,
     })),
-    state: buildCombatView(result.state, options),
+    state: renderedState,
   };
 }

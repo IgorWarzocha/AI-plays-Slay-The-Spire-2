@@ -1,6 +1,10 @@
+using System.Reflection;
+using Godot;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes.Cards;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 
 namespace Sts2StateExport;
@@ -51,8 +55,10 @@ public sealed class MerchantInventoryFeature : IAgentFeature
         state.Actions =
         [
             .. slots.Where(static slot => slot.Enabled).Select(slot => $"merchant.buy:{slot.Id}"),
-            "merchant.close"
+            "merchant.close",
+            "merchant.leave"
         ];
+        MerchantContextBuilder.PopulateRuntimeContext(state);
         state.Notes =
         [
             "Merchant inventory is active.",
@@ -68,7 +74,7 @@ public sealed class MerchantInventoryFeature : IAgentFeature
             return false;
         }
 
-        if (command.Verb is not ("buy" or "close"))
+        if (command.Verb is not ("buy" or "close" or "leave"))
         {
             return false;
         }
@@ -86,6 +92,10 @@ public sealed class MerchantInventoryFeature : IAgentFeature
                 return true;
             case "close":
                 RuntimeInvoker.Invoke(inventory, context.Reflection.MerchantInventoryCloseMethod);
+                return true;
+            case "leave":
+                RuntimeInvoker.Invoke(inventory, context.Reflection.MerchantInventoryCloseMethod);
+                ExecuteLeave(context, inventory);
                 return true;
             default:
                 return false;
@@ -121,6 +131,19 @@ public sealed class MerchantInventoryFeature : IAgentFeature
         context.QueueTask(task, $"merchant.buy:{argument}");
     }
 
+    private static void ExecuteLeave(FeatureContext context, NMerchantInventory inventory)
+    {
+        NMerchantRoom room = SceneTraversal.FindFirstVisible<NMerchantRoom>(inventory.GetTree().Root)
+            ?? throw new InvalidOperationException("Merchant room was not visible for leave action.");
+
+        if (room.ProceedButton is null || !SceneTraversal.IsNodeVisible(room.ProceedButton))
+        {
+            throw new InvalidOperationException("Merchant proceed button is unavailable.");
+        }
+
+        RuntimeInvoker.Invoke(room, context.Reflection.MerchantRoomHideScreenMethod, room.ProceedButton);
+    }
+
     private static MerchantSlotSnapshot BuildSnapshot(NMerchantSlot slot, int index)
     {
         MerchantEntry entry = slot.Entry ?? throw new InvalidOperationException("Merchant slot had no entry.");
@@ -142,8 +165,12 @@ public sealed class MerchantInventoryFeature : IAgentFeature
             ?? throw new InvalidOperationException("Merchant card entry did not expose creation data.");
         CardModel card = creationResult.Card
             ?? throw new InvalidOperationException("Merchant card entry did not expose a card model.");
-        string label = AgentText.SafeText(card.TitleLocString) ?? card.Title;
-        string description = DescribeEntry(entry, AgentText.SafeText(card.Description), entry.IsOnSale ? "On sale." : null);
+        NCard? cardNode = ReadNodeField<NCard>(slot, "_cardNode");
+        string label = CardTextResolver.ResolveLabel(cardNode, card);
+        string description = DescribeEntry(
+            entry,
+            CardTextResolver.ResolveDescription(cardNode, card, label),
+            entry.IsOnSale ? "On sale." : null);
 
         return new MerchantSlotSnapshot(
             MerchantEntryIdentity.Create("card", label, index),
@@ -157,8 +184,12 @@ public sealed class MerchantInventoryFeature : IAgentFeature
         MerchantRelicEntry entry = (MerchantRelicEntry)(slot.Entry ?? throw new InvalidOperationException("Merchant relic slot had no entry."));
         RelicModel relic = entry.Model
             ?? throw new InvalidOperationException("Merchant relic entry did not expose a relic model.");
-        string label = AgentText.SafeText(relic.Title) ?? relic.GetType().Name;
-        string description = DescribeEntry(entry, AgentText.SafeText(relic.Description), null);
+        Node? relicNode = ReadNodeField<Node>(slot, "_relicNode");
+        string label = ReadRenderedLabel(relicNode, slot)
+            ?? AgentText.SafeText(relic.Title)
+            ?? relic.GetType().Name;
+        string? renderedDescription = ReadRenderedDescription(relicNode, slot, label);
+        string description = DescribeEntry(entry, renderedDescription ?? ModelTextResolver.ResolveRelicDescription(relic), null);
 
         return new MerchantSlotSnapshot(
             MerchantEntryIdentity.Create("relic", label, index),
@@ -172,8 +203,12 @@ public sealed class MerchantInventoryFeature : IAgentFeature
         MerchantPotionEntry entry = (MerchantPotionEntry)(slot.Entry ?? throw new InvalidOperationException("Merchant potion slot had no entry."));
         PotionModel potion = entry.Model
             ?? throw new InvalidOperationException("Merchant potion entry did not expose a potion model.");
-        string label = AgentText.SafeText(potion.Title) ?? potion.GetType().Name;
-        string description = DescribeEntry(entry, AgentText.SafeText(potion.Description), null);
+        Node? potionNode = ReadNodeField<Node>(slot, "_potionNode");
+        string label = ReadRenderedLabel(potionNode, slot)
+            ?? AgentText.SafeText(potion.Title)
+            ?? potion.GetType().Name;
+        string? renderedDescription = ReadRenderedDescription(potionNode, slot, label);
+        string description = DescribeEntry(entry, renderedDescription ?? ModelTextResolver.ResolvePotionDescription(potion), null);
 
         return new MerchantSlotSnapshot(
             MerchantEntryIdentity.Create("potion", label, index),
@@ -209,6 +244,43 @@ public sealed class MerchantInventoryFeature : IAgentFeature
             label,
             description,
             entry.IsStocked && entry.EnoughGold);
+    }
+
+    private static TNode? ReadNodeField<TNode>(object instance, string fieldName) where TNode : class
+    {
+        FieldInfo? field = instance.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        return field?.GetValue(instance) as TNode;
+    }
+
+    private static string? ReadRenderedLabel(Node? primaryNode, Node fallbackNode)
+    {
+        return ReadRenderedTexts(primaryNode, fallbackNode)
+            .FirstOrDefault(static text => !LooksLikeCostText(text));
+    }
+
+    private static string? ReadRenderedDescription(Node? primaryNode, Node fallbackNode, string label)
+    {
+        return ReadRenderedTexts(primaryNode, fallbackNode)
+            .FirstOrDefault(text =>
+                !string.Equals(text, label, StringComparison.Ordinal)
+                && !LooksLikeCostText(text));
+    }
+
+    private static IEnumerable<string> ReadRenderedTexts(Node? primaryNode, Node fallbackNode)
+    {
+        IEnumerable<string> primary = primaryNode is null
+            ? []
+            : NodeTextReader.ReadVisibleTexts(primaryNode, 6);
+        IEnumerable<string> fallback = NodeTextReader.ReadVisibleTexts(fallbackNode, 8);
+        return primary.Concat(fallback).Distinct(StringComparer.Ordinal);
+    }
+
+    private static bool LooksLikeCostText(string text)
+    {
+        string trimmed = text.Trim();
+        return trimmed.All(static character => char.IsDigit(character))
+            || trimmed.EndsWith(" gold", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("Cost:", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string DescribeEntry(MerchantEntry entry, string? primary, string? extra)

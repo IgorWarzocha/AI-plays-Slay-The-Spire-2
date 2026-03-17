@@ -1,6 +1,7 @@
 using System.Reflection;
 using Godot;
 using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
@@ -61,10 +62,11 @@ public sealed class CombatHandSelectFeature : IAgentFeature
         {
             RoundNumber = combatState.RoundNumber,
             CurrentSide = combatState.CurrentSide.ToString(),
-            Energy = ReadIntProperty(hand!, "CurrentEnergy") ?? ReadCounterValue(SceneTraversal.FindFirstVisible<NEnergyCounter>(ui!)),
+            Energy = ResolvePlayerCombatState(combatState).Energy,
             HandIsSettled = handSnapshot.IsSettled,
             ActiveHandCount = handSnapshot.ActiveHolders.Count,
             TotalHandCount = handSnapshot.AllHolders.Count,
+            ModelHandCount = handSnapshot.ModelHandCount,
             PendingHandHolderCount = handSnapshot.PendingHolderCount,
             HandAnimationActive = handSnapshot.HandAnimationActive,
             CardPlayInProgress = handSnapshot.CardPlayInProgress,
@@ -87,7 +89,7 @@ public sealed class CombatHandSelectFeature : IAgentFeature
         if (!handSnapshot.IsSettled)
         {
             notes.Add(
-                $"Combat hand is still settling: active {handSnapshot.ActiveHolders.Count}/{handSnapshot.AllHolders.Count}, " +
+                $"Combat hand is still settling: active {handSnapshot.ActiveHolders.Count}/{handSnapshot.AllHolders.Count}/{handSnapshot.ModelHandCount}, " +
                 $"queued {handSnapshot.PendingHolderCount}, tween {(handSnapshot.HandAnimationActive ? "active" : "idle")}, " +
                 $"card play {(handSnapshot.CardPlayInProgress ? "active" : "idle")}.");
         }
@@ -180,6 +182,13 @@ public sealed class CombatHandSelectFeature : IAgentFeature
             ?? throw new InvalidOperationException("Combat hand did not expose _combatState.");
         return (CombatState?)combatStateField.GetValue(hand)
             ?? throw new InvalidOperationException("Combat hand did not expose an active combat state.");
+    }
+
+    private static PlayerCombatState ResolvePlayerCombatState(CombatState combatState)
+    {
+        Player? player = combatState.Players.FirstOrDefault();
+        return player?.PlayerCombatState
+            ?? throw new InvalidOperationException("Combat state did not expose a player combat state.");
     }
 
     private static List<ExportCombatCard> BuildSelectableHandCards(IReadOnlyList<NHandCardHolder> holders)

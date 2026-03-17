@@ -9,6 +9,8 @@ Act 1 elite note captured from a live Ironclad run.
   - Overgrowth
 - Distinctive power:
   - `Infested`
+- Closest STS1 analogue:
+  - `Slime Boss`
 
 ## Key Behavior
 
@@ -53,6 +55,8 @@ Observed intent patterns after spawn:
 
 ## Play Notes
 
+- Best quick mental model:
+  - `Slime Boss` as an elite, with status clutter layered on top
 - `Havoc` is strong here when the top draw is known, because it can convert into a high-impact attack before the parasite’s first real damage turn.
 - Killing the parasite too casually can be dangerous if the resulting `Wriggler` board is not already represented correctly in state.
 - `Infection` clutter materially changes hand quality, so exhausting real cards has extra cost.

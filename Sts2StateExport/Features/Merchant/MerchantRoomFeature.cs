@@ -46,7 +46,10 @@ public sealed class MerchantRoomFeature : IAgentFeature
         state.Actions = state.MenuItems
             .Where(static item => item.Visible && item.Enabled)
             .Select(item => $"merchant.{item.Id}")
+            .Append("merchant.leave")
+            .Distinct(StringComparer.Ordinal)
             .ToList();
+        MerchantContextBuilder.PopulateRuntimeContext(state);
         state.Notes =
         [
             "Merchant room is active.",
@@ -74,6 +77,7 @@ public sealed class MerchantRoomFeature : IAgentFeature
                 room.OpenInventory();
                 return true;
             case "proceed":
+            case "leave":
                 if (room.ProceedButton is null || !SceneTraversal.IsNodeVisible(room.ProceedButton))
                 {
                     throw new InvalidOperationException("Merchant proceed button is unavailable.");

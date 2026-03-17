@@ -18,7 +18,7 @@ internal static class CombatPotionSupport
 
         return SceneTraversal.FindAllVisible<NPotionHolder>(container)
             .Where(static holder => holder.HasPotion && holder.Potion?.Model is not null)
-            .Select(holder => BuildPotion(holder, creatures, isPlayerTurn))
+            .Select((holder, index) => BuildPotion(holder, index, creatures, isPlayerTurn))
             .ToList();
     }
 
@@ -59,7 +59,9 @@ internal static class CombatPotionSupport
             ?? throw new InvalidOperationException("Potion container is not visible.");
 
         return SceneTraversal.FindAllVisible<NPotionHolder>(container)
-            .FirstOrDefault(holder => holder.HasPotion && string.Equals(GetPotionId(holder), potionId, StringComparison.Ordinal))
+            .Select((holder, index) => new { holder, potionKey = PotionIdentity.FromHolder(holder, index) })
+            .FirstOrDefault(item => item.holder.HasPotion && string.Equals(item.potionKey, potionId, StringComparison.Ordinal))
+            ?.holder
             ?? throw new InvalidOperationException($"Potion '{potionId}' was not found.");
     }
 
@@ -78,7 +80,7 @@ internal static class CombatPotionSupport
         model.EnqueueManualUse(target ?? ResolveDefaultTarget(model, creatures));
     }
 
-    private static ExportCombatPotion BuildPotion(NPotionHolder holder, IReadOnlyList<ExportCombatCreature> creatures, bool isPlayerTurn)
+    private static ExportCombatPotion BuildPotion(NPotionHolder holder, int slotIndex, IReadOnlyList<ExportCombatCreature> creatures, bool isPlayerTurn)
     {
         PotionModel model = holder.Potion?.Model ?? throw new InvalidOperationException("Potion holder had no potion model.");
         List<string> validTargetIds = ResolveValidTargetIds(model, creatures);
@@ -86,7 +88,7 @@ internal static class CombatPotionSupport
 
         return new ExportCombatPotion
         {
-            Id = GetPotionId(holder),
+            Id = PotionIdentity.FromHolder(holder, slotIndex),
             Title = AgentText.SafeText(model.Title) ?? model.GetType().Name,
             Description = AgentText.SafeText(model.DynamicDescription) ?? AgentText.SafeText(model.Description),
             TargetType = model.TargetType.ToString(),
@@ -134,10 +136,4 @@ internal static class CombatPotionSupport
         };
     }
 
-    private static string GetPotionId(NPotionHolder holder)
-    {
-        PotionModel model = holder.Potion?.Model ?? throw new InvalidOperationException("Potion holder had no potion model.");
-        string title = AgentText.SafeText(model.Title) ?? model.GetType().Name;
-        return $"potion:{title.Trim().ToLowerInvariant().Replace(' ', '-')}";
-    }
 }

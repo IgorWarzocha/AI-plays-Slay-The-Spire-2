@@ -64,7 +64,7 @@ public sealed class TopBarOverlayFeature : IAgentOverlayFeature
                 {
                     Id = model!.GetType().Name,
                     Label = AgentText.SafeText(model.Title) ?? model.GetType().Name,
-                    Description = AgentText.SafeText(model.Description),
+                    Description = ModelTextResolver.ResolveRelicDescription(model),
                     Count = model.ShowCounter ? model.DisplayAmount : null,
                     Status = model.Status.ToString()
                 })

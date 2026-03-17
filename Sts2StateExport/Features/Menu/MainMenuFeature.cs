@@ -52,7 +52,9 @@ public sealed class MainMenuFeature : IAgentFeature
         switch (command.Verb)
         {
             case "continue":
-                context.QueueTask(RuntimeInvoker.InvokeTask(menu, reflection.MainMenuContinueMethod), command.RawAction);
+                NMainMenuTextButton continueButton = reflection.ReadField<NMainMenuTextButton>(menu, reflection.MainMenuContinueField)
+                    ?? throw new InvalidOperationException("Continue button is unavailable.");
+                RuntimeInvoker.Invoke(menu, reflection.MainMenuContinueMethod, continueButton);
                 return true;
             case "singleplayer":
                 menu.OpenSingleplayerSubmenu();

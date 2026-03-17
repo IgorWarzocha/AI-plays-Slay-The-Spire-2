@@ -1,7 +1,5 @@
-using System.Reflection;
 using Godot;
 using MegaCrit.Sts2.Core.Entities.Cards;
-using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 
@@ -74,46 +72,13 @@ public sealed class CardPileFeature : IAgentFeature
     {
         List<ExportBrowseCard> visibleCards = SceneTraversal.FindAllVisible<NGridCardHolder>(screen)
             .Where(static holder => holder.CardModel is not null)
-            .Select(holder => BuildBrowseCard(holder.CardModel!, holder.IsShowingUpgradedCard))
+            .Select(holder => BrowseCardMapper.Build(holder.CardModel!, holder.IsShowingUpgradedCard))
             .ToList();
         if (visibleCards.Count > 0)
         {
             return visibleCards;
         }
 
-        return pile.Cards.Select(card => BuildBrowseCard(card, ReadIsUpgraded(card))).ToList();
-    }
-
-    private static ExportBrowseCard BuildBrowseCard(CardModel card, bool upgraded)
-    {
-        return new ExportBrowseCard
-        {
-            Id = CardBrowseIdentity.FromCard(card),
-            Title = AgentText.SafeText(card.TitleLocString) ?? card.Title,
-            Description = AgentText.SafeText(card.Description),
-            CostText = ReadCanonicalCost(card),
-            Upgraded = upgraded
-        };
-    }
-
-    private static string? ReadCanonicalCost(CardModel card)
-    {
-        PropertyInfo? property = card.GetType().GetProperty(
-            "CanonicalEnergyCost",
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        if (property?.GetValue(card) is not int canonicalCost || canonicalCost < 0)
-        {
-            return null;
-        }
-
-        return canonicalCost.ToString();
-    }
-
-    private static bool ReadIsUpgraded(CardModel card)
-    {
-        PropertyInfo? property = card.GetType().GetProperty(
-            "IsUpgraded",
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        return property?.GetValue(card) as bool? ?? false;
+        return pile.Cards.Select(card => BrowseCardMapper.Build(card, BrowseCardMapper.ReadIsUpgraded(card))).ToList();
     }
 }

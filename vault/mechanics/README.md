@@ -6,6 +6,7 @@ Use mechanic notes for reusable gameplay rules and UI/control patterns that show
 
 - [[mechanics/combat-hand-selection]]
 - [[mechanics/death-state-export]]
+- [[mechanics/enemy-intents]]
 
 ## Writing Rule
 

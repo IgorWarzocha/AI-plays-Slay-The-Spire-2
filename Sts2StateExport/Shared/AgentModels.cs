@@ -16,6 +16,7 @@ public sealed class ExportState
     public List<string> Actions { get; set; } = [];
     public ExportTopBar? TopBar { get; set; }
     public List<ExportRelic> Relics { get; set; } = [];
+    public List<ExportHeldPotion> Potions { get; set; } = [];
     public ExportMapState? Map { get; set; }
     public ExportCardBrowseState? CardBrowse { get; set; }
     public ExportCombatState? Combat { get; set; }
@@ -104,6 +105,16 @@ public sealed class ExportRelic
     public string? Status { get; set; }
 }
 
+public sealed class ExportHeldPotion
+{
+    public string Id { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? Usage { get; set; }
+    public bool IsUsable { get; set; }
+    public bool CanDiscard { get; set; }
+}
+
 public sealed class ExportMapState
 {
     public bool Visible { get; set; }
@@ -161,6 +172,7 @@ public sealed class ExportCombatState
     public bool? HandIsSettled { get; set; }
     public int? ActiveHandCount { get; set; }
     public int? TotalHandCount { get; set; }
+    public int? ModelHandCount { get; set; }
     public int? PendingHandHolderCount { get; set; }
     public bool? HandAnimationActive { get; set; }
     public bool? CardPlayInProgress { get; set; }

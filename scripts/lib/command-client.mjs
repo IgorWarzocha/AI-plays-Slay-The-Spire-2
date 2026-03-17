@@ -17,6 +17,34 @@ function isExplicitFalse(value) {
   return value === false || value === "false" || value === "0";
 }
 
+function normalizeMerchantEntryId(entryId) {
+  if (typeof entryId !== "string") {
+    return "";
+  }
+
+  return entryId.replace(/^([a-z]+)-\d{2}-/i, "$1-");
+}
+
+export function normalizeActionForCurrentState(action, state) {
+  if (typeof action !== "string" || !action.startsWith("merchant.buy:")) {
+    return action;
+  }
+
+  const availableActions = Array.isArray(state?.actions) ? state.actions : [];
+  if (availableActions.includes(action)) {
+    return action;
+  }
+
+  const targetId = action.slice("merchant.buy:".length);
+  const normalizedTarget = normalizeMerchantEntryId(targetId);
+  const matches = availableActions
+    .filter((candidate) => candidate.startsWith("merchant.buy:"))
+    .filter((candidate) =>
+      normalizeMerchantEntryId(candidate.slice("merchant.buy:".length)) === normalizedTarget);
+
+  return matches.length === 1 ? matches[0] : action;
+}
+
 function isCombatStateSettled(state) {
   if (!state || (state.screenType !== "combat_room" && state.screenType !== "combat_card_select")) {
     return true;
@@ -30,13 +58,133 @@ function isCombatStateSettled(state) {
   return combat.handIsSettled === true;
 }
 
-function waitForSettledCombatState({ timeoutMs = 2500 } = {}) {
+function parseInstant(value) {
+  if (!value || typeof value !== "string") {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? Number.NEGATIVE_INFINITY : timestamp;
+}
+
+function isNewerState(referenceState, state) {
+  if (!state?.updatedAtUtc) {
+    return false;
+  }
+
+  return parseInstant(state.updatedAtUtc) > parseInstant(referenceState?.updatedAtUtc);
+}
+
+function hasStateMutated(beforeState, state) {
+  if (!state) {
+    return false;
+  }
+
+  const beforeUpdatedAt = beforeState?.updatedAtUtc ?? null;
+  const updatedChanged = state.updatedAtUtc && state.updatedAtUtc !== beforeUpdatedAt;
+  return updatedChanged && stableJson(state) !== stableJson(beforeState);
+}
+
+export function isInteractiveFollowUpTransition(beforeState, state, ack) {
+  if (!beforeState || !state || !ack || ack.status !== "pending") {
+    return false;
+  }
+
+  if (!hasStateMutated(beforeState, state)) {
+    return false;
+  }
+
+  return state.screenType !== beforeState.screenType;
+}
+
+export function buildCombatStabilityKey(state) {
+  if (!state || (state.screenType !== "combat_room" && state.screenType !== "combat_card_select")) {
+    return JSON.stringify({ screenType: state?.screenType ?? null });
+  }
+
+  const combat = state.combat ?? {};
+  return JSON.stringify({
+    screenType: state.screenType,
+    roundNumber: combat.roundNumber ?? null,
+    currentSide: combat.currentSide ?? null,
+    energy: combat.energy ?? null,
+    handIds: Array.isArray(combat.hand) ? combat.hand.map((card) => card.id) : [],
+    handPlayable: Array.isArray(combat.hand) ? combat.hand.map((card) => Boolean(card.isPlayable)) : [],
+    drawPileCount: combat.drawPileCount ?? null,
+    discardPileCount: combat.discardPileCount ?? null,
+    exhaustPileCount: combat.exhaustPileCount ?? null,
+    selectionMode: combat.selectionMode ?? null,
+    selectionPrompt: combat.selectionPrompt ?? null,
+    creatureIntents: Array.isArray(combat.creatures)
+      ? combat.creatures.map((creature) => ({
+          id: creature.id,
+          hp: creature.currentHp ?? null,
+          block: creature.block ?? null,
+          intents: Array.isArray(creature.intents)
+            ? creature.intents.map((intent) => ({
+                kind: intent.kind,
+                label: intent.label,
+                targets: intent.targets ?? [],
+              }))
+            : [],
+        }))
+      : [],
+  });
+}
+
+export function isCombatDisplayStable(state, { quietPeriodMs = 500 } = {}) {
+  if (!isCombatStateSettled(state)) {
+    return false;
+  }
+
+  const updatedAt = parseInstant(state?.updatedAtUtc);
+  return Number.isFinite(updatedAt) && Date.now() - updatedAt >= quietPeriodMs;
+}
+
+export function isPotionUseFollowThroughState(action, referenceState, state) {
+  if (!action?.startsWith("potions.use:")) {
+    return false;
+  }
+
+  if (!referenceState || !state || !isNewerState(referenceState, state)) {
+    return false;
+  }
+
+  return stableJson({
+    screenType: state.screenType,
+    hp: state.topBar?.hp ?? null,
+    potions: state.potions ?? [],
+  }) !== stableJson({
+    screenType: referenceState.screenType,
+    hp: referenceState.topBar?.hp ?? null,
+    potions: referenceState.potions ?? [],
+  });
+}
+
+function waitForSettledCombatState({ timeoutMs = 2500, quietPeriodMs = 500, stableSamples = 3 } = {}) {
+  let stableKey = null;
+  let stableCount = 0;
+
   return waitFor(
     () => {
       const state = readState();
-      return state && isCombatStateSettled(state) ? state : null;
+      if (!state || !isCombatDisplayStable(state, { quietPeriodMs })) {
+        stableKey = null;
+        stableCount = 0;
+        return null;
+      }
+
+      const key = buildCombatStabilityKey(state);
+      if (key === stableKey) {
+        stableCount += 1;
+      } else {
+        stableKey = key;
+        stableCount = 1;
+      }
+
+      return stableCount >= stableSamples ? state : null;
     },
-    { timeoutMs, intervalMs: 120, description: "settled combat state" },
+    { timeoutMs, intervalMs: 120, description: "stable combat state" },
   );
 }
 
@@ -74,9 +222,6 @@ export function waitForAck(id, { timeoutMs = 10000 } = {}) {
 }
 
 export function waitForCommandSettlement(id, beforeState, { timeoutMs = 6000 } = {}) {
-  const beforeJson = stableJson(beforeState);
-  const beforeUpdatedAt = beforeState?.updatedAtUtc ?? null;
-
   return waitFor(
     () => {
       const ack = readAck();
@@ -90,19 +235,32 @@ export function waitForCommandSettlement(id, beforeState, { timeoutMs = 6000 } =
         return null;
       }
 
+      if (isInteractiveFollowUpTransition(beforeState, state, ack)) {
+        return { ack, state };
+      }
+
       if (!ackCompleted || !isCombatStateSettled(state)) {
         return null;
       }
 
-      const afterJson = stableJson(state);
-      const updatedChanged = state.updatedAtUtc && state.updatedAtUtc !== beforeUpdatedAt;
-      return updatedChanged && afterJson !== beforeJson ? { ack, state } : null;
+      return hasStateMutated(beforeState, state) ? { ack, state } : null;
     },
     { timeoutMs, intervalMs: 150, description: `command ${id} state mutation` },
   );
 }
 
 export function waitForFollowThrough(action, beforeState, { timeoutMs = 6000 } = {}) {
+  if (action.startsWith("potions.use:")) {
+    const referenceState = readState() ?? beforeState;
+    return waitFor(
+      () => {
+        const state = readState();
+        return isPotionUseFollowThroughState(action, referenceState, state) ? state : null;
+      },
+      { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
+    );
+  }
+
   if (action !== "combat.end_turn") {
     return null;
   }
@@ -157,9 +315,10 @@ export function waitForScreen(screenType, { timeoutMs = 15000 } = {}) {
 export function sendAction(action, options = {}) {
   const id = options.id ?? createCommandId();
   const beforeState = readState();
+  const resolvedAction = normalizeActionForCurrentState(action, beforeState);
   const payload = {
     id,
-    action,
+    action: resolvedAction,
     ...(options.character ? { character: options.character } : {}),
     ...(options.seed ? { seed: options.seed } : {}),
     ...(options.act1 ? { act1: options.act1 } : {}),
@@ -168,7 +327,7 @@ export function sendAction(action, options = {}) {
   writeCommand(payload);
   const ack = waitForAck(id);
   if (ack.status === "error") {
-    throw new Error(ack.message ?? `Command ${action} failed.`);
+    throw new Error(ack.message ?? `Command ${resolvedAction} failed.`);
   }
 
   if (isExplicitFalse(options.strict)) {
@@ -178,7 +337,7 @@ export function sendAction(action, options = {}) {
   const result = waitForCommandSettlement(id, beforeState, {
     timeoutMs: Number(options["settle-timeout-ms"] ?? options.settleTimeoutMs ?? 6000),
   });
-  const followThroughState = waitForFollowThrough(action, beforeState, {
+  const followThroughState = waitForFollowThrough(resolvedAction, beforeState, {
     timeoutMs: Number(options["follow-through-timeout-ms"] ?? options.followThroughTimeoutMs ?? 6000),
   });
   const finalState = followThroughState
@@ -194,6 +353,7 @@ export function sendAction(action, options = {}) {
 
   return {
     action,
+    resolvedAction,
     id,
     ack: finalAck?.id === id ? finalAck : ack,
     settled: true,

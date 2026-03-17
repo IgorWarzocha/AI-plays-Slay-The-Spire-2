@@ -4,12 +4,14 @@ using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Events;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.Potions;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.CustomRun;
 using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
+using MegaCrit.Sts2.Core.Nodes.Screens.PauseMenu;
 using MegaCrit.Sts2.Core.Nodes.Screens.ProfileScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
@@ -52,6 +54,7 @@ public sealed class Sts2Reflection
 
     public FieldInfo? EventField { get; } = GetField<NEventRoom>("_event");
     public FieldInfo? ConnectedOptionsField { get; } = GetField<NEventRoom>("_connectedOptions");
+    public PropertyInfo? AncientGeneratedOptionsProperty { get; } = GetPropertyByDeclaringType("MegaCrit.Sts2.Core.Models.AncientEventModel", "GeneratedOptions");
     public FieldInfo? CardGridConfirmButtonField { get; } = GetField<NCardGridSelectionScreen>("_selectModeConfirmButton");
     public FieldInfo? DeckViewObtainedSorterField { get; } = GetField<NDeckViewScreen>("_obtainedSorter");
     public FieldInfo? DeckViewTypeSorterField { get; } = GetField<NDeckViewScreen>("_typeSorter");
@@ -63,8 +66,13 @@ public sealed class Sts2Reflection
     public FieldInfo? TreasureRelicCollectionField { get; } = GetField<NTreasureRoom>("_relicCollection");
     public FieldInfo? GameOverContinueButtonField { get; } = GetField<NGameOverScreen>("_continueButton");
     public FieldInfo? GameOverMainMenuButtonField { get; } = GetField<NGameOverScreen>("_mainMenuButton");
+    public FieldInfo? PauseMenuResumeButtonField { get; } = GetField<NPauseMenu>("_resumeButton");
+    public FieldInfo? PauseMenuSaveAndQuitButtonField { get; } = GetField<NPauseMenu>("_saveAndQuitButton");
+    public FieldInfo? PauseMenuSettingsButtonField { get; } = GetField<NPauseMenu>("_settingsButton");
+    public FieldInfo? PauseMenuCompendiumButtonField { get; } = GetField<NPauseMenu>("_compendiumButton");
+    public FieldInfo? PauseMenuGiveUpButtonField { get; } = GetField<NPauseMenu>("_giveUpButton");
 
-    public MethodInfo? MainMenuContinueMethod { get; } = GetMethod<NMainMenu>("OnContinueButtonPressedAsync", 0);
+    public MethodInfo? MainMenuContinueMethod { get; } = GetMethod<NMainMenu>("OnContinueButtonPressed", 1);
     public MethodInfo? MainMenuTimelineMethod { get; } = GetMethod<NMainMenu>("OpenTimelineScreen", 1);
     public MethodInfo? MainMenuCompendiumMethod { get; } = GetMethod<NMainMenu>("OpenCompendiumSubmenu", 1);
     public MethodInfo? SingleplayerOpenCharacterMethod { get; } = GetMethod<NSingleplayerSubmenu>("OpenCharacterSelect", 1);
@@ -96,6 +104,8 @@ public sealed class Sts2Reflection
     public MethodInfo? TopBarDeckButtonIsOpenMethod { get; } = GetMethod<NTopBarDeckButton>("IsOpen", 0);
     public MethodInfo? TopBarPauseButtonOnReleaseMethod { get; } = GetMethod<NTopBarPauseButton>("OnRelease", 0);
     public MethodInfo? TopBarPauseButtonIsOpenMethod { get; } = GetMethod<NTopBarPauseButton>("IsOpen", 0);
+    public MethodInfo? PotionHolderUseMethod { get; } = GetMethod<NPotionHolder>("UsePotion", 0);
+    public MethodInfo? PotionHolderDiscardMethod { get; } = GetMethod<NPotionHolder>("DiscardPotion", 0);
     public MethodInfo? CombatEndTurnOnReleaseMethod { get; } = GetMethod<NEndTurnButton>("OnRelease", 0);
     public MethodInfo? CombatEndTurnCanTurnBeEndedMethod { get; } = GetMethod<NEndTurnButton>("get_CanTurnBeEnded", 0);
     public MethodInfo? CombatPileOnReleaseMethod { get; } = GetMethod<NCombatCardPile>("OnRelease", 0);
@@ -105,6 +115,11 @@ public sealed class Sts2Reflection
     public MethodInfo? CardRewardSelectCardMethod { get; } = GetMethod<NCardRewardSelectionScreen>("SelectCard", 1);
     public MethodInfo? GameOverContinuePressMethod { get; } = GetMethod<NGameOverContinueButton>("OnPress", 0);
     public MethodInfo? GameOverMainMenuPressMethod { get; } = GetMethod<NReturnToMainMenuButton>("OnPress", 0);
+    public MethodInfo? PauseMenuResumeMethod { get; } = GetMethod<NPauseMenu>("OnBackOrResumeButtonPressed", 1);
+    public MethodInfo? PauseMenuSaveAndQuitMethod { get; } = GetMethod<NPauseMenu>("OnSaveAndQuitButtonPressed", 1);
+    public MethodInfo? PauseMenuSettingsMethod { get; } = GetMethod<NPauseMenu>("OnSettingsButtonPressed", 1);
+    public MethodInfo? PauseMenuCompendiumMethod { get; } = GetMethod<NPauseMenu>("OnCompendiumButtonPressed", 1);
+    public MethodInfo? PauseMenuGiveUpMethod { get; } = GetMethod<NPauseMenu>("OnGiveUpButtonPressed", 1);
 
     public PropertyInfo? MapPointIsTravelableProperty { get; } = GetProperty<NMapPoint>("IsTravelable");
     public PropertyInfo? TopBarMapButtonHotkeysProperty { get; } = GetProperty<NTopBarMapButton>("Hotkeys");
@@ -132,6 +147,7 @@ public sealed class Sts2Reflection
         RequireField(CustomConfirmButtonField, nameof(CustomConfirmButtonField));
         RequireField(EventField, nameof(EventField));
         RequireField(ConnectedOptionsField, nameof(ConnectedOptionsField));
+        RequireProperty(AncientGeneratedOptionsProperty, nameof(AncientGeneratedOptionsProperty));
         RequireField(DeckViewObtainedSorterField, nameof(DeckViewObtainedSorterField));
         RequireField(DeckViewTypeSorterField, nameof(DeckViewTypeSorterField));
         RequireField(DeckViewCostSorterField, nameof(DeckViewCostSorterField));
@@ -142,6 +158,11 @@ public sealed class Sts2Reflection
         RequireField(TreasureRelicCollectionField, nameof(TreasureRelicCollectionField));
         RequireField(GameOverContinueButtonField, nameof(GameOverContinueButtonField));
         RequireField(GameOverMainMenuButtonField, nameof(GameOverMainMenuButtonField));
+        RequireField(PauseMenuResumeButtonField, nameof(PauseMenuResumeButtonField));
+        RequireField(PauseMenuSaveAndQuitButtonField, nameof(PauseMenuSaveAndQuitButtonField));
+        RequireField(PauseMenuSettingsButtonField, nameof(PauseMenuSettingsButtonField));
+        RequireField(PauseMenuCompendiumButtonField, nameof(PauseMenuCompendiumButtonField));
+        RequireField(PauseMenuGiveUpButtonField, nameof(PauseMenuGiveUpButtonField));
         RequireProperty(MapPointIsTravelableProperty, nameof(MapPointIsTravelableProperty));
         RequireProperty(TopBarMapButtonHotkeysProperty, nameof(TopBarMapButtonHotkeysProperty));
         RequireProperty(TopBarDeckButtonHotkeysProperty, nameof(TopBarDeckButtonHotkeysProperty));
@@ -177,6 +198,8 @@ public sealed class Sts2Reflection
         RequireMethod(TopBarDeckButtonIsOpenMethod, nameof(TopBarDeckButtonIsOpenMethod));
         RequireMethod(TopBarPauseButtonOnReleaseMethod, nameof(TopBarPauseButtonOnReleaseMethod));
         RequireMethod(TopBarPauseButtonIsOpenMethod, nameof(TopBarPauseButtonIsOpenMethod));
+        RequireMethod(PotionHolderUseMethod, nameof(PotionHolderUseMethod));
+        RequireMethod(PotionHolderDiscardMethod, nameof(PotionHolderDiscardMethod));
         RequireMethod(CombatEndTurnOnReleaseMethod, nameof(CombatEndTurnOnReleaseMethod));
         RequireMethod(CombatEndTurnCanTurnBeEndedMethod, nameof(CombatEndTurnCanTurnBeEndedMethod));
         RequireMethod(CombatPileOnReleaseMethod, nameof(CombatPileOnReleaseMethod));
@@ -186,6 +209,11 @@ public sealed class Sts2Reflection
         RequireMethod(CardRewardSelectCardMethod, nameof(CardRewardSelectCardMethod));
         RequireMethod(GameOverContinuePressMethod, nameof(GameOverContinuePressMethod));
         RequireMethod(GameOverMainMenuPressMethod, nameof(GameOverMainMenuPressMethod));
+        RequireMethod(PauseMenuResumeMethod, nameof(PauseMenuResumeMethod));
+        RequireMethod(PauseMenuSaveAndQuitMethod, nameof(PauseMenuSaveAndQuitMethod));
+        RequireMethod(PauseMenuSettingsMethod, nameof(PauseMenuSettingsMethod));
+        RequireMethod(PauseMenuCompendiumMethod, nameof(PauseMenuCompendiumMethod));
+        RequireMethod(PauseMenuGiveUpMethod, nameof(PauseMenuGiveUpMethod));
     }
 
     public T? ReadField<T>(object instance, FieldInfo? fieldInfo)
@@ -216,6 +244,12 @@ public sealed class Sts2Reflection
     private static PropertyInfo? GetProperty<T>(string name)
     {
         return typeof(T).GetProperty(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+    }
+
+    private static PropertyInfo? GetPropertyByDeclaringType(string fullName, string name)
+    {
+        Type? declaringType = Type.GetType($"{fullName}, sts2");
+        return declaringType?.GetProperty(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
     }
 
     private static MethodInfo? GetMethod<T>(string name, int parameterCount)

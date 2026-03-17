@@ -91,32 +91,7 @@ public sealed class DeckViewFeature : IAgentFeature
     {
         return SceneTraversal.FindAllVisible<NGridCardHolder>(screen)
             .Where(static holder => holder.CardModel is not null)
-            .Select(holder => BuildBrowseCard(holder.CardModel!, holder.IsShowingUpgradedCard))
+            .Select(holder => BrowseCardMapper.Build(holder.CardModel!, holder.IsShowingUpgradedCard))
             .ToList();
-    }
-
-    private static ExportBrowseCard BuildBrowseCard(CardModel card, bool upgraded)
-    {
-        return new ExportBrowseCard
-        {
-            Id = CardBrowseIdentity.FromCard(card),
-            Title = AgentText.SafeText(card.TitleLocString) ?? card.Title,
-            Description = AgentText.SafeText(card.Description),
-            CostText = ReadCanonicalCost(card),
-            Upgraded = upgraded
-        };
-    }
-
-    private static string? ReadCanonicalCost(CardModel card)
-    {
-        PropertyInfo? property = card.GetType().GetProperty(
-            "CanonicalEnergyCost",
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        if (property?.GetValue(card) is not int canonicalCost || canonicalCost < 0)
-        {
-            return null;
-        }
-
-        return canonicalCost.ToString();
     }
 }
