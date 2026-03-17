@@ -11,9 +11,9 @@ Use this as the shop decision workflow for STS2 runs.
 
 Read these before acting:
 
-- `/home/igorw/Work/STS2/.agents/skills/merchant/references/strategy/shop-heuristics.md`
-- `/home/igorw/Work/STS2/.agents/skills/act-start/references/strategy/pathing-and-planning.md`
-- `/home/igorw/Work/STS2/.agents/skills/act-start/references/strategy/reward-heuristics.md`
+- `/home/igorw/Work/STS2/.agents/skills/merchant/references/heuristics.md`
+- `/home/igorw/Work/STS2/.agents/skills/act-start/references/planning.md`
+- `/home/igorw/Work/STS2/.agents/skills/act-start/references/rewards-and-deck-shape.md`
 - the current run log under `/home/igorw/Work/STS2/vault/runs`
 
 If the next node is an elite or boss, also read:

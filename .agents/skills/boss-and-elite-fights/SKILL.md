@@ -11,13 +11,13 @@ Use this skill for any hard-fight threshold check, fight plan, or post mortem in
 
 Read these before acting:
 
-- `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/strategy/elite-and-boss-prep.md`
-- `/home/igorw/Work/STS2/.agents/skills/combat/references/strategy/combat-heuristics.md`
-- `/home/igorw/Work/STS2/.agents/skills/act-start/references/strategy/pathing-and-planning.md`
-- the matching encounter note under `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references`
+- `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/prep.md`
+- `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/encounters.md`
+- `/home/igorw/Work/STS2/.agents/skills/combat/references/heuristics.md`
+- `/home/igorw/Work/STS2/.agents/skills/act-start/references/planning.md`
 - the current run log under `/home/igorw/Work/STS2/vault/runs`
 
-If the matching encounter note does not exist, treat that as missing prep. Before acting, force this loop:
+If the encounter is still unknown even after checking `encounters.md`, treat that as missing prep. Before acting, force this loop:
 
 - What am I actually seeing?
 - What is the real clock or loss condition?

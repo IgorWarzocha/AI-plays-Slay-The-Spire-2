@@ -7,6 +7,13 @@ description: Use this when playing in this repo and you need to keep the run log
 
 Keep long-lived game knowledge in the repo while the run is happening. The goal is not a technical trace. The goal is reusable play knowledge.
 
+## Required Reading
+
+Read these before doing learning-loop maintenance:
+
+- `/home/igorw/Work/STS2/.agents/skills/learning-loop/references/run-log-standard.md`
+- `/home/igorw/Work/STS2/.agents/skills/learning-loop/references/note-promotion.md`
+
 ## Core Workflow
 
 1. Keep one live run log in `/home/igorw/Work/STS2/vault/runs`.
@@ -18,7 +25,7 @@ Keep long-lived game knowledge in the repo while the run is happening. The goal 
    - outcome
    - lesson worth keeping
 4. When a run reveals a new or unclear encounter, event, mechanic, or heuristic:
-   - create or update the matching note under `/home/igorw/Work/STS2/vault`
+   - update the owning skill reference instead of creating a new vault note by default
    - first write the shortest honest read of the thing:
      - what am I seeing?
      - what is it actually testing?
@@ -28,7 +35,7 @@ Keep long-lived game knowledge in the repo while the run is happening. The goal 
 5. After every elite or boss attempt:
    - write a short fight post mortem, even if the fight was won
    - keep it to the smallest durable lesson set: what the fight tested, what line was wrong or right, and what changes next attempt
-   - update the encounter or strategy vault note only if the lesson is reusable beyond this one run
+   - update the owning skill reference only if the lesson is reusable beyond this one run
    - do this before resuming normal play, not later from memory
 6. When the run ends:
    - first read `Compendium -> Run History` through the repo CLI and use it as the authoritative run-end snapshot
@@ -53,9 +60,16 @@ Keep long-lived game knowledge in the repo while the run is happening. The goal 
   - durable heuristics, not one-off anecdotes
   - route logic, combat heuristics, shop heuristics, reward heuristics
 
+## Ownership Rule
+
+- Keep the vault minimal.
+- Run-specific notes belong in `/home/igorw/Work/STS2/vault/runs`.
+- Reusable lessons belong in the owning skill under `/home/igorw/Work/STS2/.agents/skills/*/references/`.
+- Prefer rewriting and merging existing references over creating tiny new notes.
+
 ## Run Log Standard
 
-- Use `/home/igorw/Work/STS2/vault/runs/INDEX.md` and `/home/igorw/Work/STS2/vault/templates/run-log-template.md`.
+- Use `/home/igorw/Work/STS2/.agents/skills/learning-loop/references/run-log-standard.md`.
 - Floor notes are for live context compression.
 - Final run notes are for learning.
 - End-of-run facts should be reconciled against `node /home/igorw/Work/STS2/scripts/sts2history.mjs latest` or `npm run history`.
@@ -82,6 +96,10 @@ Keep long-lived game knowledge in the repo while the run is happening. The goal 
 ## Files To Use
 
 - Run logs: `/home/igorw/Work/STS2/vault/runs`
-- Encounter notes: `/home/igorw/Work/STS2/vault/encounters`
-- Mechanics notes: `/home/igorw/Work/STS2/vault/mechanics`
-- Strategy notes: `/home/igorw/Work/STS2/vault/strategy`
+- Act planning and rewards: `/home/igorw/Work/STS2/.agents/skills/act-start/references`
+- Hard fights: `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references`
+- Combat heuristics and mechanics: `/home/igorw/Work/STS2/.agents/skills/combat/references`
+- Events: `/home/igorw/Work/STS2/.agents/skills/events/references`
+- Ironclad: `/home/igorw/Work/STS2/.agents/skills/ironclad/references`
+- Merchant: `/home/igorw/Work/STS2/.agents/skills/merchant/references`
+- Learning-loop standards: `/home/igorw/Work/STS2/.agents/skills/learning-loop/references`

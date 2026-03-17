@@ -34,7 +34,7 @@
 - The current character skill is mandatory re-reading after compaction. Example: if the run is Ironclad, re-read `/home/igorw/Work/STS2/.agents/skills/ironclad/SKILL.md`.
 - Re-read `/home/igorw/Work/STS2/.agents/skills/act-start/SKILL.md` at the start of every act and whenever act-level route planning resets.
 - Re-read `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/SKILL.md` before any elite or boss commitment, including pathing decisions that commit the run toward one.
-- Skill-local `references/` folders are the primary knowledge surface. The vault is for runs, templates, and still-unowned notes.
+- Skill-local `references/` folders are the primary evolving knowledge surface. Keep them rewritten and consolidated as we learn. The vault should stay minimal and is primarily for run logs.
 - Optimize for fewer tool calls. If a script can return the next usable state directly, patch it to do so.
 - Send actions sequentially. The command file is single-writer.
 - Restart after mod DLL changes. Mods are not hot-reload.

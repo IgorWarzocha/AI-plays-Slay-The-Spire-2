@@ -11,14 +11,13 @@ Use this when an act begins or when the run needs a fresh act-level plan.
 
 Read these before acting:
 
-- `/home/igorw/Work/STS2/.agents/skills/act-start/references/strategy/pathing-and-planning.md`
-- `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/strategy/elite-and-boss-prep.md`
-- `/home/igorw/Work/STS2/.agents/skills/act-start/references/strategy/deckbuilding-heuristics.md`
-- `/home/igorw/Work/STS2/.agents/skills/act-start/references/strategy/reward-heuristics.md`
-- `/home/igorw/Work/STS2/.agents/skills/merchant/references/strategy/shop-heuristics.md`
+- `/home/igorw/Work/STS2/.agents/skills/act-start/references/planning.md`
+- `/home/igorw/Work/STS2/.agents/skills/act-start/references/rewards-and-deck-shape.md`
+- `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/prep.md`
+- `/home/igorw/Work/STS2/.agents/skills/merchant/references/heuristics.md`
 - the current character skill for the run
 - the current run log under `/home/igorw/Work/STS2/vault/runs`
-- any matching encounter notes for the elites, boss, or major known threats in the incoming act
+- `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/encounters.md` if the incoming act contains a known hard-fight threat
 
 ## Core Doctrine
 
@@ -48,4 +47,4 @@ Read these before acting:
 
 ## Maintenance
 
-This skill and its matching vault notes are living documents. Improve them as new things are found. Do not append drift. Edit and rewrite to keep them sharp and short, and add references when needed.
+This skill and its references are living documents. Improve them as new things are found. Do not append drift. Edit and rewrite to keep them sharp and short, and add references when needed.

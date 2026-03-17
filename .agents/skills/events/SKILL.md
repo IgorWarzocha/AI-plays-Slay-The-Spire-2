@@ -11,13 +11,12 @@ Use this as the event decision workflow for STS2 runs.
 
 Read these before acting:
 
-- `/home/igorw/Work/STS2/.agents/skills/act-start/references/strategy/pathing-and-planning.md`
-- `/home/igorw/Work/STS2/.agents/skills/act-start/references/strategy/reward-heuristics.md`
-- `/home/igorw/Work/STS2/.agents/skills/act-start/references/strategy/deckbuilding-heuristics.md`
-- `/home/igorw/Work/STS2/.agents/skills/events/references/strategy/event-heuristics.md`
+- `/home/igorw/Work/STS2/.agents/skills/act-start/references/planning.md`
+- `/home/igorw/Work/STS2/.agents/skills/act-start/references/rewards-and-deck-shape.md`
+- `/home/igorw/Work/STS2/.agents/skills/events/references/heuristics.md`
+- `/home/igorw/Work/STS2/.agents/skills/events/references/known-events.md` if the current event is already documented there
 - the current character skill for the run
 - the current run log under `/home/igorw/Work/STS2/vault/runs`
-- any matching reference note for the current event if one exists
 
 If the event is immediately upstream of an elite or boss, also read:
 

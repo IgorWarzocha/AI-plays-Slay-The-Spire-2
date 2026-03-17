@@ -11,7 +11,8 @@ Use this as the default fight workflow for STS2 turns.
 
 Read these before acting:
 
-- `/home/igorw/Work/STS2/.agents/skills/combat/references/strategy/combat-heuristics.md`
+- `/home/igorw/Work/STS2/.agents/skills/combat/references/heuristics.md`
+- `/home/igorw/Work/STS2/.agents/skills/combat/references/mechanics.md`
 - the current run log under `/home/igorw/Work/STS2/vault/runs`
 
 If the run is Ironclad, also read:

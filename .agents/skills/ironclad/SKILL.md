@@ -11,12 +11,12 @@ Use this as the character-level operating note for Ironclad runs.
 
 Read these before acting in an Ironclad run:
 
-- `/home/igorw/Work/STS2/.agents/skills/ironclad/references/strategy/ironclad-core-plan.md`
-- `/home/igorw/Work/STS2/.agents/skills/combat/references/strategy/combat-heuristics.md`
-- `/home/igorw/Work/STS2/.agents/skills/act-start/references/strategy/deckbuilding-heuristics.md`
-- `/home/igorw/Work/STS2/.agents/skills/act-start/references/strategy/reward-heuristics.md`
+- `/home/igorw/Work/STS2/.agents/skills/ironclad/references/core-plan.md`
+- `/home/igorw/Work/STS2/.agents/skills/ironclad/references/card-and-relic-priorities.md`
+- `/home/igorw/Work/STS2/.agents/skills/combat/references/heuristics.md`
+- `/home/igorw/Work/STS2/.agents/skills/act-start/references/rewards-and-deck-shape.md`
 - the current run log under `/home/igorw/Work/STS2/vault/runs`
-- any matching reference note for the current decision, especially elite, boss, shop, or event notes
+- any matching section in the relevant skill reference, especially hard-fight, shop, or event notes
 
 If the current decision is an elite or boss commitment, also read `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/SKILL.md` and its required references.
 

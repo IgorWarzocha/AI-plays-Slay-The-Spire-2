@@ -52,10 +52,8 @@ This is not stable or finished yet. Expect:
   JS CLIs for gameplay, admin, reload, history, and developer workflows.
 - `vault/runs/`
   Run logs and post mortems.
-- `vault/mechanics/`
-  Mechanics notes that do not belong to a single skill.
-- `vault/automation/`
-  Notes about safe automation opportunities.
+- `.agents/skills/*/references/`
+  Evolving play knowledge, mechanics notes, encounter reads, and heuristics owned by each skill.
 - `reference/`
   Local reference-library tooling and generated helpers.
 
