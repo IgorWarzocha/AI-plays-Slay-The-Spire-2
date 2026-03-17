@@ -8,6 +8,10 @@ Use encounter notes for enemies, elites, bosses, and important events that chang
 - [[encounters/act1/soul-fysh]]
 - [[encounters/act1/sunken-statue]]
 
+## Hive
+
+- [[encounters/hive/decimillipede]]
+
 ## Writing Rule
 
 Prefer one note per encounter. If an encounter has a second phase, summons, or unusual targeting rules, call that out explicitly.

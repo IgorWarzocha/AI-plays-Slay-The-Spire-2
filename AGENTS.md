@@ -9,6 +9,7 @@
 
 ## Core Commands
 
+- Prefer `sts2-dev.mjs` for build/restart flows instead of raw `dotnet build` plus manual relaunch.
 - `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs build`
 - `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs test`
 - `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs restart`
@@ -33,8 +34,10 @@
 ## Rules
 
 - Keep admin, bootstrap, non-combat, and combat separate.
+- Optimize for fewer tool calls. If a script can return the next usable state directly, patch it to do so.
 - Send actions sequentially. The command file is single-writer.
 - Restart after mod DLL changes. Mods are not hot-reload.
+- Patch command inefficiencies as soon as they show up; the goal is fast, reliable game operation.
 - Look for STS1 parallels, but treat them as heuristics, not truth.
 - On bosses and elites, check the vault before committing.
 - Use screenshots only for unknown or unsupported screens.

@@ -31,8 +31,9 @@ public sealed class MapFeature : IAgentFeature
             Traveling = screen.IsTraveling,
             Points = points
         };
+        bool canTravel = screen.IsTravelEnabled && !screen.IsTraveling;
         state.MenuItems = points
-            .Where(static point => point.Travelable)
+            .Where(point => canTravel && point.Travelable)
             .Select(
                 point => new ExportMenuItem
                 {
@@ -95,14 +96,17 @@ public sealed class MapFeature : IAgentFeature
     private static ExportMapPoint BuildPoint(FeatureContext context, NMapPoint point)
     {
         MapPoint model = point.Point;
+        string state = point.State.ToString();
+        bool isTravelable = context.Reflection.ReadProperty<bool>(point, context.Reflection.MapPointIsTravelableProperty)
+            || string.Equals(state, "Travelable", StringComparison.Ordinal);
         return new ExportMapPoint
         {
             Id = $"{model.coord.col},{model.coord.row}",
             Col = model.coord.col,
             Row = model.coord.row,
             Type = model.PointType.ToString(),
-            State = point.State.ToString(),
-            Travelable = context.Reflection.ReadProperty<bool>(point, context.Reflection.MapPointIsTravelableProperty),
+            State = state,
+            Travelable = isTravelable,
             CanModify = model.CanBeModified
         };
     }

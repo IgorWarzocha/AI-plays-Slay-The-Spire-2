@@ -46,15 +46,30 @@ public sealed class CombatFeature : IAgentFeature
             return false;
         }
 
-        NCombatUi ui = room.Ui ?? throw new InvalidOperationException("Combat room did not expose its combat UI.");
-        NPlayerHand hand = ui.Hand ?? throw new InvalidOperationException("Combat UI did not expose the player hand.");
+        NCombatUi? ui = room.Ui;
+        if (ui is null)
+        {
+            return false;
+        }
+
+        NPlayerHand? hand = ui.Hand;
+        if (hand is null)
+        {
+            return false;
+        }
+
         CombatState? combatState = TryReadCombatState(hand);
         if (combatState is null)
         {
             return false;
         }
         CombatHandSnapshot handSnapshot = CombatHandSnapshotReader.Capture(hand);
-        PlayerCombatState playerCombatState = ResolvePlayerCombatState(combatState);
+        if (!TryResolvePlayerCombatState(combatState, out PlayerCombatState? playerCombatState))
+        {
+            return false;
+        }
+
+        PlayerCombatState resolvedPlayerCombatState = playerCombatState!;
         CombatRuntimePhase runtimePhase = ReadRuntimePhase();
 
         List<ExportCombatCreature> creatures = room.CreatureNodes
@@ -63,7 +78,7 @@ public sealed class CombatFeature : IAgentFeature
             .ThenBy(creature => creature.SlotName)
             .ThenBy(creature => creature.Name)
             .ToList();
-        List<ExportCombatCard> handCards = BuildHandCards(playerCombatState, handSnapshot);
+        List<ExportCombatCard> handCards = BuildHandCards(resolvedPlayerCombatState, handSnapshot);
         bool isPlayerTurn = string.Equals(combatState.CurrentSide.ToString(), "Player", StringComparison.Ordinal);
         List<ExportCombatPotion> potions = CombatPotionSupport.BuildPotions(context.Root, creatures, isPlayerTurn);
 
@@ -72,7 +87,7 @@ public sealed class CombatFeature : IAgentFeature
         {
             RoundNumber = combatState.RoundNumber,
             CurrentSide = combatState.CurrentSide.ToString(),
-            Energy = playerCombatState.Energy,
+            Energy = resolvedPlayerCombatState.Energy,
             HandIsSettled = handSnapshot.IsSettled && runtimePhase.IsReadyForPlayerInput,
             ActiveHandCount = handSnapshot.ActiveHolders.Count,
             TotalHandCount = handSnapshot.AllHolders.Count,
@@ -81,9 +96,9 @@ public sealed class CombatFeature : IAgentFeature
             HandAnimationActive = handSnapshot.HandAnimationActive,
             CardPlayInProgress = handSnapshot.CardPlayInProgress,
             Hand = handCards,
-            DrawPileCount = playerCombatState.DrawPile.Cards.Count,
-            DiscardPileCount = playerCombatState.DiscardPile.Cards.Count,
-            ExhaustPileCount = playerCombatState.ExhaustPile.Cards.Count,
+            DrawPileCount = resolvedPlayerCombatState.DrawPile.Cards.Count,
+            DiscardPileCount = resolvedPlayerCombatState.DiscardPile.Cards.Count,
+            ExhaustPileCount = resolvedPlayerCombatState.ExhaustPile.Cards.Count,
             CanEndTurn = RuntimeInvoker.Invoke<bool>(ui.EndTurnButton, context.Reflection.CombatEndTurnCanTurnBeEndedMethod),
             Potions = potions,
             Creatures = creatures
@@ -207,7 +222,13 @@ public sealed class CombatFeature : IAgentFeature
         NPlayerHand hand = ui.Hand ?? throw new InvalidOperationException("Combat hand is unavailable.");
         CombatState combatState = TryReadCombatState(hand)
             ?? throw new InvalidOperationException("Combat hand did not expose an active combat state.");
-        CardModel card = ResolvePlayerCombatState(combatState).Hand.Cards
+        if (!TryResolvePlayerCombatState(combatState, out PlayerCombatState? playerCombatState))
+        {
+            throw new InvalidOperationException("Combat hand did not expose a player combat state.");
+        }
+
+        PlayerCombatState resolvedPlayerCombatState = playerCombatState!;
+        CardModel card = resolvedPlayerCombatState.Hand.Cards
             .FirstOrDefault(candidate => string.Equals(CombatCardIdentity.FromCard(candidate), cardId, StringComparison.Ordinal))
             ?? throw new InvalidOperationException($"Combat card '{cardId}' was not found in the active hand.");
 
@@ -288,11 +309,11 @@ public sealed class CombatFeature : IAgentFeature
         return combatStateField?.GetValue(hand) as CombatState;
     }
 
-    private static PlayerCombatState ResolvePlayerCombatState(CombatState combatState)
+    private static bool TryResolvePlayerCombatState(CombatState combatState, out PlayerCombatState? playerCombatState)
     {
         Player? player = combatState.Players.FirstOrDefault();
-        return player?.PlayerCombatState
-            ?? throw new InvalidOperationException("Combat state did not expose a player combat state.");
+        playerCombatState = player?.PlayerCombatState;
+        return playerCombatState is not null;
     }
 
     private static CombatRuntimePhase ReadRuntimePhase()

@@ -15,6 +15,22 @@ function isCombatLikeScreen(screenType) {
     || screenType === "combat_choice_select";
 }
 
+function isTransitionShellState(state) {
+  if (!state) {
+    return true;
+  }
+
+  if (state.screenType === "run_active") {
+    return true;
+  }
+
+  if (state.screenType === "combat_room" && !state.combat) {
+    return true;
+  }
+
+  return false;
+}
+
 function createCommandId() {
   return `cmd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -192,6 +208,36 @@ export function isPotionUseFollowThroughState(action, referenceState, state) {
   });
 }
 
+export function isMapTravelFollowThroughState(beforeState, state) {
+  if (!beforeState || !state || !isNewerState(beforeState, state)) {
+    return false;
+  }
+
+  if (isTransitionShellState(state)) {
+    return false;
+  }
+
+  if (state.screenType !== beforeState.screenType) {
+    return true;
+  }
+
+  return stableJson({
+    screenType: state.screenType,
+    menuItems: state.menuItems ?? [],
+    actions: state.actions ?? [],
+    topBar: state.topBar ?? null,
+    map: state.map ?? null,
+    combat: state.combat ?? null,
+  }) !== stableJson({
+    screenType: beforeState.screenType,
+    menuItems: beforeState.menuItems ?? [],
+    actions: beforeState.actions ?? [],
+    topBar: beforeState.topBar ?? null,
+    map: beforeState.map ?? null,
+    combat: beforeState.combat ?? null,
+  });
+}
+
 export function detectCombatCostChanges(beforeState, afterState) {
   if (!isCombatLikeScreen(beforeState?.screenType) || !isCombatLikeScreen(afterState?.screenType)) {
     return [];
@@ -283,7 +329,11 @@ export function waitForAck(id, { timeoutMs = 10000 } = {}) {
   );
 }
 
-export function waitForCommandSettlement(id, beforeState, { timeoutMs = 6000 } = {}) {
+export function waitForCommandSettlement(
+  id,
+  beforeState,
+  { timeoutMs = 12000, allowPendingInteractiveTransition = true } = {},
+) {
   return waitFor(
     () => {
       const ack = readAck();
@@ -297,7 +347,7 @@ export function waitForCommandSettlement(id, beforeState, { timeoutMs = 6000 } =
         return null;
       }
 
-      if (isInteractiveFollowUpTransition(beforeState, state, ack)) {
+      if (allowPendingInteractiveTransition && isInteractiveFollowUpTransition(beforeState, state, ack)) {
         return { ack, state };
       }
 
@@ -311,7 +361,7 @@ export function waitForCommandSettlement(id, beforeState, { timeoutMs = 6000 } =
   );
 }
 
-export function waitForFollowThrough(action, beforeState, { timeoutMs = 6000 } = {}) {
+export function waitForFollowThrough(action, beforeState, { timeoutMs = 12000 } = {}) {
   if (action.startsWith("rewards.claim:reward-Potion-")) {
     return waitFor(
       () => {
@@ -374,6 +424,26 @@ export function waitForFollowThrough(action, beforeState, { timeoutMs = 6000 } =
   );
 }
 
+function isAdvancedPlayerCombatTurn(beforeState, state) {
+  if (state?.screenType !== "combat_room") {
+    return false;
+  }
+
+  const beforeRoundNumber = beforeState?.combat?.roundNumber ?? null;
+  const combat = state.combat;
+  if (!combat || combat.currentSide !== "Player") {
+    return false;
+  }
+
+  if (beforeRoundNumber !== null && combat.roundNumber <= beforeRoundNumber) {
+    return false;
+  }
+
+  const handCount = Array.isArray(combat.hand) ? combat.hand.length : 0;
+  const visibleMenuCount = Array.isArray(state.menuItems) ? state.menuItems.length : 0;
+  return (handCount > 0 || visibleMenuCount > 0) && isCombatStateSettled(state);
+}
+
 export function waitForScreen(screenType, { timeoutMs = 15000 } = {}) {
   return waitFor(
     () => {
@@ -388,6 +458,10 @@ export function sendAction(action, options = {}) {
   const id = options.id ?? createCommandId();
   const beforeState = readState();
   const resolvedAction = normalizeActionForCurrentState(action, beforeState);
+  const settleTimeoutMs = Number(options["settle-timeout-ms"] ?? options.settleTimeoutMs ?? 12000);
+  const followThroughTimeoutMs = Number(
+    options["follow-through-timeout-ms"] ?? options.followThroughTimeoutMs ?? 12000,
+  );
   const payload = {
     id,
     action: resolvedAction,
@@ -406,14 +480,35 @@ export function sendAction(action, options = {}) {
     return { action, id, ack, settled: false, state: readState() };
   }
 
-  const result = waitForCommandSettlement(id, beforeState, {
-    timeoutMs: Number(options["settle-timeout-ms"] ?? options.settleTimeoutMs ?? 6000),
-  });
-  const followThroughState = waitForFollowThrough(resolvedAction, beforeState, {
-    timeoutMs: Number(options["follow-through-timeout-ms"] ?? options.followThroughTimeoutMs ?? 6000),
-  });
+  let followThroughState = null;
+  const requiresStrictSettlement = resolvedAction.startsWith("map.travel:");
+  if (resolvedAction === "combat.end_turn") {
+    try {
+      followThroughState = waitForFollowThrough(resolvedAction, beforeState, {
+        timeoutMs: followThroughTimeoutMs,
+      });
+    } catch (error) {
+      const currentState = readState();
+      if (!isAdvancedPlayerCombatTurn(beforeState, currentState)) {
+        throw error;
+      }
+
+      followThroughState = currentState;
+    }
+  }
+  const result = followThroughState
+    ? null
+    : waitForCommandSettlement(id, beforeState, {
+        timeoutMs: settleTimeoutMs,
+        allowPendingInteractiveTransition: !requiresStrictSettlement,
+      });
+  const fallbackFollowThroughState = followThroughState
+    ?? (requiresStrictSettlement
+      ? null
+      : waitForFollowThrough(resolvedAction, beforeState, { timeoutMs: followThroughTimeoutMs }));
   const finalState = followThroughState
-    ?? result.state
+    ?? fallbackFollowThroughState
+    ?? result?.state
     ?? (() => {
       try {
         return waitForSettledCombatState();

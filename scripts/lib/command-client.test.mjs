@@ -6,6 +6,7 @@ import {
   detectCombatCostChanges,
   isCombatDisplayStable,
   isInteractiveFollowUpTransition,
+  isMapTravelFollowThroughState,
   isPotionUseFollowThroughState,
   isRewardPotionClaimFollowThroughState,
   normalizeActionForCurrentState,
@@ -223,4 +224,29 @@ test("detectCombatCostChanges reports dynamic hand cost mutations", () => {
       afterCost: "0",
     },
   ]);
+});
+
+test("map travel waits past transient room shells and returns the destination surface", () => {
+  const beforeState = {
+    screenType: "map_screen",
+    updatedAtUtc: "2026-03-17T12:03:00.000Z",
+    actions: ["map.travel:3,11"],
+    menuItems: [{ id: "3,11", label: "RestSite (3,11)" }],
+  };
+  const transientCombatShell = {
+    screenType: "combat_room",
+    updatedAtUtc: "2026-03-17T12:03:01.000Z",
+    actions: ["top_bar.map"],
+    combat: null,
+  };
+  const destinationState = {
+    screenType: "rest_site",
+    updatedAtUtc: "2026-03-17T12:03:02.000Z",
+    actions: ["rest_site.choose:HEAL", "rest_site.choose:SMITH"],
+    menuItems: [{ id: "HEAL", label: "Rest" }],
+    topBar: { hp: "35/92", gold: 278 },
+  };
+
+  assert.equal(isMapTravelFollowThroughState(beforeState, transientCombatShell), false);
+  assert.equal(isMapTravelFollowThroughState(beforeState, destinationState), true);
 });

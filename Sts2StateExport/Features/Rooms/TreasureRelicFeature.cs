@@ -1,3 +1,5 @@
+using System.Reflection;
+using Godot;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Screens.TreasureRoomRelic;
@@ -63,14 +65,56 @@ public sealed class TreasureRelicFeature : IAgentFeature
     private static ExportMenuItem BuildRelicItem(NTreasureRoomRelicHolder holder)
     {
         RelicModel relic = holder.Relic?.Model ?? throw new InvalidOperationException("Treasure relic holder had no relic model.");
+        Node? relicNode = ReadNodeField<Node>(holder, "_relicNode");
+        string label = ReadRenderedLabel(relicNode, holder)
+            ?? AgentText.SafeText(relic.Title)
+            ?? relic.GetType().Name;
+        string? renderedDescription = ReadRenderedDescription(relicNode, holder, label);
         return new ExportMenuItem
         {
             Id = RoomChoiceIdentity.FromTreasureRelic(relic, holder.Index),
-            Label = AgentText.SafeText(relic.Title) ?? relic.GetType().Name,
-            Description = AgentText.SafeText(relic.Description),
+            Label = label,
+            Description = renderedDescription ?? ModelTextResolver.ResolveRelicDescription(relic),
             Visible = true,
             Enabled = true,
             Selected = false
         };
+    }
+
+    private static TNode? ReadNodeField<TNode>(object instance, string fieldName) where TNode : class
+    {
+        FieldInfo? field = instance.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        return field?.GetValue(instance) as TNode;
+    }
+
+    private static string? ReadRenderedLabel(Node? primaryNode, Node fallbackNode)
+    {
+        return ReadRenderedTexts(primaryNode, fallbackNode)
+            .FirstOrDefault(static text => !LooksLikeCostText(text));
+    }
+
+    private static string? ReadRenderedDescription(Node? primaryNode, Node fallbackNode, string label)
+    {
+        return ReadRenderedTexts(primaryNode, fallbackNode)
+            .FirstOrDefault(text =>
+                !string.Equals(text, label, StringComparison.Ordinal)
+                && !LooksLikeCostText(text));
+    }
+
+    private static IEnumerable<string> ReadRenderedTexts(Node? primaryNode, Node fallbackNode)
+    {
+        IEnumerable<string> primary = primaryNode is null
+            ? []
+            : NodeTextReader.ReadVisibleTexts(primaryNode, 6);
+        IEnumerable<string> fallback = NodeTextReader.ReadVisibleTexts(fallbackNode, 8);
+        return primary.Concat(fallback).Distinct(StringComparer.Ordinal);
+    }
+
+    private static bool LooksLikeCostText(string text)
+    {
+        string trimmed = text.Trim();
+        return trimmed.All(static character => char.IsDigit(character))
+            || trimmed.EndsWith(" gold", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("Cost:", StringComparison.OrdinalIgnoreCase);
     }
 }
