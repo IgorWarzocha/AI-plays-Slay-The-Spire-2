@@ -19,6 +19,12 @@ General fight rules distilled from live STS2 runs.
 - Building a winning position is the goal.
 - A lower-tempo setup turn can be stronger than a full-energy damage turn.
 
+## Patience
+
+- Patience is part of execution, not a luxury.
+- After a power, draw burst, cost mutation, or free-card proc, stop and re-read before spending the rest of the turn.
+- Do not batch away temporary discounts or free cards. Cash the new state first, then continue.
+
 ## Potion Timing
 
 - Some potions are strongest on turn 1 when the opener is weak.

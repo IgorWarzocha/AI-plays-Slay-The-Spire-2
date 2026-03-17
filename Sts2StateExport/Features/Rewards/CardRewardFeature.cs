@@ -78,7 +78,10 @@ public sealed class CardRewardFeature : IAgentFeature
                 CardRewardAlternativeOption option = ReadAlternativeOptions(screen)
                     .FirstOrDefault(candidate => string.Equals(candidate.Id, command.Argument, StringComparison.Ordinal))
                     ?? throw new InvalidOperationException($"Card reward alternate option '{command.Argument}' was not found.");
-                context.QueueTask(option.OnSelect(), command.RawAction);
+                RuntimeInvoker.Invoke(
+                    screen,
+                    context.Reflection.CardRewardAlternateSelectedMethod,
+                    [option.AfterSelected]);
                 return true;
             }
             case "skip":
@@ -86,7 +89,10 @@ public sealed class CardRewardFeature : IAgentFeature
                 CardRewardAlternativeOption option = ReadAlternativeOptions(screen)
                     .FirstOrDefault(static candidate => candidate.IsSkip)
                     ?? throw new InvalidOperationException("This card reward screen cannot be skipped.");
-                context.QueueTask(option.OnSelect(), command.RawAction);
+                RuntimeInvoker.Invoke(
+                    screen,
+                    context.Reflection.CardRewardAlternateSelectedMethod,
+                    [option.AfterSelected]);
                 return true;
             }
             default:
@@ -143,8 +149,7 @@ public sealed class CardRewardFeature : IAgentFeature
                         Hotkey = string.IsNullOrWhiteSpace(alternative.Hotkey) ? null : alternative.Hotkey,
                         IsSkip = string.Equals(optionId, "skip", StringComparison.OrdinalIgnoreCase)
                             || string.Equals(label, "Skip", StringComparison.OrdinalIgnoreCase),
-                        OnSelect = alternative.OnSelect
-                            ?? throw new InvalidOperationException($"Card reward alternate option '{optionId}' did not expose an OnSelect handler.")
+                        AfterSelected = alternative.AfterSelected
                     };
                 })
             .ToList();
@@ -164,6 +169,6 @@ public sealed class CardRewardFeature : IAgentFeature
         public required string Label { get; init; }
         public string? Hotkey { get; init; }
         public bool IsSkip { get; init; }
-        public required Func<Task> OnSelect { get; init; }
+        public required object AfterSelected { get; init; }
     }
 }

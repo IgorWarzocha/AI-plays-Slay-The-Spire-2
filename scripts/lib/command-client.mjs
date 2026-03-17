@@ -53,8 +53,43 @@ function normalizeMerchantEntryId(entryId) {
   return entryId.replace(/^([a-z]+)-\d{2}-/i, "$1-");
 }
 
-export function normalizeActionForCurrentState(action, state) {
-  if (typeof action !== "string" || !action.startsWith("merchant.buy:")) {
+function stripPotionSlotPrefix(potionId) {
+  if (typeof potionId !== "string") {
+    return "";
+  }
+
+  return potionId.replace(/^potion-\d+:/i, "");
+}
+
+function parsePotionAction(action) {
+  if (typeof action !== "string") {
+    return null;
+  }
+
+  const prefixes = [
+    "combat.use_potion:",
+    "combat.discard_potion:",
+    "potions.use:",
+    "potions.discard:",
+  ];
+
+  const prefix = prefixes.find((candidate) => action.startsWith(candidate));
+  if (!prefix) {
+    return null;
+  }
+
+  const remainder = action.slice(prefix.length);
+  const [potionId, target = ""] = remainder.split("@", 2);
+  return {
+    prefix,
+    potionId,
+    target,
+  };
+}
+
+function normalizePotionActionForCurrentState(action, state) {
+  const parsed = parsePotionAction(action);
+  if (!parsed) {
     return action;
   }
 
@@ -63,14 +98,51 @@ export function normalizeActionForCurrentState(action, state) {
     return action;
   }
 
-  const targetId = action.slice("merchant.buy:".length);
-  const normalizedTarget = normalizeMerchantEntryId(targetId);
+  const targetPotion = stripPotionSlotPrefix(parsed.potionId);
   const matches = availableActions
-    .filter((candidate) => candidate.startsWith("merchant.buy:"))
-    .filter((candidate) =>
-      normalizeMerchantEntryId(candidate.slice("merchant.buy:".length)) === normalizedTarget);
+    .filter((candidate) => candidate.startsWith(parsed.prefix))
+    .filter((candidate) => {
+      const candidateParsed = parsePotionAction(candidate);
+      if (!candidateParsed) {
+        return false;
+      }
+
+      if (stripPotionSlotPrefix(candidateParsed.potionId) !== targetPotion) {
+        return false;
+      }
+
+      if (parsed.target && candidateParsed.target !== parsed.target) {
+        return false;
+      }
+
+      return true;
+    });
 
   return matches.length === 1 ? matches[0] : action;
+}
+
+export function normalizeActionForCurrentState(action, state) {
+  if (typeof action !== "string") {
+    return action;
+  }
+
+  if (action.startsWith("merchant.buy:")) {
+    const availableActions = Array.isArray(state?.actions) ? state.actions : [];
+    if (availableActions.includes(action)) {
+      return action;
+    }
+
+    const targetId = action.slice("merchant.buy:".length);
+    const normalizedTarget = normalizeMerchantEntryId(targetId);
+    const matches = availableActions
+      .filter((candidate) => candidate.startsWith("merchant.buy:"))
+      .filter((candidate) =>
+        normalizeMerchantEntryId(candidate.slice("merchant.buy:".length)) === normalizedTarget);
+
+    return matches.length === 1 ? matches[0] : action;
+  }
+
+  return normalizePotionActionForCurrentState(action, state);
 }
 
 function isCombatStateSettled(state) {
@@ -212,14 +284,18 @@ export function isDeckCardSelectFollowThroughState(action, beforeState, state, {
   }
 
   if (state.screenType === "combat_room") {
-    return isCombatDisplayStable(state, { quietPeriodMs });
+    return isCombatStateSettled(state);
   }
 
-  if (!isMerchantInventoryConsistent(state)) {
-    return false;
+  if (state.screenType === "merchant_inventory") {
+    if (!isMerchantInventoryConsistent(state)) {
+      return false;
+    }
+
+    return isQuietSinceLastUpdate(state, quietPeriodMs);
   }
 
-  return isQuietSinceLastUpdate(state, quietPeriodMs);
+  return !isTransitionShellState(state);
 }
 
 export function isMerchantActionFollowThroughState(action, beforeState, state, { quietPeriodMs = 500 } = {}) {
@@ -322,12 +398,16 @@ export function isPotionUseFollowThroughState(action, referenceState, state) {
   });
 }
 
-export function isMapTravelFollowThroughState(beforeState, state) {
+export function isMapTravelFollowThroughState(beforeState, state, commandId = null) {
   if (!beforeState || !state || !isNewerState(beforeState, state)) {
     return false;
   }
 
   if (isTransitionShellState(state)) {
+    return false;
+  }
+
+  if (commandId && state.lastHandledCommandId !== commandId) {
     return false;
   }
 
@@ -475,7 +555,25 @@ export function waitForCommandSettlement(
   );
 }
 
-export function waitForFollowThrough(action, beforeState, { timeoutMs = 12000 } = {}) {
+export function waitForFollowThrough(action, beforeState, { timeoutMs = 12000, commandId = null } = {}) {
+  if (action.startsWith("map.travel:")) {
+    return waitFor(
+      () => {
+        const state = readState();
+        if (!isMapTravelFollowThroughState(beforeState, state, commandId)) {
+          return null;
+        }
+
+        if (isCombatLikeScreen(state.screenType) && !isCombatStateSettled(state)) {
+          return null;
+        }
+
+        return state;
+      },
+      { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
+    );
+  }
+
   if (action.startsWith("rewards.claim:reward-Potion-")) {
     return waitFor(
       () => {
@@ -487,7 +585,7 @@ export function waitForFollowThrough(action, beforeState, { timeoutMs = 12000 } 
   }
 
   if (action.startsWith("potions.use:")) {
-    const referenceState = readState() ?? beforeState;
+    const referenceState = beforeState ?? readState();
     return waitFor(
       () => {
         const state = readState();
@@ -616,18 +714,23 @@ export function sendAction(action, options = {}) {
 
   let followThroughState = null;
   const requiresStrictSettlement = resolvedAction.startsWith("map.travel:");
-  if (resolvedAction === "combat.end_turn") {
+  if (resolvedAction === "combat.end_turn" || resolvedAction.startsWith("map.travel:")) {
     try {
       followThroughState = waitForFollowThrough(resolvedAction, beforeState, {
         timeoutMs: followThroughTimeoutMs,
+        commandId: id,
       });
     } catch (error) {
-      const currentState = readState();
-      if (!isAdvancedPlayerCombatTurn(beforeState, currentState)) {
+      if (resolvedAction === "combat.end_turn") {
+        const currentState = readState();
+        if (!isAdvancedPlayerCombatTurn(beforeState, currentState)) {
+          throw error;
+        }
+
+        followThroughState = currentState;
+      } else {
         throw error;
       }
-
-      followThroughState = currentState;
     }
   }
   const result = followThroughState
@@ -639,7 +742,10 @@ export function sendAction(action, options = {}) {
   const fallbackFollowThroughState = followThroughState
     ?? (requiresStrictSettlement
       ? null
-      : waitForFollowThrough(resolvedAction, beforeState, { timeoutMs: followThroughTimeoutMs }));
+      : waitForFollowThrough(resolvedAction, beforeState, {
+        timeoutMs: followThroughTimeoutMs,
+        commandId: id,
+      }));
   const finalState = followThroughState
     ?? fallbackFollowThroughState
     ?? result?.state

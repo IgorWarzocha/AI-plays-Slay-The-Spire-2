@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { startMonitor } from "./monitor-client.mjs";
 import { STS2_RUNTIME_PATHS } from "./runtime-paths.mjs";
 import { run } from "./shell.mjs";
-import { sleep, waitFor } from "./time.mjs";
+import { waitFor } from "./time.mjs";
 import { readState } from "./game-state.mjs";
 import { getWindow, isRunning } from "./window-detector.mjs";
 
@@ -51,7 +51,20 @@ export function quitGame() {
 export function restartGame() {
   quitGame();
   const window = launchGame();
-  // A fixed cooldown makes restart self-contained for STS2's slow bootstrap.
-  sleep(20000);
+  waitFor(
+    () => {
+      const state = readState();
+      if (!state?.screenType) {
+        return null;
+      }
+
+      if (state.screenType === "unknown" || state.screenType === "booting" || state.screenType === "run_active") {
+        return null;
+      }
+
+      return state;
+    },
+    { timeoutMs: 90000, intervalMs: 500, description: "surfaced STS2 screen after restart" },
+  );
   return window;
 }

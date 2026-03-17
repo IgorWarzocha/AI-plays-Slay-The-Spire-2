@@ -268,3 +268,58 @@ test("buildCombatCommandView surfaces combat cost changes per action", () => {
     },
   ]);
 });
+
+test("buildGameplayView surfaces combat card transient states and unplayable causes", () => {
+  const state = {
+    screenType: "combat_room",
+    updatedAtUtc: "2026-03-17T15:30:00.000Z",
+    topBar: { currentHp: 73, maxHp: 91, gold: 176, buttons: [] },
+    relics: [],
+    actions: ["combat.end_turn"],
+    combat: {
+      roundNumber: 3,
+      currentSide: "Player",
+      energy: 2,
+      handIsSettled: true,
+      canEndTurn: true,
+      potions: [],
+      creatures: [],
+      hand: [
+        {
+          id: "card-bound",
+          title: "Uppercut+",
+          costText: "2",
+          description: "Deal 12 damage.",
+          isPlayable: false,
+          glowsGold: false,
+          glowsRed: false,
+          affliction: {
+            kind: "affliction",
+            typeName: "Bound",
+            title: "Bound",
+            description: "This card cannot be played normally.",
+            extraCardText: "Bound",
+            amount: 1,
+            status: null,
+            overlayPath: "res://bound.png",
+            glowsGold: null,
+            glowsRed: null,
+          },
+          enchantment: null,
+          unplayable: {
+            reason: "BlockedByHook",
+            preventerType: "Bound",
+            preventerTitle: "Bound",
+            preventerDescription: "This card cannot be played normally.",
+          },
+          validTargetIds: ["creature-1"],
+        },
+      ],
+    },
+  };
+
+  const view = buildGameplayView(state);
+  assert.equal(view.combat.hand[0].affliction.title, "Bound");
+  assert.equal(view.combat.hand[0].unplayable.reason, "BlockedByHook");
+  assert.equal(view.combat.hand[0].unplayable.preventerTitle, "Bound");
+});

@@ -73,6 +73,7 @@ public sealed class Sts2Reflection
     public FieldInfo? PauseMenuGiveUpButtonField { get; } = GetField<NPauseMenu>("_giveUpButton");
 
     public MethodInfo? MainMenuContinueMethod { get; } = GetMethod<NMainMenu>("OnContinueButtonPressed", 1);
+    public MethodInfo? MainMenuTextButtonOnReleaseMethod { get; } = GetMethod<NMainMenuTextButton>("OnRelease", 0);
     public MethodInfo? MainMenuTimelineMethod { get; } = GetMethod<NMainMenu>("OpenTimelineScreen", 1);
     public MethodInfo? MainMenuCompendiumMethod { get; } = GetMethod<NMainMenu>("OpenCompendiumSubmenu", 1);
     public MethodInfo? SingleplayerOpenCharacterMethod { get; } = GetMethod<NSingleplayerSubmenu>("OpenCharacterSelect", 1);
@@ -113,6 +114,7 @@ public sealed class Sts2Reflection
     public MethodInfo? ProceedButtonOnReleaseMethod { get; } = GetMethod<NProceedButton>("OnRelease", 0);
     public MethodInfo? RewardsOnProceedButtonPressedMethod { get; } = GetMethod<NRewardsScreen>("OnProceedButtonPressed", 1);
     public MethodInfo? CardRewardSelectCardMethod { get; } = GetMethod<NCardRewardSelectionScreen>("SelectCard", 1);
+    public MethodInfo? CardRewardAlternateSelectedMethod { get; } = GetMethod<NCardRewardSelectionScreen>("OnAlternateRewardSelected", 1);
     public MethodInfo? GameOverContinuePressMethod { get; } = GetMethod<NGameOverContinueButton>("OnPress", 0);
     public MethodInfo? GameOverMainMenuPressMethod { get; } = GetMethod<NReturnToMainMenuButton>("OnPress", 0);
     public MethodInfo? PauseMenuResumeMethod { get; } = GetMethod<NPauseMenu>("OnBackOrResumeButtonPressed", 1);
@@ -169,6 +171,7 @@ public sealed class Sts2Reflection
         RequireProperty(TopBarPauseButtonHotkeysProperty, nameof(TopBarPauseButtonHotkeysProperty));
 
         RequireMethod(MainMenuContinueMethod, nameof(MainMenuContinueMethod));
+        RequireMethod(MainMenuTextButtonOnReleaseMethod, nameof(MainMenuTextButtonOnReleaseMethod));
         RequireMethod(MainMenuTimelineMethod, nameof(MainMenuTimelineMethod));
         RequireMethod(MainMenuCompendiumMethod, nameof(MainMenuCompendiumMethod));
         RequireMethod(SingleplayerOpenCharacterMethod, nameof(SingleplayerOpenCharacterMethod));
@@ -207,6 +210,7 @@ public sealed class Sts2Reflection
         RequireMethod(ProceedButtonOnReleaseMethod, nameof(ProceedButtonOnReleaseMethod));
         RequireMethod(RewardsOnProceedButtonPressedMethod, nameof(RewardsOnProceedButtonPressedMethod));
         RequireMethod(CardRewardSelectCardMethod, nameof(CardRewardSelectCardMethod));
+        RequireMethod(CardRewardAlternateSelectedMethod, nameof(CardRewardAlternateSelectedMethod));
         RequireMethod(GameOverContinuePressMethod, nameof(GameOverContinuePressMethod));
         RequireMethod(GameOverMainMenuPressMethod, nameof(GameOverMainMenuPressMethod));
         RequireMethod(PauseMenuResumeMethod, nameof(PauseMenuResumeMethod));

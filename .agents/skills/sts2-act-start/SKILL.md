@@ -35,6 +35,9 @@ Read these before acting:
 - Mark which rewards or shops would genuinely change pathing permission.
 - Decide how many elites the deck has earned right now, not in theory.
 - Decide what must be fixed before the boss.
+- Late in an act, do not over-preserve if the deck is already ahead of the act's tests and the route still has recovery or potion outs.
+- A route with strong relics, upgraded control, spare potion capacity, and a fire before the boss often has earned one more elite even at imperfect HP.
+- If the route is already forcing a hard fight, spend current HP, gold, and potion capacity to improve that fight instead of preserving fake safety into it.
 
 ## Decision Standard
 

@@ -375,48 +375,15 @@ public sealed class CombatFeature : IAgentFeature
 
     private static ExportCombatCard BuildHandCard(CardModel card, NHandCardHolder? holder)
     {
-        NCard? cardNode = holder?.CardNode;
-        bool isPlayable = ReadBoolProperty(card, "IsPlayable") ?? card.CanPlay();
+        List<string> validTargetIds = card.TargetType.ToString() == "None"
+            ? []
+            : card.CombatState?.HittableEnemies
+                .Where(card.IsValidTarget)
+                .Select(CombatCardIdentity.FromCreature)
+                .ToList()
+                ?? [];
 
-        string title = CardTextResolver.ResolveLabel(cardNode, card);
-        string? description = CardTextResolver.ResolveDescription(cardNode, card, title);
-
-        return new ExportCombatCard
-        {
-            Id = CombatCardIdentity.FromCard(card),
-            Title = title,
-            Description = description,
-            CostText = ReadCardCost(cardNode, card),
-            TargetType = card.TargetType.ToString(),
-            IsPlayable = isPlayable && card.CanPlay(),
-            ValidTargetIds = card.TargetType.ToString() == "None"
-                ? []
-                : card.CombatState?.HittableEnemies
-                    .Where(card.IsValidTarget)
-                    .Select(CombatCardIdentity.FromCreature)
-                    .ToList()
-                    ?? [],
-            GlowsGold = holder is not null && (ReadBoolProperty(holder, "ShouldGlowGold") ?? false),
-            GlowsRed = holder is not null && (ReadBoolProperty(holder, "ShouldGlowRed") ?? false)
-        };
-    }
-
-    private static string? ReadCardCost(NCard? cardNode, CardModel card)
-    {
-        object? energyCost = ReadObjectProperty(card, "EnergyCost");
-        if (energyCost is not null)
-        {
-            MethodInfo? getResolvedMethod = energyCost.GetType().GetMethod(
-                "GetResolved",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (getResolvedMethod?.Invoke(energyCost, null) is int resolvedCost && resolvedCost >= 0)
-            {
-                return resolvedCost.ToString();
-            }
-        }
-
-        int? canonicalCost = ReadIntProperty(card, "CanonicalEnergyCost");
-        return canonicalCost is >= 0 ? canonicalCost.Value.ToString() : null;
+        return CombatCardExportMapper.Build(card, holder, validTargetIdsOverride: validTargetIds);
     }
 
     private static ExportCombatCreature BuildCreature(NCreature node)

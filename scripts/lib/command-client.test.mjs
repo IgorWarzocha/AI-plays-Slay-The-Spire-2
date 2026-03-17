@@ -92,6 +92,44 @@ test("merchant actions re-resolve when slot indices shift after a purchase", () 
   );
 });
 
+test("combat potion actions re-resolve when earlier potion use shifts potion ids", () => {
+  const state = {
+    screenType: "combat_room",
+    actions: [
+      "combat.use_potion:potion-01:potion-shaped-rock@creature-1",
+      "combat.discard_potion:potion-01:potion-shaped-rock",
+    ],
+  };
+
+  assert.equal(
+    normalizeActionForCurrentState("combat.use_potion:potion-02:potion-shaped-rock@creature-1", state),
+    "combat.use_potion:potion-01:potion-shaped-rock@creature-1",
+  );
+  assert.equal(
+    normalizeActionForCurrentState("combat.discard_potion:potion-02:potion-shaped-rock", state),
+    "combat.discard_potion:potion-01:potion-shaped-rock",
+  );
+});
+
+test("non-combat potion actions re-resolve when slot ids shift", () => {
+  const state = {
+    screenType: "rewards_screen",
+    actions: [
+      "potions.use:potion-01:blood-potion",
+      "potions.discard:potion-01:blood-potion",
+    ],
+  };
+
+  assert.equal(
+    normalizeActionForCurrentState("potions.use:potion-03:blood-potion", state),
+    "potions.use:potion-01:blood-potion",
+  );
+  assert.equal(
+    normalizeActionForCurrentState("potions.discard:potion-03:blood-potion", state),
+    "potions.discard:potion-01:blood-potion",
+  );
+});
+
 test("interactive follow-up transitions settle even while ack stays pending", () => {
   const beforeState = {
     screenType: "merchant_inventory",
@@ -264,7 +302,7 @@ test("deck card select follow-through accepts a settled combat return frame", ()
   };
   const settledCombat = {
     screenType: "combat_room",
-    updatedAtUtc: new Date(now - 1000).toISOString(),
+    updatedAtUtc: new Date(now).toISOString(),
     combat: {
       handIsSettled: true,
       hand: [{ id: "card-1", isPlayable: true }],
@@ -273,6 +311,24 @@ test("deck card select follow-through accepts a settled combat return frame", ()
 
   assert.equal(
     isDeckCardSelectFollowThroughState("deck_card_select.select:shrug-it-off-plus-01", beforeState, settledCombat),
+    true,
+  );
+});
+
+test("deck card select follow-through accepts a non-merchant room return frame", () => {
+  const now = Date.now();
+  const beforeState = {
+    screenType: "deck_card_select",
+    updatedAtUtc: new Date(now - 4000).toISOString(),
+  };
+  const restSite = {
+    screenType: "rest_site",
+    updatedAtUtc: new Date(now).toISOString(),
+    actions: ["rest_site.proceed"],
+  };
+
+  assert.equal(
+    isDeckCardSelectFollowThroughState("deck_card_select.select:demon-form-01", beforeState, restSite),
     true,
   );
 });
@@ -381,4 +437,71 @@ test("map travel waits past transient room shells and returns the destination su
 
   assert.equal(isMapTravelFollowThroughState(beforeState, transientCombatShell), false);
   assert.equal(isMapTravelFollowThroughState(beforeState, destinationState), true);
+});
+
+test("map travel accepts a settled combat destination", () => {
+  const beforeState = {
+    screenType: "map_screen",
+    updatedAtUtc: "2026-03-17T14:40:00.000Z",
+    actions: ["map.travel:2,11"],
+  };
+  const combatDestination = {
+    screenType: "combat_room",
+    updatedAtUtc: "2026-03-17T14:40:05.000Z",
+    combat: {
+      currentSide: "Player",
+      roundNumber: 1,
+      handIsSettled: true,
+      hand: [{ id: "strike", title: "Strike", costText: "1", isPlayable: true }],
+      creatures: [],
+    },
+  };
+
+  assert.equal(isMapTravelFollowThroughState(beforeState, combatDestination), true);
+});
+
+test("map travel ignores a stale mutated map frame before the command is actually handled", () => {
+  const beforeState = {
+    screenType: "map_screen",
+    updatedAtUtc: "2026-03-17T14:59:18.398Z",
+    actions: ["map.travel:2,12"],
+    menuItems: [{ id: "2,12", label: "Elite (2,12)" }],
+  };
+  const staleAfterState = {
+    screenType: "map_screen",
+    updatedAtUtc: "2026-03-17T14:59:33.418Z",
+    actions: [],
+    menuItems: [],
+    lastHandledCommandId: "cmd-other",
+  };
+
+  assert.equal(
+    isMapTravelFollowThroughState(beforeState, staleAfterState, "cmd-expected"),
+    false,
+  );
+});
+
+test("map travel accepts a handled combat destination", () => {
+  const beforeState = {
+    screenType: "map_screen",
+    updatedAtUtc: "2026-03-17T14:59:18.398Z",
+    actions: ["map.travel:2,12"],
+  };
+  const combatDestination = {
+    screenType: "combat_room",
+    updatedAtUtc: "2026-03-17T14:59:50.524Z",
+    lastHandledCommandId: "cmd-expected",
+    combat: {
+      currentSide: "Player",
+      roundNumber: 1,
+      handIsSettled: true,
+      hand: [{ id: "strike", title: "Strike", costText: "1", isPlayable: true }],
+      creatures: [],
+    },
+  };
+
+  assert.equal(
+    isMapTravelFollowThroughState(beforeState, combatDestination, "cmd-expected"),
+    true,
+  );
 });

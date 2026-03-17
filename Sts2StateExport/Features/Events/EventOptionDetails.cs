@@ -27,7 +27,13 @@ internal static class EventOptionDetails
             AddPart(parts, seen, DescribeHoverTip(hoverTip));
         }
 
-        return parts.Count == 0 ? null : string.Join(" ", parts);
+        if (parts.Count == 0)
+        {
+            return null;
+        }
+
+        string combined = string.Join(" ", parts);
+        return PostProcessMadScience(baseDescription, combined);
     }
 
     private static void AddPart(ICollection<string> parts, ISet<string> seen, string? value)
@@ -89,7 +95,7 @@ internal static class EventOptionDetails
     private static string DescribeCard(CardModel card)
     {
         string title = AgentText.SafeText(card.TitleLocString) ?? card.Title;
-        string? description = AgentText.SafeText(card.Description);
+        string? description = ModelTextResolver.ResolveCardDescription(card);
         return JoinParts($"Card: {title}.", description) ?? $"Card: {title}.";
     }
 
@@ -105,5 +111,25 @@ internal static class EventOptionDetails
             (false, true) => right!.Trim(),
             _ => null
         };
+    }
+
+    private static string PostProcessMadScience(string? baseDescription, string combined)
+    {
+        if (!combined.Contains("Card: Mad Science. ???", StringComparison.Ordinal))
+        {
+            return combined;
+        }
+
+        if (baseDescription?.Contains("Make an Attack", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return combined.Replace("Card: Mad Science. ???", "Card: Mad Science. Deal 12 damage. ???", StringComparison.Ordinal);
+        }
+
+        if (baseDescription?.Contains("Make a Skill", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return combined.Replace("Card: Mad Science. ???", "Card: Mad Science. Gain 12 [gold]Block[/gold]. ???", StringComparison.Ordinal);
+        }
+
+        return combined;
     }
 }

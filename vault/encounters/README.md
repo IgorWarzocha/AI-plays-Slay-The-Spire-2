@@ -13,6 +13,10 @@ Use encounter notes for enemies, elites, bosses, and important events that chang
 - [[encounters/hive/decimillipede]]
 - [[encounters/hive/the-insatiable]]
 
+## Glory
+
+- [[encounters/glory/tinker-time]]
+
 ## Writing Rule
 
 Prefer one note per encounter. If an encounter has a second phase, summons, or unusual targeting rules, call that out explicitly.

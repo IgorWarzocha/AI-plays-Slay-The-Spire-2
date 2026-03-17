@@ -210,7 +210,32 @@ public sealed class ExportCombatCard
     public bool IsPlayable { get; set; }
     public bool GlowsGold { get; set; }
     public bool GlowsRed { get; set; }
+    public ExportCombatCardState? Affliction { get; set; }
+    public ExportCombatCardState? Enchantment { get; set; }
+    public ExportCombatCardUnplayable? Unplayable { get; set; }
     public List<string> ValidTargetIds { get; set; } = [];
+}
+
+public sealed class ExportCombatCardState
+{
+    public string Kind { get; set; } = string.Empty;
+    public string? TypeName { get; set; }
+    public string? Title { get; set; }
+    public string? Description { get; set; }
+    public string? ExtraCardText { get; set; }
+    public int? Amount { get; set; }
+    public string? Status { get; set; }
+    public string? OverlayPath { get; set; }
+    public bool? GlowsGold { get; set; }
+    public bool? GlowsRed { get; set; }
+}
+
+public sealed class ExportCombatCardUnplayable
+{
+    public string? Reason { get; set; }
+    public string? PreventerType { get; set; }
+    public string? PreventerTitle { get; set; }
+    public string? PreventerDescription { get; set; }
 }
 
 public sealed class ExportCombatCreature

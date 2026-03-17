@@ -199,19 +199,7 @@ public sealed class CombatHandSelectFeature : IAgentFeature
                 holder =>
                 {
                     CardModel card = holder.CardModel!;
-                    string title = CardTextResolver.ResolveLabel(holder.CardNode, card);
-                    return new ExportCombatCard
-                    {
-                        Id = CombatCardIdentity.FromCard(card),
-                        Title = title,
-                        Description = CardTextResolver.ResolveDescription(holder.CardNode, card, title),
-                        CostText = ReadCardCost(card),
-                        TargetType = card.TargetType.ToString(),
-                        IsPlayable = true,
-                        GlowsGold = ReadBoolProperty(holder, "ShouldGlowGold") ?? false,
-                        GlowsRed = ReadBoolProperty(holder, "ShouldGlowRed") ?? false,
-                        ValidTargetIds = []
-                    };
+                    return CombatCardExportMapper.Build(card, holder, isPlayableOverride: true, validTargetIdsOverride: []);
                 })
             .ToList();
     }
@@ -251,39 +239,6 @@ public sealed class CombatHandSelectFeature : IAgentFeature
 
         object? button = ReadOptionalField(hand, "_selectModeConfirmButton");
         return button is Control control && SceneTraversal.IsNodeVisible(control);
-    }
-
-    private static string? ReadCardCost(CardModel card)
-    {
-        PropertyInfo? energyCostProperty = card.GetType().GetProperty(
-            "EnergyCost",
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        object? energyCost = energyCostProperty?.GetValue(card);
-        if (energyCost is null)
-        {
-            return null;
-        }
-
-        MethodInfo? getResolvedMethod = energyCost.GetType().GetMethod(
-            "GetResolved",
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        if (getResolvedMethod?.Invoke(energyCost, null) is int resolvedCost && resolvedCost >= 0)
-        {
-            return resolvedCost.ToString();
-        }
-
-        return null;
-    }
-
-    private static bool? ReadBoolProperty(object instance, string propertyName)
-    {
-        PropertyInfo? property = instance.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        object? value = property?.GetValue(instance);
-        return value switch
-        {
-            bool flag => flag,
-            _ => null
-        };
     }
 
     private static object ReadRequiredField(object instance, string fieldName)
