@@ -29,8 +29,33 @@ public static class AgentText
 
         try
         {
-            string? raw = value.GetRawText();
-            return string.IsNullOrWhiteSpace(raw) ? null : raw;
+            if (value.Variables.Count > 0)
+            {
+                try
+                {
+                    string? formatted = value.GetFormattedText();
+                    if (!string.IsNullOrWhiteSpace(formatted))
+                    {
+                        return formatted;
+                    }
+                }
+                catch (Exception)
+                {
+                    // Some runtime descriptions depend on selector extensions that are
+                    // only valid in specific UI contexts. Falling back to raw text is
+                    // better than crashing the entire frame export.
+                }
+            }
+
+            try
+            {
+                string? raw = value.GetRawText();
+                return string.IsNullOrWhiteSpace(raw) ? null : raw;
+            }
+            catch (Exception)
+            {
+                return FormatMissingLoc(value);
+            }
         }
         catch (LocException)
         {

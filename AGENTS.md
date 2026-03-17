@@ -59,11 +59,16 @@ Minimal repo-local reference for the commands and paths this workspace uses most
 - Use screenshots only to validate genuinely unknown screens; normal control should stay model-backed.
 - If a screen cannot be read or operated programmatically, take a validation screenshot immediately before making further assumptions.
 - Treat new console errors in `godot.log` as real bugs and fix them before continuing.
+- Do not pick blindly. If a screen offers a gameplay choice and the concrete payload is not exposed to the agent, treat that as a missing exporter/control feature and fix the codebase before choosing.
+- Generic event text is not enough when the game has already resolved a concrete reward or consequence at runtime. Export the resolved payload.
 
 ## Documentation Loop
 
 - Maintain the Obsidian-style learning vault under `/home/igorw/Work/STS2/vault`.
 - This repo is not only for mod development. It is also the long-lived STS2 learning repo for the agent.
+- This is STS2, not STS1. Familiar STS1 heuristics are useful starting points, not trusted conclusions.
+- Do not autopilot off prior STS1 intuition. Re-evaluate cards, relics, events, pathing, and combat lines in the actual STS2 context.
+- Treat familiarity as a bias risk. Overconfidence from “this looks like STS1” is a gameplay mistake and must be called out in run notes and post mortems when it appears.
 - After any new encounter, mechanic, or reusable control pattern appears, add or update a vault note before continuing normal play.
 - Treat the vault as the long-lived learning surface for STS2. Generated runtime pages in `runtime/` are reference material, not the final memory layer.
 - Every run must also have its own markdown log under `/home/igorw/Work/STS2/vault/runs`.

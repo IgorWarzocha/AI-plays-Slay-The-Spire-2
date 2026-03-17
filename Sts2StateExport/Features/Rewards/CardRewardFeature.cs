@@ -55,11 +55,14 @@ public sealed class CardRewardFeature : IAgentFeature
     private static ExportMenuItem BuildCardRewardItem(NCardHolder holder)
     {
         CardModel card = holder.CardModel ?? throw new InvalidOperationException("Card reward holder did not expose a card model.");
+        string label = CardTextResolver.ResolveLabel(holder.CardNode, card);
+        string? description = CardTextResolver.ResolveDescription(holder.CardNode, card, label);
+
         return new ExportMenuItem
         {
             Id = RewardIdentity.FromCard(card),
-            Label = AgentText.SafeText(card.TitleLocString) ?? card.Title,
-            Description = AgentText.SafeText(card.Description),
+            Label = label,
+            Description = description,
             Visible = true,
             Enabled = true,
             Selected = false

@@ -82,11 +82,12 @@ public sealed class RewardsFeature : IAgentFeature
     {
         Reward reward = button.Reward ?? throw new InvalidOperationException("Reward button did not expose a reward model.");
         List<string> visibleTexts = NodeTextReader.ReadVisibleTexts(button);
-        string label = visibleTexts.FirstOrDefault()
-            ?? ReadRewardProperty(reward, "RewardType")?.ToString()
-            ?? reward.GetType().Name;
-        string? description = AgentText.SafeText(reward.Description)
-            ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal));
+        string? visibleLabel = visibleTexts.FirstOrDefault();
+        string label = RewardDetails.BuildLabel(reward, visibleLabel);
+        string? description = RewardDetails.BuildDescription(
+            reward,
+            AgentText.SafeText(reward.Description)
+                ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, visibleLabel, StringComparison.Ordinal)));
 
         return new ExportMenuItem
         {

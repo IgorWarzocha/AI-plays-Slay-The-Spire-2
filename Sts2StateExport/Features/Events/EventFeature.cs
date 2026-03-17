@@ -107,8 +107,10 @@ public sealed class EventFeature : IAgentFeature
                             ?? option.TextKey
                             ?? visibleTexts.FirstOrDefault()
                             ?? $"Option {index + 1}";
-                        string? description = AgentText.SafeText(option.Description)
-                            ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal));
+                        string? description = EventOptionDetails.BuildDescription(
+                            option,
+                            AgentText.SafeText(option.Description)
+                            ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal)));
 
                         return new EventOptionButtonBinding(index, option, label, description);
                     })
@@ -125,8 +127,10 @@ public sealed class EventFeature : IAgentFeature
                         ?? option.TextKey
                         ?? visibleTexts.FirstOrDefault()
                         ?? $"Option {index + 1}";
-                    string? description = AgentText.SafeText(option.Description)
-                        ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal));
+                    string? description = EventOptionDetails.BuildDescription(
+                        option,
+                        AgentText.SafeText(option.Description)
+                        ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal)));
 
                     return new EventOptionButtonBinding(index, option, label, description);
                 })

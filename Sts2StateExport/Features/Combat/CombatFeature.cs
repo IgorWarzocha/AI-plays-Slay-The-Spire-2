@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.Potions;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
@@ -48,15 +49,17 @@ public sealed class CombatFeature : IAgentFeature
             return false;
         }
 
-        List<ExportCombatCard> handCards = hand.ActiveHolders
-            .Select(holder => BuildHandCard(holder))
-            .ToList();
         List<ExportCombatCreature> creatures = room.CreatureNodes
             .Select(BuildCreature)
             .OrderBy(creature => creature.Side)
             .ThenBy(creature => creature.SlotName)
             .ThenBy(creature => creature.Name)
             .ToList();
+        List<ExportCombatCard> handCards = hand.ActiveHolders
+            .Select(holder => BuildHandCard(holder))
+            .ToList();
+        bool isPlayerTurn = string.Equals(combatState.CurrentSide.ToString(), "Player", StringComparison.Ordinal);
+        List<ExportCombatPotion> potions = CombatPotionSupport.BuildPotions(context.Root, creatures, isPlayerTurn);
 
         state.ScreenType = "combat_room";
         state.Combat = new ExportCombatState
@@ -69,6 +72,7 @@ public sealed class CombatFeature : IAgentFeature
             DiscardPileCount = ReadPileCount(ui.DiscardPile),
             ExhaustPileCount = ReadPileCount(ui.ExhaustPile),
             CanEndTurn = RuntimeInvoker.Invoke<bool>(ui.EndTurnButton, context.Reflection.CombatEndTurnCanTurnBeEndedMethod),
+            Potions = potions,
             Creatures = creatures
         };
 
@@ -86,6 +90,7 @@ public sealed class CombatFeature : IAgentFeature
             .ToList();
         state.Actions =
         [
+            .. CombatPotionSupport.BuildActions(potions),
             .. handCards.Where(static card => card.IsPlayable).Select(card => $"combat.play:{card.Id}"),
             .. handCards.Where(static card => card.IsPlayable && card.ValidTargetIds.Count > 0)
                 .SelectMany(card => card.ValidTargetIds.Select(targetId => $"combat.play:{card.Id}@{targetId}")),
@@ -117,6 +122,9 @@ public sealed class CombatFeature : IAgentFeature
                     ui.EndTurnButton ?? throw new InvalidOperationException("End turn button is unavailable."),
                     context.Reflection.CombatEndTurnOnReleaseMethod);
                 return true;
+            case "use_potion":
+            case "discard_potion":
+                return ExecutePotionCommand(context, command);
             case "open_pile":
                 OpenPile(context, ui, command.Argument);
                 return true;
@@ -126,6 +134,28 @@ public sealed class CombatFeature : IAgentFeature
             default:
                 throw new InvalidOperationException($"Unsupported combat action '{command.RawAction}'.");
         }
+    }
+
+    private static bool ExecutePotionCommand(FeatureContext context, ParsedCommand command)
+    {
+        IReadOnlyList<Creature> creatures = context.RequireVisible<NCombatRoom>().CreatureNodes
+            .Select(static node => node.Entity)
+            .ToList();
+
+        if (string.Equals(command.Verb, "use_potion", StringComparison.Ordinal))
+        {
+            CombatPotionSupport.UsePotion(context.Root, command.Argument, creatures);
+            return true;
+        }
+
+        if (string.Equals(command.Verb, "discard_potion", StringComparison.Ordinal))
+        {
+            NPotionHolder holder = CombatPotionSupport.FindPotionHolderForExecution(context.Root, command.Argument);
+            RuntimeInvoker.Invoke(holder, holder.GetType().GetMethod(nameof(NPotionHolder.DiscardPotion)));
+            return true;
+        }
+
+        return false;
     }
 
     private static void ExecutePlayCommand(NCombatRoom room, NCombatUi ui, string? argument)
@@ -233,11 +263,14 @@ public sealed class CombatFeature : IAgentFeature
         NCard? cardNode = holder.CardNode;
         bool isPlayable = ReadBoolProperty(card, "IsPlayable") ?? card.CanPlay();
 
+        string title = CardTextResolver.ResolveLabel(cardNode, card);
+        string? description = CardTextResolver.ResolveDescription(cardNode, card, title);
+
         return new ExportCombatCard
         {
             Id = CombatCardIdentity.FromCard(card),
-            Title = AgentText.SafeText(card.TitleLocString) ?? card.Title,
-            Description = AgentText.SafeText(card.Description),
+            Title = title,
+            Description = description,
             CostText = ReadCardCost(cardNode, card),
             TargetType = card.TargetType.ToString(),
             IsPlayable = isPlayable && card.CanPlay(),

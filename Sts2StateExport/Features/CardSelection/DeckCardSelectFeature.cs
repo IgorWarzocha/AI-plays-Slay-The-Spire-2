@@ -116,11 +116,14 @@ public sealed class DeckCardSelectFeature : IAgentFeature
                 entry =>
                 {
                     NCard card = entry.CardNode;
+                    MegaCrit.Sts2.Core.Models.CardModel cardModel = ReadSelectableCardModel(card) as MegaCrit.Sts2.Core.Models.CardModel
+                        ?? throw new InvalidOperationException("Deck card node did not expose a card model.");
                     List<string> visibleTexts = NodeTextReader.ReadVisibleTexts(card);
-                    string label = ReadCardText(card, "_titleLabel")
-                        ?? visibleTexts.FirstOrDefault()
-                        ?? "Unknown Card";
-                    string? description = ReadCardText(card, "_descriptionLabel")
+                    string label = CardTextResolver.ResolveLabel(card, cardModel);
+                    string? description = CardTextResolver.ResolveDescription(
+                        card,
+                        cardModel,
+                        label)
                         ?? visibleTexts.FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal));
                     int occurrence = titleCounts.GetValueOrDefault(label, 0) + 1;
                     titleCounts[label] = occurrence;
@@ -319,16 +322,4 @@ public sealed class DeckCardSelectFeature : IAgentFeature
         RuntimeInvoker.Invoke(screen, methodInfo, args);
     }
 
-    private static string? ReadCardText(NCard card, string fieldName)
-    {
-        FieldInfo? field = card.GetType().GetField(
-            fieldName,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        if (field?.GetValue(card) is not Node node)
-        {
-            return null;
-        }
-
-        return NodeTextReader.ReadVisibleTexts(node, 1).FirstOrDefault();
-    }
 }

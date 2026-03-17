@@ -187,6 +187,10 @@ function stableJson(value) {
   return JSON.stringify(value ?? null);
 }
 
+function createCommandId() {
+  return `cmd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function isExplicitFalse(value) {
   return value === false || value === "false" || value === "0";
 }
@@ -280,8 +284,14 @@ function waitForCommandSettlement(id, beforeState, { timeoutMs = 6000 } = {}) {
         throw new Error(ack.message ?? `Command ${id} failed.`);
       }
 
+      const ackCompleted = ack?.id === id && ack.status !== "pending";
+
       const state = readState();
       if (!state || state.lastHandledCommandId !== id) {
+        return null;
+      }
+
+      if (!ackCompleted) {
         return null;
       }
 
@@ -297,6 +307,51 @@ function waitForCommandSettlement(id, beforeState, { timeoutMs = 6000 } = {}) {
   );
 }
 
+function waitForFollowThrough(action, beforeState, {
+  timeoutMs = 6000,
+} = {}) {
+  if (action !== "combat.end_turn") {
+    return null;
+  }
+
+  const beforeRoundNumber = beforeState?.combat?.roundNumber ?? null;
+  const beforeUpdatedAt = beforeState?.updatedAtUtc ?? null;
+
+  return waitFor(
+    () => {
+      const state = readState();
+      if (!state?.updatedAtUtc || state.updatedAtUtc === beforeUpdatedAt) {
+        return null;
+      }
+
+      if (state.screenType !== "combat_room") {
+        return state;
+      }
+
+      const combat = state.combat;
+      if (!combat) {
+        return state;
+      }
+
+      if (combat.currentSide !== "Player") {
+        return null;
+      }
+
+      if (beforeRoundNumber === null || combat.roundNumber > beforeRoundNumber) {
+        const handCount = Array.isArray(combat.hand) ? combat.hand.length : 0;
+        const visibleMenuCount = Array.isArray(state.menuItems) ? state.menuItems.length : 0;
+
+        if (handCount > 0 || visibleMenuCount > 0) {
+          return state;
+        }
+      }
+
+      return null;
+    },
+    { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
+  );
+}
+
 function waitForScreen(screenType, { timeoutMs = 15000 } = {}) {
   return waitFor(
     () => {
@@ -308,7 +363,7 @@ function waitForScreen(screenType, { timeoutMs = 15000 } = {}) {
 }
 
 function sendAction(action, options = {}) {
-  const id = options.id ?? `cmd-${Date.now()}`;
+  const id = options.id ?? createCommandId();
   const beforeState = readState();
   const payload = {
     id,
@@ -320,22 +375,57 @@ function sendAction(action, options = {}) {
 
   writeCommand(payload);
   const ack = waitForAck(id);
-  if (isExplicitFalse(options.strict)) {
-    return ack;
+  if (ack.status === "error") {
+    throw new Error(ack.message ?? `Command ${action} failed.`);
   }
 
-  if (ack.status === "error") {
-    return ack;
+  if (isExplicitFalse(options.strict)) {
+    return {
+      action,
+      id,
+      ack,
+      settled: false,
+      state: readState(),
+    };
   }
 
   const result = waitForCommandSettlement(id, beforeState, {
     timeoutMs: Number(options["settle-timeout-ms"] ?? options.settleTimeoutMs ?? 6000),
   });
 
+  const followThroughState = waitForFollowThrough(action, beforeState, {
+    timeoutMs: Number(options["follow-through-timeout-ms"] ?? options.followThroughTimeoutMs ?? 6000),
+  });
+  const finalState = followThroughState ?? result.state ?? readState();
+
   return {
-    ...ack,
+    action,
+    id,
+    ack,
     settled: true,
-    screenType: result.state?.screenType ?? null,
+    ackStatus: ack.status,
+    screenType: finalState?.screenType ?? null,
+    state: finalState,
+  };
+}
+
+function runActions(actions, options = {}) {
+  const results = [];
+
+  for (let index = 0; index < actions.length; index += 1) {
+    const action = actions[index];
+    const result = sendAction(action, {
+      ...options,
+      id: actions.length === 1 ? options.id : undefined,
+    });
+    results.push(result);
+  }
+
+  return {
+    ok: true,
+    actionCount: results.length,
+    results,
+    state: results.at(-1)?.state ?? readState(),
   };
 }
 
@@ -392,7 +482,7 @@ function usage() {
   sts2ctl.mjs monitor-start
   sts2ctl.mjs monitor-stop
   sts2ctl.mjs monitor-status
-  sts2ctl.mjs command <action> [--character <id>] [--seed <seed>] [--act1 <act>] [--strict false] [--settle-timeout-ms <ms>]
+  sts2ctl.mjs command <action> [action...] [--character <id>] [--seed <seed>] [--act1 <act>] [--strict false] [--settle-timeout-ms <ms>]
   sts2ctl.mjs wait-screen <screenType>
   sts2ctl.mjs start-standard [--character <id>] [--seed <seed>] [--act1 <act>]
 `);
@@ -428,13 +518,13 @@ function main() {
       console.log(JSON.stringify({ running: isMonitorRunning(), pid: readMonitorPid() }, null, 2));
       return;
     case "command": {
-      const action = positional[1];
-      if (!action) {
-        throw new Error("command requires an action.");
+      const actions = positional.slice(1);
+      if (actions.length === 0) {
+        throw new Error("command requires at least one action.");
       }
 
-      const ack = sendAction(action, options);
-      console.log(JSON.stringify(ack, null, 2));
+      const result = runActions(actions, options);
+      console.log(JSON.stringify(result, null, 2));
       return;
     }
     case "wait-screen": {

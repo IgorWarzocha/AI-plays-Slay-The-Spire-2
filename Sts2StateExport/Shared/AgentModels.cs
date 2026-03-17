@@ -160,8 +160,21 @@ public sealed class ExportCombatState
     public bool CanEndTurn { get; set; }
     public string? SelectionMode { get; set; }
     public string? SelectionPrompt { get; set; }
+    public List<ExportCombatPotion> Potions { get; set; } = [];
     public List<ExportCombatCard> Hand { get; set; } = [];
     public List<ExportCombatCreature> Creatures { get; set; } = [];
+}
+
+public sealed class ExportCombatPotion
+{
+    public string Id { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? TargetType { get; set; }
+    public string? Usage { get; set; }
+    public bool IsUsable { get; set; }
+    public bool CanDiscard { get; set; }
+    public List<string> ValidTargetIds { get; set; } = [];
 }
 
 public sealed class ExportCombatCard
