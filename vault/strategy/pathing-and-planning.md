@@ -24,18 +24,6 @@ Before taking an elite path, check:
 
 If those answers are weak, the route has not earned the elite yet.
 
-## Planning Heuristic
-
-- Do not optimize only for the current turn.
-- Play for the next few turns, especially in elite fights.
-
-Questions to ask during combat:
-
-- what does this line make my next two turns look like
-- am I spending energy, or am I building a winning position
-- is setup stronger than short-term tempo here
-- if I wake the enemy or trigger phase two, can this deck handle what happens next
-
 ## Common Failure Mode
 
 - taking a short-term value line
@@ -48,13 +36,16 @@ Example:
 
 That is usually greed disguised as confidence.
 
-## Application To Ironclad
+## Planning Rule
 
-- `Inflame` and similar setup cards are often underplayed when the line is judged only by current-turn efficiency.
-- `Iron Wave` is not just tempo. It can be part of a multi-turn survival line.
-- Early Act 1 elites should be treated as threshold checks, not generic damage races.
+- Plan routes in chunks, not clicks.
+- Ask what the path looks like after the next hard room, not just at the next node.
+- If a route needs multiple things to go right in sequence, it is probably not the route the deck has earned.
 
 ## Related
 
+- [[strategy/combat-heuristics]]
+- [[strategy/deckbuilding-heuristics]]
+- [[strategy/elite-and-boss-prep]]
 - [[strategy/ironclad-core-plan]]
 - [[runs/2026-03-16-ironclad-run-002]]

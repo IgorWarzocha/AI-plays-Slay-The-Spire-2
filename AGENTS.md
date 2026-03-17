@@ -9,14 +9,17 @@
 
 ## Core Commands
 
-- `node /home/igorw/Work/STS2/scripts/sts2admin.mjs restart`
+- `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs build`
+- `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs test`
+- `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs restart`
+- `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs continue`
+- `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs reload`
 - `node /home/igorw/Work/STS2/scripts/sts2run.mjs start-standard`
-- `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs status --relics`
-- `node /home/igorw/Work/STS2/scripts/sts2combat.mjs status --relics --notes`
+- `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs status`
+- `node /home/igorw/Work/STS2/scripts/sts2combat.mjs status`
 - `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs command <action>`
 - `node /home/igorw/Work/STS2/scripts/sts2combat.mjs command <action>`
 - `node /home/igorw/Work/STS2/scripts/sts2-log-tail.mjs`
-- `dotnet build /home/igorw/Work/STS2/Sts2StateExport/Sts2StateExport.csproj`
 - `dotnet run --project /home/igorw/Work/STS2/tools/Sts2TypeInspector/Sts2TypeInspector.csproj -- <TypeFragment>`
 
 ## Key Paths

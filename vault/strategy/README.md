@@ -6,8 +6,14 @@ These notes should be shorter and more operational than the long-form source gui
 
 ## Current Notes
 
+- [[strategy/combat-heuristics]]
+- [[strategy/deckbuilding-heuristics]]
+- [[strategy/elite-and-boss-prep]]
+- [[strategy/event-heuristics]]
 - [[strategy/ironclad-core-plan]]
 - [[strategy/pathing-and-planning]]
+- [[strategy/reward-heuristics]]
+- [[strategy/shop-heuristics]]
 
 ## Source Rule
 

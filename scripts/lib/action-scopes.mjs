@@ -8,6 +8,7 @@ const BOOTSTRAP_SCOPES = new Set([
 const COMBAT_SCOPES = new Set([
   "combat",
   "combat_card_select",
+  "combat_choice_select",
 ]);
 
 export function getActionScope(action) {

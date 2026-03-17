@@ -41,6 +41,15 @@ function summarizeCombatCard(card) {
   };
 }
 
+function summarizeCostChange(change) {
+  return {
+    cardId: change.cardId,
+    title: change.title ?? null,
+    beforeCost: change.beforeCost ?? null,
+    afterCost: change.afterCost ?? null,
+  };
+}
+
 function summarizePotion(potion) {
   return {
     id: potion.id,
@@ -61,7 +70,14 @@ function summarizeCreature(creature) {
     hp: `${creature.currentHp}/${creature.maxHp}`,
     block: creature.block,
     powers: creature.powers ?? [],
-    intents: creature.intents ?? [],
+    intents: (creature.intents ?? []).map((intent) => ({
+      kind: intent.kind,
+      label: intent.label ?? null,
+      title: intent.title ?? null,
+      description: intent.description ?? null,
+      summary: intent.summary ?? null,
+      targets: intent.targets ?? [],
+    })),
   };
 }
 
@@ -211,7 +227,11 @@ export function buildGameplayView(state, options = {}) {
       break;
     case "combat_room":
     case "combat_card_select":
+    case "combat_choice_select":
       view.combat = state.combat ? summarizeCombat(state.combat) : null;
+      if ((state.menuItems ?? []).length > 0) {
+        view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
+      }
       break;
     case "deck_view":
     case "card_pile":
@@ -247,6 +267,7 @@ export function buildCommandView(result, options = {}) {
       id: entry.id,
       ackStatus: entry.ackStatus ?? entry.ack?.status ?? null,
       screenType: entry.screenType ?? null,
+      costChanges: (entry.costChanges ?? []).map(summarizeCostChange),
     })),
     state: buildGameplayView(result.state, options),
   };
@@ -269,7 +290,9 @@ export function buildCombatView(state, options = {}) {
     return state;
   }
 
-  if (state.screenType !== "combat_room" && state.screenType !== "combat_card_select") {
+  if (state.screenType !== "combat_room"
+    && state.screenType !== "combat_card_select"
+    && state.screenType !== "combat_choice_select") {
     throw new Error(`Combat view requires a combat screen, received '${state.screenType ?? "unknown"}'.`);
   }
 
@@ -287,8 +310,11 @@ export function buildCombatView(state, options = {}) {
       : (state.relics ?? []).map(summarizeRelicLabel),
     notes: options.notes === true ? (state.notes ?? []) : [],
     combat: state.combat ? summarizeCombat(state.combat) : null,
+    menuItems: (state.menuItems ?? []).map(summarizeMenuItem),
     actions: (state.actions ?? []).filter((action) =>
-      action.startsWith("combat.") || action.startsWith("combat_card_select.")),
+      action.startsWith("combat.")
+      || action.startsWith("combat_card_select.")
+      || action.startsWith("combat_choice_select.")),
   };
 }
 
@@ -298,7 +324,9 @@ export function buildCombatCommandView(result, options = {}) {
   }
 
   const state = result.state;
-  const renderedState = state?.screenType === "combat_room" || state?.screenType === "combat_card_select"
+  const renderedState = state?.screenType === "combat_room"
+    || state?.screenType === "combat_card_select"
+    || state?.screenType === "combat_choice_select"
     ? buildCombatView(state, options)
     : buildGameplayView(state, options);
 
@@ -310,6 +338,7 @@ export function buildCombatCommandView(result, options = {}) {
       id: entry.id,
       ackStatus: entry.ackStatus ?? entry.ack?.status ?? null,
       screenType: entry.screenType ?? null,
+      costChanges: (entry.costChanges ?? []).map(summarizeCostChange),
     })),
     state: renderedState,
   };

@@ -237,6 +237,9 @@ public sealed class ExportCombatIntent
 {
     public string Kind { get; set; } = string.Empty;
     public string? Label { get; set; }
+    public string? Title { get; set; }
+    public string? Description { get; set; }
+    public string? Summary { get; set; }
     public string OwnerId { get; set; } = string.Empty;
     public List<string> Targets { get; set; } = [];
 }

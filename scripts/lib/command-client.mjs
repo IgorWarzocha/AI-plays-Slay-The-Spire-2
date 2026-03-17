@@ -9,6 +9,12 @@ function stableJson(value) {
   return JSON.stringify(value ?? null);
 }
 
+function isCombatLikeScreen(screenType) {
+  return screenType === "combat_room"
+    || screenType === "combat_card_select"
+    || screenType === "combat_choice_select";
+}
+
 function createCommandId() {
   return `cmd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -46,7 +52,11 @@ export function normalizeActionForCurrentState(action, state) {
 }
 
 function isCombatStateSettled(state) {
-  if (!state || (state.screenType !== "combat_room" && state.screenType !== "combat_card_select")) {
+  if (!state || !isCombatLikeScreen(state.screenType)) {
+    return true;
+  }
+
+  if (state.screenType === "combat_choice_select") {
     return true;
   }
 
@@ -97,8 +107,28 @@ export function isInteractiveFollowUpTransition(beforeState, state, ack) {
   return state.screenType !== beforeState.screenType;
 }
 
+export function isRewardPotionClaimFollowThroughState(action, beforeState, state) {
+  if (!action?.startsWith("rewards.claim:reward-Potion-")) {
+    return false;
+  }
+
+  if (!beforeState || !state || !isNewerState(beforeState, state)) {
+    return false;
+  }
+
+  return stableJson({
+    screenType: state.screenType,
+    potions: state.potions ?? [],
+    menuItems: state.menuItems ?? [],
+  }) !== stableJson({
+    screenType: beforeState.screenType,
+    potions: beforeState.potions ?? [],
+    menuItems: beforeState.menuItems ?? [],
+  });
+}
+
 export function buildCombatStabilityKey(state) {
-  if (!state || (state.screenType !== "combat_room" && state.screenType !== "combat_card_select")) {
+  if (!state || !isCombatLikeScreen(state.screenType)) {
     return JSON.stringify({ screenType: state?.screenType ?? null });
   }
 
@@ -110,6 +140,7 @@ export function buildCombatStabilityKey(state) {
     energy: combat.energy ?? null,
     handIds: Array.isArray(combat.hand) ? combat.hand.map((card) => card.id) : [],
     handPlayable: Array.isArray(combat.hand) ? combat.hand.map((card) => Boolean(card.isPlayable)) : [],
+    menuItemIds: Array.isArray(state.menuItems) ? state.menuItems.map((item) => item.id) : [],
     drawPileCount: combat.drawPileCount ?? null,
     discardPileCount: combat.discardPileCount ?? null,
     exhaustPileCount: combat.exhaustPileCount ?? null,
@@ -161,6 +192,37 @@ export function isPotionUseFollowThroughState(action, referenceState, state) {
   });
 }
 
+export function detectCombatCostChanges(beforeState, afterState) {
+  if (!isCombatLikeScreen(beforeState?.screenType) || !isCombatLikeScreen(afterState?.screenType)) {
+    return [];
+  }
+
+  const beforeHand = new Map(
+    (beforeState?.combat?.hand ?? []).map((card) => [card.id, card]),
+  );
+
+  return (afterState?.combat?.hand ?? [])
+    .flatMap((afterCard) => {
+      const beforeCard = beforeHand.get(afterCard.id);
+      if (!beforeCard) {
+        return [];
+      }
+
+      const beforeCost = beforeCard.costText ?? null;
+      const afterCost = afterCard.costText ?? null;
+      if (beforeCost === afterCost) {
+        return [];
+      }
+
+      return [{
+        cardId: afterCard.id,
+        title: afterCard.title ?? null,
+        beforeCost,
+        afterCost,
+      }];
+    });
+}
+
 function waitForSettledCombatState({ timeoutMs = 2500, quietPeriodMs = 500, stableSamples = 3 } = {}) {
   let stableKey = null;
   let stableCount = 0;
@@ -194,7 +256,7 @@ export function readDisplayState({ timeoutMs = 2500 } = {}) {
     return null;
   }
 
-  if (state.screenType !== "combat_room" && state.screenType !== "combat_card_select") {
+  if (!isCombatLikeScreen(state.screenType)) {
     return state;
   }
 
@@ -250,6 +312,16 @@ export function waitForCommandSettlement(id, beforeState, { timeoutMs = 6000 } =
 }
 
 export function waitForFollowThrough(action, beforeState, { timeoutMs = 6000 } = {}) {
+  if (action.startsWith("rewards.claim:reward-Potion-")) {
+    return waitFor(
+      () => {
+        const state = readState();
+        return isRewardPotionClaimFollowThroughState(action, beforeState, state) ? state : null;
+      },
+      { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
+    );
+  }
+
   if (action.startsWith("potions.use:")) {
     const referenceState = readState() ?? beforeState;
     return waitFor(
@@ -359,6 +431,7 @@ export function sendAction(action, options = {}) {
     settled: true,
     ackStatus: finalAck?.id === id ? finalAck.status : ack.status,
     screenType: finalState?.screenType ?? null,
+    costChanges: detectCombatCostChanges(beforeState, finalState),
     state: finalState,
   };
 }

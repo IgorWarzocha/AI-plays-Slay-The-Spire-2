@@ -5,6 +5,8 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.HoverTips;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
@@ -131,6 +133,11 @@ public sealed class CombatFeature : IAgentFeature
         state.Notes = [.. notes];
 
         return true;
+    }
+
+    internal static ExportCombatCreature BuildCreatureForExport(NCreature creature)
+    {
+        return BuildCreature(creature);
     }
 
     public bool TryExecute(FeatureContext context, ParsedCommand command)
@@ -442,20 +449,87 @@ public sealed class CombatFeature : IAgentFeature
         object? intent = intentNode.GetType()
             .GetField("_intent", BindingFlags.Instance | BindingFlags.NonPublic)
             ?.GetValue(intentNode);
-        object? targets = intentNode.GetType()
+        object? rawTargets = intentNode.GetType()
             .GetField("_targets", BindingFlags.Instance | BindingFlags.NonPublic)
             ?.GetValue(intentNode);
+        List<Creature> targetCreatures = rawTargets is IEnumerable<Creature> creatureTargets
+            ? creatureTargets.ToList()
+            : [];
 
-        string? label = NodeTextReader.ReadVisibleTexts(intentNode, 3).FirstOrDefault();
+        string? fallbackLabel = NodeTextReader.ReadVisibleTexts(intentNode, 3).FirstOrDefault();
+        string? label = ResolveIntentLabel(intent, targetCreatures, ownerNode.Entity) ?? fallbackLabel;
+        HoverTip? hoverTip = ResolveIntentHoverTip(intent, targetCreatures, ownerNode.Entity);
+        string? title = hoverTip?.Title;
+        string? description = hoverTip?.Description;
         return new ExportCombatIntent
         {
             Kind = intent?.GetType().Name ?? "UnknownIntent",
             Label = label,
-            Targets = targets is IEnumerable<Creature> creatureTargets
-                ? creatureTargets.Select(CombatCardIdentity.FromCreature).ToList()
-                : [],
+            Title = title,
+            Description = description,
+            Summary = BuildIntentSummary(title, description, label, intent),
+            Targets = targetCreatures.Select(CombatCardIdentity.FromCreature).ToList(),
             OwnerId = CombatCardIdentity.FromCreature(ownerNode.Entity)
         };
+    }
+
+    private static string? ResolveIntentLabel(object? intent, IEnumerable<Creature> targets, Creature owner)
+    {
+        if (intent is null)
+        {
+            return null;
+        }
+
+        MethodInfo? labelMethod = intent.GetType().GetMethod(
+            "GetIntentLabel",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            null,
+            [typeof(IEnumerable<Creature>), typeof(Creature)],
+            null);
+        object? label = labelMethod?.Invoke(intent, [targets, owner]);
+        return label switch
+        {
+            null => null,
+            LocString locString => AgentText.SafeText(locString),
+            _ => label.ToString()
+        };
+    }
+
+    private static HoverTip? ResolveIntentHoverTip(object? intent, IEnumerable<Creature> targets, Creature owner)
+    {
+        if (intent is null)
+        {
+            return null;
+        }
+
+        MethodInfo? hoverTipMethod = intent.GetType().GetMethod(
+            "GetHoverTip",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            null,
+            [typeof(IEnumerable<Creature>), typeof(Creature)],
+            null);
+        object? hoverTip = hoverTipMethod?.Invoke(intent, [targets, owner]);
+        return hoverTip is HoverTip value ? value : null;
+    }
+
+    private static string? BuildIntentSummary(string? title, string? description, string? label, object? intent)
+    {
+        if (!string.IsNullOrWhiteSpace(title) && !string.IsNullOrWhiteSpace(description))
+        {
+            return $"{title}: {description}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(description))
+        {
+            return description;
+        }
+
+        if (!string.IsNullOrWhiteSpace(label))
+        {
+            return label;
+        }
+
+        return intent?.GetType().Name;
     }
 
     private static ExportCombatPower BuildPower(object power)

@@ -14,7 +14,7 @@ public sealed class RunPotionOverlayFeature : IAgentOverlayFeature
 
     public void Augment(FeatureContext context, ExportState state)
     {
-        if (state.TopBar is null || state.ScreenType is "combat_room" or "combat_card_select")
+        if (state.TopBar is null || state.ScreenType is "combat_room" or "combat_card_select" or "combat_choice_select")
         {
             return;
         }
@@ -128,8 +128,9 @@ public sealed class RunPotionOverlayFeature : IAgentOverlayFeature
             ?? throw new InvalidOperationException("Potion container is not visible.");
 
         return SceneTraversal.FindAllVisible<NPotionHolder>(container)
+            .Where(static holder => holder.HasPotion && holder.Potion?.Model is not null)
             .Select((holder, index) => new { holder, potionKey = PotionIdentity.FromHolder(holder, index) })
-            .FirstOrDefault(item => item.holder.HasPotion && string.Equals(item.potionKey, potionId, StringComparison.Ordinal))
+            .FirstOrDefault(item => string.Equals(item.potionKey, potionId, StringComparison.Ordinal))
             ?.holder
             ?? throw new InvalidOperationException($"Potion '{potionId}' was not found.");
     }

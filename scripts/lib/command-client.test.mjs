@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 
 import {
   buildCombatStabilityKey,
+  detectCombatCostChanges,
   isCombatDisplayStable,
   isInteractiveFollowUpTransition,
   isPotionUseFollowThroughState,
+  isRewardPotionClaimFollowThroughState,
   normalizeActionForCurrentState,
 } from "./command-client.mjs";
 
@@ -147,4 +149,78 @@ test("potion use follow-through waits for the post-effect non-combat frame", () 
     isPotionUseFollowThroughState("potions.use:potion-02:blood-potion", referenceState, healedState),
     true,
   );
+});
+
+test("reward potion claims wait for the potion inventory or reward list to change", () => {
+  const beforeState = {
+    screenType: "rewards_screen",
+    updatedAtUtc: "2026-03-17T10:30:01.000Z",
+    potions: [
+      { id: "potion-01:swift-potion", title: "Swift Potion" },
+      { id: "potion-02:power-potion", title: "Power Potion" },
+      { id: "potion-03:regen-potion", title: "Regen Potion" },
+    ],
+    menuItems: [
+      { id: "reward-Potion-2-41fdba", label: "Soldier's Stew" },
+      { id: "reward-Card-5-251eb91", label: "Add a card to your deck." },
+    ],
+  };
+  const staleState = {
+    screenType: "rewards_screen",
+    updatedAtUtc: "2026-03-17T10:30:01.000Z",
+    potions: beforeState.potions,
+    menuItems: beforeState.menuItems,
+  };
+  const updatedState = {
+    screenType: "rewards_screen",
+    updatedAtUtc: "2026-03-17T10:30:02.000Z",
+    potions: [
+      { id: "potion-01:soldiers-stew", title: "Soldier's Stew" },
+      { id: "potion-02:power-potion", title: "Power Potion" },
+      { id: "potion-03:regen-potion", title: "Regen Potion" },
+    ],
+    menuItems: [
+      { id: "reward-Card-5-251eb91", label: "Add a card to your deck." },
+    ],
+  };
+
+  assert.equal(
+    isRewardPotionClaimFollowThroughState("rewards.claim:reward-Potion-2-41fdba", beforeState, staleState),
+    false,
+  );
+  assert.equal(
+    isRewardPotionClaimFollowThroughState("rewards.claim:reward-Potion-2-41fdba", beforeState, updatedState),
+    true,
+  );
+});
+
+test("detectCombatCostChanges reports dynamic hand cost mutations", () => {
+  const beforeState = {
+    screenType: "combat_room",
+    combat: {
+      hand: [
+        { id: "pyre", title: "Pyre+", costText: "2" },
+        { id: "unrelenting", title: "Unrelenting", costText: "2" },
+        { id: "bash", title: "Bash+", costText: "2" },
+      ],
+    },
+  };
+  const afterPowerProc = {
+    screenType: "combat_room",
+    combat: {
+      hand: [
+        { id: "unrelenting", title: "Unrelenting", costText: "0" },
+        { id: "bash", title: "Bash+", costText: "2" },
+      ],
+    },
+  };
+
+  assert.deepEqual(detectCombatCostChanges(beforeState, afterPowerProc), [
+    {
+      cardId: "unrelenting",
+      title: "Unrelenting",
+      beforeCost: "2",
+      afterCost: "0",
+    },
+  ]);
 });

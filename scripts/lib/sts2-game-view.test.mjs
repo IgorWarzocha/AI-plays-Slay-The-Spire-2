@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { buildGameplayView } from "./sts2-game-view.mjs";
 import { buildCombatCommandView } from "./sts2-game-view.mjs";
+import { buildCombatView } from "./sts2-game-view.mjs";
 
 test("buildGameplayView hides admin noise and surfaces relic details only on demand", () => {
   const state = {
@@ -100,4 +101,137 @@ test("buildGameplayView includes deck snapshot and detailed relics for merchant 
   assert.equal(view.cardBrowse.kind, "deck_snapshot");
   assert.equal(view.cardBrowse.cardCount, 2);
   assert.equal(view.menuItems[0].label, "Lantern");
+});
+
+test("buildGameplayView preserves readable combat intent summaries", () => {
+  const state = {
+    screenType: "combat_room",
+    updatedAtUtc: "2026-03-17T12:20:00.000Z",
+    topBar: { currentHp: 77, maxHp: 89, gold: 53, buttons: [] },
+    relics: [],
+    actions: ["combat.end_turn"],
+    combat: {
+      roundNumber: 2,
+      currentSide: "Player",
+      energy: 3,
+      hand: [],
+      potions: [],
+      canEndTurn: true,
+      creatures: [
+        {
+          id: "creature-1",
+          name: "Chomper",
+          side: "Enemy",
+          currentHp: 60,
+          maxHp: 60,
+          block: 0,
+          powers: [],
+          intents: [
+            {
+              kind: "StatusIntent",
+              label: "3",
+              title: "Strategic",
+              description: "This enemy intends to give you 3 Status cards.",
+              summary: "Strategic: This enemy intends to give you 3 Status cards.",
+              targets: ["creature-0"],
+            },
+          ],
+        },
+      ],
+    },
+  };
+
+  const view = buildGameplayView(state);
+  assert.equal(view.combat.creatures[0].intents[0].title, "Strategic");
+  assert.equal(
+    view.combat.creatures[0].intents[0].summary,
+    "Strategic: This enemy intends to give you 3 Status cards.",
+  );
+});
+
+test("buildCombatView supports modal combat card choice overlays", () => {
+  const state = {
+    screenType: "combat_choice_select",
+    updatedAtUtc: "2026-03-17T13:00:00.000Z",
+    topBar: { currentHp: 61, maxHp: 86, gold: 87, buttons: [] },
+    relics: [{ id: "Lantern", label: "Lantern", description: "Start with 1 extra energy.", count: null, status: "Active" }],
+    actions: [
+      "combat_choice_select.select:slow-and-low-01",
+      "combat_choice_select.skip",
+    ],
+    menuItems: [
+      { id: "slow-and-low-01", label: "Slow and Low", description: "Apply Weak.", enabled: true, selected: false },
+    ],
+    combat: {
+      roundNumber: 3,
+      currentSide: "Player",
+      energy: 2,
+      hand: [],
+      potions: [],
+      creatures: [],
+      canEndTurn: false,
+      selectionMode: "choice_selection",
+      selectionPrompt: "Choose a Card",
+      handIsSettled: true,
+    },
+  };
+
+  const view = buildCombatView(state);
+  assert.equal(view.screenType, "combat_choice_select");
+  assert.equal(view.combat.selectionPrompt, "Choose a Card");
+  assert.deepEqual(view.menuItems.map((item) => item.id), ["slow-and-low-01"]);
+  assert.deepEqual(view.actions, [
+    "combat_choice_select.select:slow-and-low-01",
+    "combat_choice_select.skip",
+  ]);
+});
+
+test("buildCombatCommandView surfaces combat cost changes per action", () => {
+  const result = {
+    ok: true,
+    actionCount: 1,
+    results: [
+      {
+        action: "combat.play:pyre",
+        id: "cmd-1",
+        ackStatus: "completed",
+        screenType: "combat_room",
+        costChanges: [
+          {
+            cardId: "unrelenting",
+            title: "Unrelenting",
+            beforeCost: "2",
+            afterCost: "0",
+          },
+        ],
+      },
+    ],
+    state: {
+      screenType: "combat_room",
+      updatedAtUtc: "2026-03-17T13:10:00.000Z",
+      topBar: { currentHp: 74, maxHp: 89, gold: 122, buttons: [] },
+      relics: [],
+      actions: ["combat.end_turn"],
+      combat: {
+        roundNumber: 1,
+        currentSide: "Player",
+        energy: 2,
+        handIsSettled: true,
+        hand: [],
+        potions: [],
+        creatures: [],
+        canEndTurn: true,
+      },
+    },
+  };
+
+  const view = buildCombatCommandView(result);
+  assert.deepEqual(view.actions[0].costChanges, [
+    {
+      cardId: "unrelenting",
+      title: "Unrelenting",
+      beforeCost: "2",
+      afterCost: "0",
+    },
+  ]);
 });

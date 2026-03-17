@@ -37,9 +37,3 @@ Short operational note distilled from [[../reference/ironclad-guide]] and live m
 
 - Draft and event decisions should use this note as a fast heuristic layer before falling back to the full reference guide.
 - If a new run disproves one of these rules, update this note instead of leaving the correction buried in a run log.
-
-## Potion Discipline
-
-- Do not spend `Swift Potion` just because the turn is mediocre.
-- Use draw potions when the turn is actually dead, or when the deck needs to dig toward a specific out such as block, lethal, or a key breakpoint.
-- If the hand already contains a real line, save the potion unless the draw materially improves that line.

@@ -1,0 +1,13 @@
+{
+  "name": "sts2-agent-tooling",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/sts2-dev.mjs build",
+    "build:no-restart": "node scripts/sts2-dev.mjs build-no-restart",
+    "test": "node scripts/sts2-dev.mjs test",
+    "restart": "node scripts/sts2-dev.mjs restart",
+    "continue": "node scripts/sts2-dev.mjs continue",
+    "reload": "node scripts/sts2-dev.mjs reload"
+  }
+}

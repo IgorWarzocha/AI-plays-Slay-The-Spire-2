@@ -59,6 +59,7 @@ public sealed class FrameCoordinator
                 new TreasureRoomFeature(),
                 new MapFeature(),
                 new CombatHandSelectFeature(),
+                new CombatChoiceSelectFeature(),
                 new CombatFeature(),
                 new RewardsFeature(),
                 new RunPresenceFeature(),

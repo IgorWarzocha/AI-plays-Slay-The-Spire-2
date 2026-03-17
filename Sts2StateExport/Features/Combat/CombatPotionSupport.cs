@@ -59,8 +59,9 @@ internal static class CombatPotionSupport
             ?? throw new InvalidOperationException("Potion container is not visible.");
 
         return SceneTraversal.FindAllVisible<NPotionHolder>(container)
+            .Where(static holder => holder.HasPotion && holder.Potion?.Model is not null)
             .Select((holder, index) => new { holder, potionKey = PotionIdentity.FromHolder(holder, index) })
-            .FirstOrDefault(item => item.holder.HasPotion && string.Equals(item.potionKey, potionId, StringComparison.Ordinal))
+            .FirstOrDefault(item => string.Equals(item.potionKey, potionId, StringComparison.Ordinal))
             ?.holder
             ?? throw new InvalidOperationException($"Potion '{potionId}' was not found.");
     }
