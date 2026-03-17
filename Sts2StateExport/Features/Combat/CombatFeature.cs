@@ -48,6 +48,7 @@ public sealed class CombatFeature : IAgentFeature
         {
             return false;
         }
+        CombatHandSnapshot handSnapshot = CombatHandSnapshotReader.Capture(hand);
 
         List<ExportCombatCreature> creatures = room.CreatureNodes
             .Select(BuildCreature)
@@ -55,7 +56,7 @@ public sealed class CombatFeature : IAgentFeature
             .ThenBy(creature => creature.SlotName)
             .ThenBy(creature => creature.Name)
             .ToList();
-        List<ExportCombatCard> handCards = hand.ActiveHolders
+        List<ExportCombatCard> handCards = handSnapshot.ActiveHolders
             .Select(holder => BuildHandCard(holder))
             .ToList();
         bool isPlayerTurn = string.Equals(combatState.CurrentSide.ToString(), "Player", StringComparison.Ordinal);
@@ -67,6 +68,12 @@ public sealed class CombatFeature : IAgentFeature
             RoundNumber = combatState.RoundNumber,
             CurrentSide = combatState.CurrentSide.ToString(),
             Energy = ReadCounterValue(SceneTraversal.FindFirstVisible<NEnergyCounter>(ui)),
+            HandIsSettled = handSnapshot.IsSettled,
+            ActiveHandCount = handSnapshot.ActiveHolders.Count,
+            TotalHandCount = handSnapshot.AllHolders.Count,
+            PendingHandHolderCount = handSnapshot.PendingHolderCount,
+            HandAnimationActive = handSnapshot.HandAnimationActive,
+            CardPlayInProgress = handSnapshot.CardPlayInProgress,
             Hand = handCards,
             DrawPileCount = ReadPileCount(ui.DrawPile),
             DiscardPileCount = ReadPileCount(ui.DiscardPile),
@@ -97,11 +104,20 @@ public sealed class CombatFeature : IAgentFeature
             .. BuildPileActions(ui),
             "combat.end_turn"
         ];
-        state.Notes =
+        List<string> notes =
         [
             "Combat state is model-backed.",
             "Targeted card plays use combat and card runtime identities."
         ];
+        if (!handSnapshot.IsSettled)
+        {
+            notes.Add(
+                $"Combat hand is still settling: active {handSnapshot.ActiveHolders.Count}/{handSnapshot.AllHolders.Count}, " +
+                $"queued {handSnapshot.PendingHolderCount}, tween {(handSnapshot.HandAnimationActive ? "active" : "idle")}, " +
+                $"card play {(handSnapshot.CardPlayInProgress ? "active" : "idle")}.");
+        }
+        state.Notes = [.. notes];
+
         return true;
     }
 

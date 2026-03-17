@@ -5,16 +5,20 @@ Minimal repo-local reference for the commands and paths this workspace uses most
 ## Core Commands
 
 - `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs status`
-  - Show live window, exported state, and last command ack.
-- `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs launch`
-  - Launch STS2 and wait for a fresh exporter heartbeat.
-- `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs restart`
-  - Close and relaunch STS2.
-- `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs quit`
-  - Close STS2.
+  - Show compact gameplay state only. No window/process/monitor metadata.
+- `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs status --relics`
+  - Show full relic state with descriptions and counters.
 - `node /home/igorw/Work/STS2/scripts/sts2ctl.mjs command <action>`
   - Send one exported action such as `main_menu.continue`, `map.travel:0,3`, or `merchant.open`.
   - Default mode is strict: the command waits for a real exported state mutation instead of trusting the first ack blindly.
+- `node /home/igorw/Work/STS2/scripts/sts2admin.mjs launch`
+  - Launch STS2 and wait for a fresh exporter heartbeat.
+- `node /home/igorw/Work/STS2/scripts/sts2admin.mjs restart`
+  - Close and relaunch STS2.
+- `node /home/igorw/Work/STS2/scripts/sts2admin.mjs quit`
+  - Close STS2.
+- `node /home/igorw/Work/STS2/scripts/sts2admin.mjs status`
+  - Show window/process/monitor/admin status only.
 - `node /home/igorw/Work/STS2/scripts/sts2-log-tail.mjs`
   - Show an agent-focused tail of `godot.log` with exporter errors and command-relevant gameplay lines only.
 - `node /home/igorw/Work/STS2/scripts/sts2-reference-build.mjs`
@@ -54,6 +58,9 @@ Minimal repo-local reference for the commands and paths this workspace uses most
 ## Working Pattern
 
 - Prefer `sts2ctl.mjs command ...` over synthetic input.
+- Keep gameplay and admin concerns separate.
+- `sts2ctl.mjs` is the gameplay surface.
+- `sts2admin.mjs` is the process/window/monitor surface.
 - Send gameplay commands sequentially. `sts2ctl.mjs` uses a single command file, so parallel action writes will race and lose a command.
 - Restart after every mod DLL change. Mods are not hot-reload.
 - Use screenshots only to validate genuinely unknown screens; normal control should stay model-backed.

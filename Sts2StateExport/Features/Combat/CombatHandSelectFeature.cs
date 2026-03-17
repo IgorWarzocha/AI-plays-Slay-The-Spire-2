@@ -24,7 +24,8 @@ public sealed class CombatHandSelectFeature : IAgentFeature
         }
 
         CombatState combatState = ReadCombatState(hand!);
-        List<ExportCombatCard> handCards = BuildSelectableHandCards(hand!);
+        CombatHandSnapshot handSnapshot = CombatHandSnapshotReader.Capture(hand!);
+        List<ExportCombatCard> handCards = BuildSelectableHandCards(handSnapshot.ActiveHolders);
         CardSelectionPrefsSnapshot prefs = ReadSelectionPrefs(hand!);
         int selectedCount = ReadSelectedCount(hand!);
         bool canConfirm = CanConfirmSelection(hand!, selectedCount, prefs.MinSelect);
@@ -61,6 +62,12 @@ public sealed class CombatHandSelectFeature : IAgentFeature
             RoundNumber = combatState.RoundNumber,
             CurrentSide = combatState.CurrentSide.ToString(),
             Energy = ReadIntProperty(hand!, "CurrentEnergy") ?? ReadCounterValue(SceneTraversal.FindFirstVisible<NEnergyCounter>(ui!)),
+            HandIsSettled = handSnapshot.IsSettled,
+            ActiveHandCount = handSnapshot.ActiveHolders.Count,
+            TotalHandCount = handSnapshot.AllHolders.Count,
+            PendingHandHolderCount = handSnapshot.PendingHolderCount,
+            HandAnimationActive = handSnapshot.HandAnimationActive,
+            CardPlayInProgress = handSnapshot.CardPlayInProgress,
             DrawPileCount = ReadPileCount(ui!.DrawPile),
             DiscardPileCount = ReadPileCount(ui.DiscardPile),
             ExhaustPileCount = ReadPileCount(ui.ExhaustPile),
@@ -70,13 +77,22 @@ public sealed class CombatHandSelectFeature : IAgentFeature
             Hand = handCards,
             Creatures = []
         };
-        state.Notes =
+        List<string> notes =
         [
             "Combat is waiting on a hand-card choice.",
             $"Prompt: {state.Combat.SelectionPrompt ?? "Unknown"}",
             $"Mode: {state.Combat.SelectionMode}",
             $"Selection progress: {selectedCount}/{prefs.MaxSelect} selected (min {prefs.MinSelect})."
         ];
+        if (!handSnapshot.IsSettled)
+        {
+            notes.Add(
+                $"Combat hand is still settling: active {handSnapshot.ActiveHolders.Count}/{handSnapshot.AllHolders.Count}, " +
+                $"queued {handSnapshot.PendingHolderCount}, tween {(handSnapshot.HandAnimationActive ? "active" : "idle")}, " +
+                $"card play {(handSnapshot.CardPlayInProgress ? "active" : "idle")}.");
+        }
+        state.Notes = [.. notes];
+
         return true;
     }
 
@@ -166,9 +182,9 @@ public sealed class CombatHandSelectFeature : IAgentFeature
             ?? throw new InvalidOperationException("Combat hand did not expose an active combat state.");
     }
 
-    private static List<ExportCombatCard> BuildSelectableHandCards(NPlayerHand hand)
+    private static List<ExportCombatCard> BuildSelectableHandCards(IReadOnlyList<NHandCardHolder> holders)
     {
-        return hand.ActiveHolders
+        return holders
             .Where(static holder => holder.CardModel is not null)
             .Select(
                 holder =>

@@ -158,6 +158,12 @@ public sealed class ExportCombatState
     public int? DiscardPileCount { get; set; }
     public int? ExhaustPileCount { get; set; }
     public bool CanEndTurn { get; set; }
+    public bool? HandIsSettled { get; set; }
+    public int? ActiveHandCount { get; set; }
+    public int? TotalHandCount { get; set; }
+    public int? PendingHandHolderCount { get; set; }
+    public bool? HandAnimationActive { get; set; }
+    public bool? CardPlayInProgress { get; set; }
     public string? SelectionMode { get; set; }
     public string? SelectionPrompt { get; set; }
     public List<ExportCombatPotion> Potions { get; set; } = [];
