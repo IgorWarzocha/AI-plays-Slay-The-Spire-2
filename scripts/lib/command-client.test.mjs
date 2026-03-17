@@ -5,7 +5,10 @@ import {
   buildCombatStabilityKey,
   detectCombatCostChanges,
   isCombatDisplayStable,
+  isDeckCardSelectFollowThroughState,
   isInteractiveFollowUpTransition,
+  isMerchantActionFollowThroughState,
+  isMerchantInventoryConsistent,
   isMapTravelFollowThroughState,
   isPotionUseFollowThroughState,
   isRewardPotionClaimFollowThroughState,
@@ -193,6 +196,135 @@ test("reward potion claims wait for the potion inventory or reward list to chang
     isRewardPotionClaimFollowThroughState("rewards.claim:reward-Potion-2-41fdba", beforeState, updatedState),
     true,
   );
+});
+
+test("merchant inventory consistency rejects affordable items marked as not enough gold", () => {
+  const inconsistentState = {
+    screenType: "merchant_inventory",
+    topBar: { gold: 104 },
+    menuItems: [
+      { id: "card-01-twin-strike", description: "Cost: 52 gold. Not enough gold.", enabled: false },
+      { id: "close", description: "Close the merchant inventory.", enabled: true },
+    ],
+  };
+  const consistentState = {
+    screenType: "merchant_inventory",
+    topBar: { gold: 14 },
+    menuItems: [
+      { id: "card-01-twin-strike", description: "Cost: 52 gold. Not enough gold.", enabled: false },
+      { id: "close", description: "Close the merchant inventory.", enabled: true },
+    ],
+  };
+
+  assert.equal(isMerchantInventoryConsistent(inconsistentState), false);
+  assert.equal(isMerchantInventoryConsistent(consistentState), true);
+});
+
+test("deck card select follow-through waits past inconsistent merchant frames", () => {
+  const now = Date.now();
+  const beforeState = {
+    screenType: "deck_card_select",
+    updatedAtUtc: new Date(now - 4000).toISOString(),
+    topBar: { gold: 114 },
+  };
+  const inconsistentMerchant = {
+    screenType: "merchant_inventory",
+    updatedAtUtc: new Date(now - 1000).toISOString(),
+    topBar: { gold: 104 },
+    menuItems: [
+      { id: "card-01-twin-strike", description: "Cost: 52 gold. Not enough gold.", enabled: false },
+      { id: "close", description: "Close the merchant inventory.", enabled: true },
+    ],
+  };
+  const settledMerchant = {
+    screenType: "merchant_inventory",
+    updatedAtUtc: new Date(now - 1000).toISOString(),
+    topBar: { gold: 14 },
+    menuItems: [
+      { id: "card-01-twin-strike", description: "Cost: 52 gold. Not enough gold.", enabled: false },
+      { id: "close", description: "Close the merchant inventory.", enabled: true },
+    ],
+  };
+
+  assert.equal(
+    isDeckCardSelectFollowThroughState("deck_card_select.select:strike-01", beforeState, inconsistentMerchant),
+    false,
+  );
+  assert.equal(
+    isDeckCardSelectFollowThroughState("deck_card_select.select:strike-01", beforeState, settledMerchant),
+    true,
+  );
+});
+
+test("deck card select follow-through accepts a settled combat return frame", () => {
+  const now = Date.now();
+  const beforeState = {
+    screenType: "deck_card_select",
+    updatedAtUtc: new Date(now - 4000).toISOString(),
+  };
+  const settledCombat = {
+    screenType: "combat_room",
+    updatedAtUtc: new Date(now - 1000).toISOString(),
+    combat: {
+      handIsSettled: true,
+      hand: [{ id: "card-1", isPlayable: true }],
+    },
+  };
+
+  assert.equal(
+    isDeckCardSelectFollowThroughState("deck_card_select.select:shrug-it-off-plus-01", beforeState, settledCombat),
+    true,
+  );
+});
+
+test("merchant buy follow-through waits for a quiet consistent inventory frame", () => {
+  const now = Date.now();
+  const beforeState = {
+    screenType: "merchant_inventory",
+    updatedAtUtc: new Date(now - 5000).toISOString(),
+    topBar: { gold: 493 },
+  };
+  const inconsistentMerchant = {
+    screenType: "merchant_inventory",
+    updatedAtUtc: new Date(now - 1000).toISOString(),
+    topBar: { gold: 104 },
+    menuItems: [
+      { id: "card-01-twin-strike", description: "Cost: 52 gold. Not enough gold.", enabled: false },
+      { id: "close", description: "Close the merchant inventory.", enabled: true },
+    ],
+  };
+  const settledMerchant = {
+    screenType: "merchant_inventory",
+    updatedAtUtc: new Date(now - 1000).toISOString(),
+    topBar: { gold: 161 },
+    menuItems: [
+      { id: "card-01-twin-strike", description: "Cost: 52 gold.", enabled: true },
+      { id: "close", description: "Close the merchant inventory.", enabled: true },
+    ],
+  };
+
+  assert.equal(
+    isMerchantActionFollowThroughState("merchant.buy:card-02-shrug-it-off", beforeState, inconsistentMerchant),
+    false,
+  );
+  assert.equal(
+    isMerchantActionFollowThroughState("merchant.buy:card-02-shrug-it-off", beforeState, settledMerchant),
+    true,
+  );
+});
+
+test("merchant leave follow-through requires the quiet map frame", () => {
+  const now = Date.now();
+  const beforeState = {
+    screenType: "merchant_inventory",
+    updatedAtUtc: new Date(now - 5000).toISOString(),
+  };
+  const mapState = {
+    screenType: "map_screen",
+    updatedAtUtc: new Date(now - 1000).toISOString(),
+  };
+
+  assert.equal(isMerchantActionFollowThroughState("merchant.leave", beforeState, mapState), true);
 });
 
 test("detectCombatCostChanges reports dynamic hand cost mutations", () => {

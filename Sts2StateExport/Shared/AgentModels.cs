@@ -83,6 +83,9 @@ public sealed class ExportTopBar
     public int? CurrentHp { get; set; }
     public int? MaxHp { get; set; }
     public int? Gold { get; set; }
+    public int? PotionSlotCount { get; set; }
+    public int? FilledPotionSlotCount { get; set; }
+    public int? EmptyPotionSlotCount { get; set; }
     public List<ExportTopBarButton> Buttons { get; set; } = [];
 }
 
@@ -108,6 +111,8 @@ public sealed class ExportRelic
 public sealed class ExportHeldPotion
 {
     public string Id { get; set; } = string.Empty;
+    public int SlotIndex { get; set; }
+    public bool HasPotion { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Usage { get; set; }

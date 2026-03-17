@@ -3,6 +3,7 @@
 import {
   parseArgs,
   readDisplayState,
+  readState,
   sendAction,
   waitForScreen,
 } from "./lib/sts2-runtime.mjs";
@@ -88,7 +89,7 @@ function isLoadedRunSurface(state) {
 function waitForLoadedRunSurface(timeoutMs) {
   return waitFor(
     () => {
-      const state = readDisplayState();
+      const state = readState();
       return isLoadedRunSurface(state) ? state : null;
     },
     { timeoutMs, intervalMs: 150, description: "usable resumed run surface" },

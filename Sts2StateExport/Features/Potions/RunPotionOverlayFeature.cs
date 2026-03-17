@@ -25,19 +25,24 @@ public sealed class RunPotionOverlayFeature : IAgentOverlayFeature
             return;
         }
 
-        List<ExportHeldPotion> potions = SceneTraversal.FindAllVisible<NPotionHolder>(container)
-            .Where(static holder => holder.HasPotion && holder.Potion?.Model is not null)
-            .Select((holder, index) => BuildPotion(holder, index))
+        List<NPotionHolder> holders = SceneTraversal.FindAllVisible<NPotionHolder>(container)
             .ToList();
 
-        if (potions.Count == 0)
+        if (holders.Count == 0)
         {
             return;
         }
 
-        state.Potions = potions;
+        List<ExportHeldPotion> potions = holders
+            .Select((holder, index) => BuildPotionSlot(holder, index))
+            .ToList();
 
-        foreach (ExportHeldPotion potion in potions)
+        state.Potions = potions;
+        state.TopBar.PotionSlotCount = potions.Count;
+        state.TopBar.FilledPotionSlotCount = potions.Count(static potion => potion.HasPotion);
+        state.TopBar.EmptyPotionSlotCount = potions.Count(static potion => !potion.HasPotion);
+
+        foreach (ExportHeldPotion potion in potions.Where(static potion => potion.HasPotion))
         {
             if (potion.IsUsable)
             {
@@ -80,12 +85,29 @@ public sealed class RunPotionOverlayFeature : IAgentOverlayFeature
         }
     }
 
-    private static ExportHeldPotion BuildPotion(NPotionHolder holder, int slotIndex)
+    private static ExportHeldPotion BuildPotionSlot(NPotionHolder holder, int slotIndex)
     {
+        if (!holder.HasPotion || holder.Potion?.Model is null)
+        {
+            return new ExportHeldPotion
+            {
+                Id = PotionIdentity.FromEmptySlot(slotIndex),
+                SlotIndex = slotIndex + 1,
+                HasPotion = false,
+                Title = "Empty Slot",
+                Description = null,
+                Usage = null,
+                IsUsable = false,
+                CanDiscard = false
+            };
+        }
+
         PotionModel model = holder.Potion?.Model ?? throw new InvalidOperationException("Potion holder had no potion model.");
         return new ExportHeldPotion
         {
             Id = PotionIdentity.FromHolder(holder, slotIndex),
+            SlotIndex = slotIndex + 1,
+            HasPotion = true,
             Title = AgentText.SafeText(model.Title) ?? model.GetType().Name,
             Description = ModelTextResolver.ResolvePotionDescription(model),
             Usage = model.Usage.ToString(),

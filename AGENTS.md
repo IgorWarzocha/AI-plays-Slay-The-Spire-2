@@ -10,6 +10,7 @@
 ## Core Commands
 
 - Prefer `sts2-dev.mjs` for build/restart flows instead of raw `dotnet build` plus manual relaunch.
+- `sts2-dev.mjs build` and `sts2-dev.mjs restart` already include the STS2 restart cooldown. Do not add manual post-build sleep/status polling unless the script itself is being fixed.
 - `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs build`
 - `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs test`
 - `node /home/igorw/Work/STS2/scripts/sts2-dev.mjs restart`
@@ -45,6 +46,7 @@
 - Restart after mod DLL changes. Mods are not hot-reload.
 - Patch command inefficiencies as soon as they show up; the goal is fast, reliable game operation.
 - Look for STS1 parallels, but treat them as heuristics, not truth.
+- Refine repo skills when durable heuristics are discovered, but do not force a skill when the live run state shows the heuristic does not apply.
 - Use screenshots only for unknown or unsupported screens.
 - If a gameplay choice is not concretely exposed, fix the exporter before choosing.
 - Treat new `godot.log` errors as real bugs and fix them before continuing.

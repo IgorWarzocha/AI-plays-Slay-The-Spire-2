@@ -23,10 +23,13 @@ public sealed class MerchantInventoryFeature : IAgentFeature
             return false;
         }
 
+        MerchantInventory merchantInventory = inventory.Inventory
+            ?? throw new InvalidOperationException("Merchant inventory model was unavailable.");
+
         List<MerchantSlotSnapshot> slots = inventory
             .GetAllSlots()
             .Where(SceneTraversal.IsNodeVisible)
-            .Select((slot, index) => BuildSnapshot(slot, index))
+            .Select((slot, index) => BuildSnapshot(slot, index, merchantInventory))
             .ToList();
 
         state.ScreenType = "merchant_inventory";
@@ -112,17 +115,19 @@ public sealed class MerchantInventoryFeature : IAgentFeature
         NMerchantSlot slot = inventory
             .GetAllSlots()
             .Where(SceneTraversal.IsNodeVisible)
-            .Select((candidate, index) => new { candidate, snapshot = BuildSnapshot(candidate, index) })
+            .Select((candidate, index) => new { candidate, snapshot = BuildSnapshot(candidate, index, inventory.Inventory ?? throw new InvalidOperationException("Merchant inventory model was unavailable.")) })
             .FirstOrDefault(item => string.Equals(item.snapshot.Id, argument, StringComparison.Ordinal))?.candidate
             ?? throw new InvalidOperationException($"Merchant item '{argument}' was not found.");
 
         MerchantEntry entry = slot.Entry ?? throw new InvalidOperationException("Merchant slot had no entry.");
+        MerchantInventory merchantInventory = inventory.Inventory
+            ?? throw new InvalidOperationException("Merchant inventory model was unavailable.");
         if (!entry.IsStocked)
         {
             throw new InvalidOperationException($"Merchant item '{argument}' is already sold out.");
         }
 
-        if (!entry.EnoughGold)
+        if (!HasEnoughGold(entry, merchantInventory))
         {
             throw new InvalidOperationException($"Merchant item '{argument}' is not affordable.");
         }
@@ -144,21 +149,22 @@ public sealed class MerchantInventoryFeature : IAgentFeature
         RuntimeInvoker.Invoke(room, context.Reflection.MerchantRoomHideScreenMethod, room.ProceedButton);
     }
 
-    private static MerchantSlotSnapshot BuildSnapshot(NMerchantSlot slot, int index)
+    private static MerchantSlotSnapshot BuildSnapshot(NMerchantSlot slot, int index, MerchantInventory inventory)
     {
         MerchantEntry entry = slot.Entry ?? throw new InvalidOperationException("Merchant slot had no entry.");
+        bool affordable = HasEnoughGold(entry, inventory);
 
         return slot switch
         {
-            NMerchantCard cardSlot => BuildCardSnapshot(cardSlot, index),
-            NMerchantRelic relicSlot => BuildRelicSnapshot(relicSlot, index),
-            NMerchantPotion potionSlot => BuildPotionSnapshot(potionSlot, index),
-            NMerchantCardRemoval removalSlot => BuildRemovalSnapshot(removalSlot, index),
-            _ => BuildFallbackSnapshot(slot, entry, index)
+            NMerchantCard cardSlot => BuildCardSnapshot(cardSlot, index, affordable),
+            NMerchantRelic relicSlot => BuildRelicSnapshot(relicSlot, index, affordable),
+            NMerchantPotion potionSlot => BuildPotionSnapshot(potionSlot, index, affordable),
+            NMerchantCardRemoval removalSlot => BuildRemovalSnapshot(removalSlot, index, affordable),
+            _ => BuildFallbackSnapshot(slot, entry, index, affordable)
         };
     }
 
-    private static MerchantSlotSnapshot BuildCardSnapshot(NMerchantCard slot, int index)
+    private static MerchantSlotSnapshot BuildCardSnapshot(NMerchantCard slot, int index, bool affordable)
     {
         MerchantCardEntry entry = (MerchantCardEntry)(slot.Entry ?? throw new InvalidOperationException("Merchant card slot had no entry."));
         CardCreationResult creationResult = entry.CreationResult
@@ -170,16 +176,17 @@ public sealed class MerchantInventoryFeature : IAgentFeature
         string description = DescribeEntry(
             entry,
             CardTextResolver.ResolveDescription(cardNode, card, label),
-            entry.IsOnSale ? "On sale." : null);
+            entry.IsOnSale ? "On sale." : null,
+            affordable);
 
         return new MerchantSlotSnapshot(
             MerchantEntryIdentity.Create("card", label, index),
             label,
             description,
-            entry.IsStocked && entry.EnoughGold);
+            entry.IsStocked && affordable);
     }
 
-    private static MerchantSlotSnapshot BuildRelicSnapshot(NMerchantRelic slot, int index)
+    private static MerchantSlotSnapshot BuildRelicSnapshot(NMerchantRelic slot, int index, bool affordable)
     {
         MerchantRelicEntry entry = (MerchantRelicEntry)(slot.Entry ?? throw new InvalidOperationException("Merchant relic slot had no entry."));
         RelicModel relic = entry.Model
@@ -189,16 +196,16 @@ public sealed class MerchantInventoryFeature : IAgentFeature
             ?? AgentText.SafeText(relic.Title)
             ?? relic.GetType().Name;
         string? renderedDescription = ReadRenderedDescription(relicNode, slot, label);
-        string description = DescribeEntry(entry, renderedDescription ?? ModelTextResolver.ResolveRelicDescription(relic), null);
+        string description = DescribeEntry(entry, renderedDescription ?? ModelTextResolver.ResolveRelicDescription(relic), null, affordable);
 
         return new MerchantSlotSnapshot(
             MerchantEntryIdentity.Create("relic", label, index),
             label,
             description,
-            entry.IsStocked && entry.EnoughGold);
+            entry.IsStocked && affordable);
     }
 
-    private static MerchantSlotSnapshot BuildPotionSnapshot(NMerchantPotion slot, int index)
+    private static MerchantSlotSnapshot BuildPotionSnapshot(NMerchantPotion slot, int index, bool affordable)
     {
         MerchantPotionEntry entry = (MerchantPotionEntry)(slot.Entry ?? throw new InvalidOperationException("Merchant potion slot had no entry."));
         PotionModel potion = entry.Model
@@ -208,42 +215,42 @@ public sealed class MerchantInventoryFeature : IAgentFeature
             ?? AgentText.SafeText(potion.Title)
             ?? potion.GetType().Name;
         string? renderedDescription = ReadRenderedDescription(potionNode, slot, label);
-        string description = DescribeEntry(entry, renderedDescription ?? ModelTextResolver.ResolvePotionDescription(potion), null);
+        string description = DescribeEntry(entry, renderedDescription ?? ModelTextResolver.ResolvePotionDescription(potion), null, affordable);
 
         return new MerchantSlotSnapshot(
             MerchantEntryIdentity.Create("potion", label, index),
             label,
             description,
-            entry.IsStocked && entry.EnoughGold);
+            entry.IsStocked && affordable);
     }
 
-    private static MerchantSlotSnapshot BuildRemovalSnapshot(NMerchantCardRemoval slot, int index)
+    private static MerchantSlotSnapshot BuildRemovalSnapshot(NMerchantCardRemoval slot, int index, bool affordable)
     {
         MerchantCardRemovalEntry entry = (MerchantCardRemovalEntry)(slot.Entry ?? throw new InvalidOperationException("Merchant removal slot had no entry."));
         string label = "Remove a card";
         string? nodeDescription = NodeTextReader.ReadVisibleTexts(slot, 4)
             .FirstOrDefault(static text => !text.Contains("remove a card", StringComparison.OrdinalIgnoreCase));
-        string description = DescribeEntry(entry, nodeDescription, entry.Used ? "Already used." : null);
+        string description = DescribeEntry(entry, nodeDescription, entry.Used ? "Already used." : null, affordable);
 
         return new MerchantSlotSnapshot(
             MerchantEntryIdentity.Create("remove", label, index),
             label,
             description,
-            entry.IsStocked && entry.EnoughGold);
+            entry.IsStocked && affordable);
     }
 
-    private static MerchantSlotSnapshot BuildFallbackSnapshot(NMerchantSlot slot, MerchantEntry entry, int index)
+    private static MerchantSlotSnapshot BuildFallbackSnapshot(NMerchantSlot slot, MerchantEntry entry, int index, bool affordable)
     {
         string label = NodeTextReader.ReadVisibleTexts(slot, 3).FirstOrDefault() ?? slot.GetType().Name;
         string? details = NodeTextReader.ReadVisibleTexts(slot, 5)
             .FirstOrDefault(text => !string.Equals(text, label, StringComparison.Ordinal));
-        string description = DescribeEntry(entry, details, null);
+        string description = DescribeEntry(entry, details, null, affordable);
 
         return new MerchantSlotSnapshot(
             MerchantEntryIdentity.Create("slot", label, index),
             label,
             description,
-            entry.IsStocked && entry.EnoughGold);
+            entry.IsStocked && affordable);
     }
 
     private static TNode? ReadNodeField<TNode>(object instance, string fieldName) where TNode : class
@@ -283,7 +290,7 @@ public sealed class MerchantInventoryFeature : IAgentFeature
             || trimmed.StartsWith("Cost:", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string DescribeEntry(MerchantEntry entry, string? primary, string? extra)
+    private static string DescribeEntry(MerchantEntry entry, string? primary, string? extra, bool? affordableOverride = null)
     {
         List<string> parts = [];
         if (!string.IsNullOrWhiteSpace(primary))
@@ -297,7 +304,7 @@ public sealed class MerchantInventoryFeature : IAgentFeature
         {
             parts.Add("Sold out.");
         }
-        else if (!entry.EnoughGold)
+        else if (!(affordableOverride ?? entry.EnoughGold))
         {
             parts.Add("Not enough gold.");
         }
@@ -308,6 +315,28 @@ public sealed class MerchantInventoryFeature : IAgentFeature
         }
 
         return string.Join(" ", parts);
+    }
+
+    private static bool HasEnoughGold(MerchantEntry entry, MerchantInventory inventory)
+    {
+        int currentGold = ReadPlayerGold(inventory.Player);
+        return currentGold >= entry.Cost;
+    }
+
+    private static int ReadPlayerGold(object player)
+    {
+        PropertyInfo? goldProperty = player.GetType().GetProperty("Gold", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (goldProperty?.GetValue(player) is int gold)
+        {
+            return gold;
+        }
+
+        if (goldProperty?.GetValue(player) is decimal decimalGold)
+        {
+            return decimal.ToInt32(decimalGold);
+        }
+
+        throw new InvalidOperationException("Could not read player gold from merchant inventory.");
     }
 
     private sealed record MerchantSlotSnapshot(string Id, string Label, string Description, bool Enabled);

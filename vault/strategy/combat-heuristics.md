@@ -25,6 +25,13 @@ General fight rules distilled from live STS2 runs.
 - Use a potion when it changes the shape of the fight: block breakpoint, lethal breakpoint, or setup breakpoint.
 - Do not spend a potion just because the turn is mediocre.
 
+## Cost Display
+
+- Read cost-changing UI carefully.
+- Some effects make the next card free while visually zeroing multiple cards in hand.
+- Treat that as a display quirk, not proof that the whole hand is free.
+- Spend the free card on the highest-value play before evaluating the rest of the turn.
+
 ## Threat Priority
 
 - Kill or weaken the source of future damage, status clutter, or scaling.

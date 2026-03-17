@@ -15,6 +15,12 @@ function isCombatLikeScreen(screenType) {
     || screenType === "combat_choice_select";
 }
 
+function isMerchantLikeScreen(screenType) {
+  return screenType === "merchant_room"
+    || screenType === "merchant_inventory"
+    || screenType === "deck_card_select";
+}
+
 function isTransitionShellState(state) {
   if (!state) {
     return true;
@@ -93,6 +99,11 @@ function parseInstant(value) {
   return Number.isNaN(timestamp) ? Number.NEGATIVE_INFINITY : timestamp;
 }
 
+function isQuietSinceLastUpdate(state, quietPeriodMs = 500) {
+  const updatedAt = parseInstant(state?.updatedAtUtc);
+  return Number.isFinite(updatedAt) && Date.now() - updatedAt >= quietPeriodMs;
+}
+
 function isNewerState(referenceState, state) {
   if (!state?.updatedAtUtc) {
     return false;
@@ -143,6 +154,110 @@ export function isRewardPotionClaimFollowThroughState(action, beforeState, state
   });
 }
 
+export function isMerchantInventoryConsistent(state) {
+  if (state?.screenType !== "merchant_inventory") {
+    return true;
+  }
+
+  const gold = state.topBar?.gold ?? null;
+  if (gold == null || !Array.isArray(state.menuItems)) {
+    return true;
+  }
+
+  for (const item of state.menuItems) {
+    if (item?.id === "close") {
+      continue;
+    }
+
+    const description = typeof item?.description === "string" ? item.description : "";
+    const soldOut = description.includes("Sold out.") || description.includes("Already used.");
+    if (soldOut) {
+      continue;
+    }
+
+    const costMatch = description.match(/Cost:\s*(\d+)\s*gold/i);
+    if (!costMatch) {
+      continue;
+    }
+
+    const cost = Number.parseInt(costMatch[1], 10);
+    if (!Number.isFinite(cost)) {
+      continue;
+    }
+
+    const saysNotEnoughGold = description.includes("Not enough gold.");
+    if (saysNotEnoughGold && gold >= cost) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function isDeckCardSelectFollowThroughState(action, beforeState, state, { quietPeriodMs = 500 } = {}) {
+  if (!action?.startsWith("deck_card_select.select:")) {
+    return false;
+  }
+
+  if (beforeState?.screenType !== "deck_card_select") {
+    return false;
+  }
+
+  if (!state || !isNewerState(beforeState, state)) {
+    return false;
+  }
+
+  if (state.screenType === "deck_card_select") {
+    return false;
+  }
+
+  if (state.screenType === "combat_room") {
+    return isCombatDisplayStable(state, { quietPeriodMs });
+  }
+
+  if (!isMerchantInventoryConsistent(state)) {
+    return false;
+  }
+
+  return isQuietSinceLastUpdate(state, quietPeriodMs);
+}
+
+export function isMerchantActionFollowThroughState(action, beforeState, state, { quietPeriodMs = 500 } = {}) {
+  if (typeof action !== "string" || !action.startsWith("merchant.")) {
+    return false;
+  }
+
+  if (!isMerchantLikeScreen(beforeState?.screenType)) {
+    return false;
+  }
+
+  if (!state || !isNewerState(beforeState, state)) {
+    return false;
+  }
+
+  if (action === "merchant.leave") {
+    return state.screenType === "map_screen" && isQuietSinceLastUpdate(state, quietPeriodMs);
+  }
+
+  if (action === "merchant.close") {
+    return state.screenType === "merchant_room" && isQuietSinceLastUpdate(state, quietPeriodMs);
+  }
+
+  if (!action.startsWith("merchant.buy:")) {
+    return false;
+  }
+
+  if (state.screenType === "deck_card_select") {
+    return isQuietSinceLastUpdate(state, quietPeriodMs);
+  }
+
+  if (state.screenType !== "merchant_inventory") {
+    return false;
+  }
+
+  return isMerchantInventoryConsistent(state) && isQuietSinceLastUpdate(state, quietPeriodMs);
+}
+
 export function buildCombatStabilityKey(state) {
   if (!state || !isCombatLikeScreen(state.screenType)) {
     return JSON.stringify({ screenType: state?.screenType ?? null });
@@ -184,8 +299,7 @@ export function isCombatDisplayStable(state, { quietPeriodMs = 500 } = {}) {
     return false;
   }
 
-  const updatedAt = parseInstant(state?.updatedAtUtc);
-  return Number.isFinite(updatedAt) && Date.now() - updatedAt >= quietPeriodMs;
+  return isQuietSinceLastUpdate(state, quietPeriodMs);
 }
 
 export function isPotionUseFollowThroughState(action, referenceState, state) {
@@ -378,6 +492,26 @@ export function waitForFollowThrough(action, beforeState, { timeoutMs = 12000 } 
       () => {
         const state = readState();
         return isPotionUseFollowThroughState(action, referenceState, state) ? state : null;
+      },
+      { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
+    );
+  }
+
+  if (action.startsWith("deck_card_select.select:")) {
+    return waitFor(
+      () => {
+        const state = readState();
+        return isDeckCardSelectFollowThroughState(action, beforeState, state) ? state : null;
+      },
+      { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
+    );
+  }
+
+  if (action.startsWith("merchant.")) {
+    return waitFor(
+      () => {
+        const state = readState();
+        return isMerchantActionFollowThroughState(action, beforeState, state) ? state : null;
       },
       { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
     );

@@ -53,6 +53,8 @@ function summarizeCostChange(change) {
 function summarizePotion(potion) {
   return {
     id: potion.id,
+    slot: potion.slotIndex ?? null,
+    occupied: potion.hasPotion ?? true,
     title: potion.title,
     description: potion.description ?? null,
     usable: potion.isUsable,
@@ -225,6 +227,11 @@ export function buildGameplayView(state, options = {}) {
         ? null
         : `${state.topBar.currentHp}/${state.topBar.maxHp}`,
       gold: state.topBar.gold ?? null,
+      potionSlots: state.topBar.potionSlotCount == null ? null : {
+        total: state.topBar.potionSlotCount,
+        filled: state.topBar.filledPotionSlotCount ?? null,
+        empty: state.topBar.emptyPotionSlotCount ?? null,
+      },
       buttons: (state.topBar.buttons ?? []).map(summarizeButton),
     } : null,
     relics: includeRelicDetails

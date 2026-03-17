@@ -7,9 +7,19 @@ internal static class PotionIdentity
 {
     public static string FromHolder(NPotionHolder holder, int slotIndex)
     {
+        if (!holder.HasPotion || holder.Potion?.Model is null)
+        {
+            return FromEmptySlot(slotIndex);
+        }
+
         PotionModel model = holder.Potion?.Model ?? throw new InvalidOperationException("Potion holder had no potion model.");
         string title = AgentText.SafeText(model.Title) ?? model.GetType().Name;
         string slug = title.Trim().ToLowerInvariant().Replace(' ', '-');
         return $"potion-{slotIndex + 1:D2}:{slug}";
+    }
+
+    public static string FromEmptySlot(int slotIndex)
+    {
+        return $"potion-{slotIndex + 1:D2}:empty";
     }
 }

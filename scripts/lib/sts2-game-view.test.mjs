@@ -71,13 +71,18 @@ test("buildGameplayView includes deck snapshot and detailed relics for merchant 
       currentHp: 86,
       maxHp: 89,
       gold: 393,
+      potionSlotCount: 3,
+      filledPotionSlotCount: 1,
+      emptyPotionSlotCount: 2,
       buttons: [],
     },
     relics: [
       { id: "BurningBlood", label: "Burning Blood", description: "Heal 6 HP.", count: null, status: "Active" },
     ],
     potions: [
-      { id: "potion-01:blood-potion", title: "Blood Potion", description: "Heal 20%.", usage: "AnyTime", isUsable: true, canDiscard: true },
+      { id: "potion-01:blood-potion", slotIndex: 1, hasPotion: true, title: "Blood Potion", description: "Heal 20%.", usage: "AnyTime", isUsable: true, canDiscard: true },
+      { id: "potion-02:empty", slotIndex: 2, hasPotion: false, title: "Empty Slot", description: null, usage: null, isUsable: false, canDiscard: false },
+      { id: "potion-03:empty", slotIndex: 3, hasPotion: false, title: "Empty Slot", description: null, usage: null, isUsable: false, canDiscard: false },
     ],
     menuItems: [{ id: "merchant.buy:1", label: "Lantern", description: "Start each combat with 1 extra energy.", enabled: true, selected: false }],
     cardBrowse: {
@@ -98,6 +103,8 @@ test("buildGameplayView includes deck snapshot and detailed relics for merchant 
   assert.equal(view.relics[0].description, "Heal 6 HP.");
   assert.equal(view.potions[0].title, "Blood Potion");
   assert.equal(view.potions[0].usable, true);
+  assert.equal(view.potions[1].occupied, false);
+  assert.deepEqual(view.topBar.potionSlots, { total: 3, filled: 1, empty: 2 });
   assert.equal(view.cardBrowse.kind, "deck_snapshot");
   assert.equal(view.cardBrowse.cardCount, 2);
   assert.equal(view.menuItems[0].label, "Lantern");

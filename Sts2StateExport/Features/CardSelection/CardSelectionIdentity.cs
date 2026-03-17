@@ -15,7 +15,7 @@ public static partial class CardSelectionIdentity
 
     private static string Slugify(string value)
     {
-        string lowered = value.Trim().ToLowerInvariant();
+        string lowered = value.Trim().ToLowerInvariant().Replace("+", "-plus-");
         string collapsed = NonAlphanumericRegex().Replace(lowered, "-").Trim('-');
         return string.IsNullOrWhiteSpace(collapsed) ? "unknown" : collapsed;
     }
