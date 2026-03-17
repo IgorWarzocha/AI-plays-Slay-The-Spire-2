@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildGameplayView } from "../lib/sts2-game-view.ts";
+import { buildCommandView, buildGameplayView } from "../lib/sts2-game-view.ts";
 import type { RelicState } from "../lib/types.ts";
 
 function expectDefined<T>(value: T): NonNullable<T> {
@@ -44,11 +44,14 @@ test("buildGameplayView hides admin noise and surfaces relic details only on dem
   const compact = buildGameplayView(state);
   assert.deepEqual(compact.relics, ["Burning Blood", "Pomander (3)"]);
   assert.equal(expectDefined(compact.topBar).hp, "61/86");
-  assert.deepEqual(compact.actions, ["combat.end_turn"]);
+  assert.equal(compact.actions, undefined);
 
   const detailed = buildGameplayView(state, { relics: true });
   assert.equal(expectRelic(expectDefined(detailed.relics[0])).description, "Heal 6 HP.");
   assert.equal(expectRelic(expectDefined(detailed.relics[1])).count, 3);
+
+  const hard = buildGameplayView(state, { hard: true });
+  assert.deepEqual(hard.actions, ["combat.end_turn"]);
 });
 
 test("buildGameplayView includes deck snapshot and detailed relics for merchant screens", () => {
@@ -87,7 +90,7 @@ test("buildGameplayView includes deck snapshot and detailed relics for merchant 
     actions: ["merchant.buy:1", "merchant.close"],
   };
 
-  const view = buildGameplayView(state);
+  const view = buildGameplayView(state, { hard: true });
   assert.equal(expectRelic(expectDefined(view.relics[0])).description, "Heal 6 HP.");
   assert.equal(expectDefined(view.potions[0]).title, "Blood Potion");
   assert.equal(expectDefined(view.potions[1]).occupied, false);
@@ -135,7 +138,7 @@ test("buildGameplayView preserves readable combat intent summaries", () => {
     },
   };
 
-  const view = buildGameplayView(state);
+  const view = buildGameplayView(state, { hard: true });
   assert.equal(expectDefined(expectDefined(expectDefined(view.combat).creatures[0]).intents[0]).summary, "18 damage");
   assert.equal(expectDefined(expectDefined(expectDefined(view.combat).creatures[0]).intents[0]).title, "Heavy Slam");
   assert.equal(expectDefined(expectDefined(view.combat).creatures[0]).powers[0]?.title, "Intangible");
@@ -155,9 +158,133 @@ test("buildGameplayView preserves card reward alternatives like skip", () => {
     ],
   };
 
-  const view = buildGameplayView(state);
+  const view = buildGameplayView(state, { hard: true });
   assert.equal(expectDefined(expectDefined(view.menuItems)[1]).label, "Skip");
   assert.deepEqual(view.actions, ["rewards.claim:skip"]);
+});
+
+test("buildCommandView keeps next actions, notes, and menu items in easy mode", () => {
+  const result = {
+    ok: true,
+    actionCount: 1,
+    results: [
+      { action: "combat.play:feed", id: "cmd-1", ackStatus: "completed", screenType: "rewards_screen" },
+    ],
+    state: {
+      screenType: "rewards_screen",
+      updatedAtUtc: "2026-03-17T12:22:00.000Z",
+      topBar: { currentHp: 44, maxHp: 80, gold: 120, buttons: [] },
+      relics: [],
+      potions: [],
+      actions: ["rewards.claim:gold", "rewards.claim:card", "rewards.proceed"],
+      notes: ["Rewards visible: 2."],
+      menuItems: [
+        { id: "rewards.claim:gold", label: "13 Gold", description: "13 Gold", enabled: true, selected: false },
+        { id: "rewards.claim:card", label: "Add a card to your deck.", description: "Add a card to your deck.", enabled: true, selected: false },
+      ],
+    },
+  };
+
+  const view = buildCommandView(result, { easy: true });
+  assert.deepEqual(view.state.actions, ["rewards.claim:gold", "rewards.claim:card", "rewards.proceed"]);
+  assert.equal(expectDefined(view.state.notes)[0], "Rewards visible: 2.");
+  assert.equal(expectDefined(expectDefined(view.state.menuItems)[1]).label, "Add a card to your deck.");
+});
+
+test("buildCommandView keeps treasure relic descriptions in easy mode", () => {
+  const result = {
+    ok: true,
+    actionCount: 1,
+    results: [
+      { action: "treasure.open", id: "cmd-1", ackStatus: "completed", screenType: "treasure_relic_selection" },
+    ],
+    state: {
+      screenType: "treasure_relic_selection",
+      updatedAtUtc: "2026-03-17T12:22:00.000Z",
+      topBar: { currentHp: 44, maxHp: 80, gold: 120, buttons: [] },
+      relics: [],
+      potions: [],
+      actions: ["treasure_relic.choose:relic-0-BowlerHat"],
+      menuItems: [
+        {
+          id: "relic-0-BowlerHat",
+          label: "Bowler Hat",
+          description: "Gain 20% additional Gold.",
+          enabled: true,
+          selected: false,
+        },
+      ],
+      notes: ["Choose one visible relic to continue the chest flow."],
+    },
+  };
+
+  const view = buildCommandView(result, { easy: true });
+  assert.deepEqual(view.state.actions, ["treasure_relic.choose:relic-0-BowlerHat"]);
+  assert.equal(expectDefined(expectDefined(view.state.menuItems)[0]).label, "Bowler Hat");
+  assert.equal(expectDefined(expectDefined(view.state.menuItems)[0]).description, "Gain 20% additional Gold.");
+  assert.equal(view.state.notes, undefined);
+});
+
+test("buildCommandView keeps easy command output compact on non-choice screens", () => {
+  const result = {
+    ok: true,
+    actionCount: 1,
+    results: [
+      { action: "rewards.proceed", id: "cmd-1", ackStatus: "completed", screenType: "map_screen" },
+    ],
+    state: {
+      screenType: "map_screen",
+      updatedAtUtc: "2026-03-17T12:23:00.000Z",
+      topBar: { currentHp: 44, maxHp: 80, gold: 120, buttons: [] },
+      relics: [],
+      potions: [],
+      actions: ["map.travel:3,1"],
+      notes: ["Map screen is open."],
+      menuItems: [{ id: "travel-1", label: "3,1", description: null, enabled: true, selected: false }],
+      map: {
+        visible: true,
+        travelEnabled: true,
+        traveling: false,
+        points: [
+          { id: "3,0", col: 3, row: 0, type: "Ancient", state: "Traveled", travelable: false, canModify: true },
+          { id: "3,1", col: 3, row: 1, type: "Monster", state: "Travelable", travelable: true, canModify: true },
+        ],
+      },
+    },
+  };
+
+  const view = buildCommandView(result, { easy: true });
+  assert.deepEqual(view.state.actions, ["map.travel:3,1"]);
+  assert.equal(view.state.notes, undefined);
+  assert.equal(view.state.menuItems, undefined);
+});
+
+test("buildGameplayView shows a compact full-map summary on map screens", () => {
+  const state = {
+    screenType: "map_screen",
+    updatedAtUtc: "2026-03-17T12:24:00.000Z",
+    topBar: { currentHp: 80, maxHp: 80, gold: 99, buttons: [] },
+    relics: [],
+    potions: [],
+    actions: ["map.travel:2,1", "map.travel:4,1"],
+    map: {
+      visible: true,
+      travelEnabled: true,
+      traveling: false,
+      points: [
+        { id: "3,0", col: 3, row: 0, type: "Ancient", state: "Traveled", travelable: false, canModify: true },
+        { id: "2,1", col: 2, row: 1, type: "Monster", state: "Travelable", travelable: true, canModify: true },
+        { id: "4,1", col: 4, row: 1, type: "Monster", state: "Travelable", travelable: true, canModify: true },
+        { id: "6,2", col: 6, row: 2, type: "Shop", state: "Untravelable", travelable: false, canModify: true },
+      ],
+    },
+  };
+
+  const view = buildGameplayView(state, { hard: true });
+  assert.equal(expectDefined(view.map).current?.coord, "3,0");
+  assert.deepEqual(expectDefined(view.map).travelablePoints.map((point) => point.coord), ["2,1", "4,1"]);
+  assert.equal(expectDefined(view.map).rows.length, 3);
+  assert.equal(expectDefined(view.map).pointCount, 4);
 });
 
 test("buildGameplayView summarizes run history without admin noise", () => {
@@ -225,9 +352,50 @@ test("buildGameplayView summarizes run history without admin noise", () => {
     },
   };
 
-  const view = buildGameplayView(state);
+  const view = buildGameplayView(state, { hard: true });
   assert.equal(expectDefined(view.runHistory).fileName, "2026-03-17-ironclad-run-003");
   assert.equal(expectDefined(view.runHistory).hp, "0/92");
   assert.equal(expectDefined(expectDefined(expectDefined(view.runHistory).floors[0]).cardsTransformed[0]).to, "Uppercut");
   assert.equal(expectDefined(expectDefined(view.runHistory).relics[0]).label, "Burning Blood");
+});
+
+test("buildGameplayView easy mode strips noisy collections and empty potion slots", () => {
+  const state = {
+    screenType: "merchant_inventory",
+    updatedAtUtc: "2026-03-17T12:10:00.000Z",
+    topBar: {
+      currentHp: 86,
+      maxHp: 89,
+      gold: 393,
+      potionSlotCount: 3,
+      filledPotionSlotCount: 1,
+      emptyPotionSlotCount: 2,
+      buttons: [],
+    },
+    relics: [
+      { id: "BurningBlood", label: "Burning Blood", description: "Heal 6 HP.", count: null, status: "Active" },
+    ],
+    potions: [
+      { id: "potion-01:blood-potion", slotIndex: 1, hasPotion: true, title: "Blood Potion", description: "Heal 20%.", usage: "AnyTime", isUsable: true, canDiscard: true },
+      { id: "potion-02:empty", slotIndex: 2, hasPotion: false, title: "Empty Slot", description: null, usage: null, isUsable: false, canDiscard: false },
+    ],
+    menuItems: [{ id: "merchant.buy:1", label: "Lantern", description: "Start each combat with 1 extra energy.", enabled: true, selected: false }],
+    cardBrowse: {
+      kind: "deck_snapshot",
+      title: "Current Deck",
+      pileType: "Deck",
+      cardCount: 2,
+      canClose: false,
+      cards: [
+        { id: "c1", title: "Strike", costText: "1", upgraded: false, description: "Deal 6 damage." },
+      ],
+    },
+    actions: ["merchant.buy:1", "merchant.close"],
+  };
+
+  const view = buildGameplayView(state, { easy: true });
+  assert.equal(view.actions, undefined);
+  assert.equal(view.menuItems, undefined);
+  assert.equal(expectDefined(view.potions).length, 1);
+  assert.equal(expectDefined(expectDefined(view.cardBrowse).cards[0]).description, null);
 });

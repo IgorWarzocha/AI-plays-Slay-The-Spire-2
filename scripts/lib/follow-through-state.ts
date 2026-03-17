@@ -46,6 +46,32 @@ export function isRewardPotionClaimFollowThroughState(action: string, beforeStat
   });
 }
 
+export function isRewardClaimFollowThroughState(action: string, beforeState: DisplayState | null | undefined, state: DisplayState | null | undefined): boolean {
+  if (!action.startsWith('rewards.claim:')) {
+    return false;
+  }
+
+  if (!beforeState || !state || !isNewerState(beforeState, state)) {
+    return false;
+  }
+
+  return stableJson({
+    screenType: state.screenType,
+    topBar: state.topBar ?? null,
+    potions: state.potions ?? [],
+    menuItems: state.menuItems ?? [],
+    actions: state.actions ?? [],
+    notes: state.notes ?? [],
+  }) !== stableJson({
+    screenType: beforeState.screenType,
+    topBar: beforeState.topBar ?? null,
+    potions: beforeState.potions ?? [],
+    menuItems: beforeState.menuItems ?? [],
+    actions: beforeState.actions ?? [],
+    notes: beforeState.notes ?? [],
+  });
+}
+
 export function isMerchantInventoryConsistent(state: DisplayState | null | undefined): boolean {
   if (state?.screenType !== 'merchant_inventory') {
     return true;
@@ -113,14 +139,56 @@ export function isDeckCardSelectFollowThroughState(
   }
 
   if (state.screenType === 'merchant_inventory') {
-    if (!isMerchantInventoryConsistent(state)) {
-      return false;
-    }
-
-    return isQuietSinceLastUpdate(state, quietPeriodMs);
+    return isMerchantInventoryConsistent(state);
   }
 
   return !isTransitionShellState(state);
+}
+
+export function isCombatCardSelectSelectionFollowThroughState(
+  action: string,
+  beforeState: DisplayState | null | undefined,
+  state: DisplayState | null | undefined,
+): boolean {
+  if (!action.startsWith('combat_card_select.select:')) {
+    return false;
+  }
+
+  if (beforeState?.screenType !== 'combat_card_select') {
+    return false;
+  }
+
+  if (!state || !isNewerState(beforeState, state)) {
+    return false;
+  }
+
+  if (state.screenType === 'combat_room') {
+    return isCombatStateSettled(state);
+  }
+
+  if (state.screenType !== 'combat_card_select') {
+    return false;
+  }
+
+  const selectedAction = action;
+  const actions = state.actions ?? [];
+  const notes = state.notes ?? [];
+
+  if (!actions.includes(selectedAction) && (actions.includes('combat_card_select.confirm') || notes.some((note) => typeof note === 'string' && note.includes('Selection progress: 1/1')))) {
+    return true;
+  }
+
+  return stableJson({
+    actions,
+    notes,
+    menuItems: state.menuItems ?? [],
+    hand: state.combat?.hand ?? [],
+  }) !== stableJson({
+    actions: beforeState.actions ?? [],
+    notes: beforeState.notes ?? [],
+    menuItems: beforeState.menuItems ?? [],
+    hand: beforeState.combat?.hand ?? [],
+  });
 }
 
 export function isMerchantActionFollowThroughState(
@@ -142,11 +210,19 @@ export function isMerchantActionFollowThroughState(
   }
 
   if (action === 'merchant.leave') {
-    return state.screenType === 'map_screen' && isQuietSinceLastUpdate(state, quietPeriodMs);
+    return state.screenType === 'map_screen';
   }
 
   if (action === 'merchant.close') {
-    return state.screenType === 'merchant_room' && isQuietSinceLastUpdate(state, quietPeriodMs);
+    return state.screenType === 'merchant_room';
+  }
+
+  if (action === 'merchant.open') {
+    if (state.screenType !== 'merchant_inventory') {
+      return false;
+    }
+
+    return isMerchantInventoryConsistent(state);
   }
 
   if (!action.startsWith('merchant.buy:')) {
@@ -154,14 +230,21 @@ export function isMerchantActionFollowThroughState(
   }
 
   if (state.screenType === 'deck_card_select') {
-    return isQuietSinceLastUpdate(state, quietPeriodMs);
+    const prompt = Array.isArray(state.notes)
+      ? state.notes.find((note) => typeof note === 'string' && note.startsWith('Prompt:'))
+      : null;
+
+    return Array.isArray(state.menuItems)
+      && state.menuItems.length > 0
+      && typeof prompt === 'string'
+      && prompt.length > 'Prompt:'.length;
   }
 
   if (state.screenType !== 'merchant_inventory') {
     return false;
   }
 
-  return isMerchantInventoryConsistent(state) && isQuietSinceLastUpdate(state, quietPeriodMs);
+  return isMerchantInventoryConsistent(state);
 }
 
 export function isPotionUseFollowThroughState(action: string, referenceState: DisplayState | null | undefined, state: DisplayState | null | undefined): boolean {
@@ -195,6 +278,12 @@ export function isMapTravelFollowThroughState(beforeState: DisplayState | null |
 
   if (commandId && state.lastHandledCommandId !== commandId) {
     return false;
+  }
+
+  if (state.screenType === 'map_screen' || state.screenType === 'map') {
+    if (state.map?.traveling || state.map?.travelEnabled === false) {
+      return false;
+    }
   }
 
   if (state.screenType !== beforeState.screenType) {

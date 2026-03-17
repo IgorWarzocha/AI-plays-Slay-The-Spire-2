@@ -26,9 +26,66 @@ test("buildCombatCommandView falls back to gameplay view when combat actions exi
     },
   };
 
-  const view = buildCombatCommandView(result);
+  const view = buildCombatCommandView(result, { hard: true });
   assert.equal(view.state.screenType, "rewards_screen");
   assert.deepEqual(view.state.actions, ["rewards.proceed"]);
+});
+
+test("buildCombatCommandView keeps next actions and reward choices in easy mode after exiting combat", () => {
+  const result = {
+    ok: true,
+    actionCount: 2,
+    results: [
+      { action: "combat.play:strike", id: "cmd-1", ackStatus: "completed", screenType: "combat_room" },
+      { action: "combat.play:strike", id: "cmd-2", ackStatus: "completed", screenType: "rewards_screen" },
+    ],
+    state: {
+      screenType: "rewards_screen",
+      updatedAtUtc: "2026-03-17T12:06:00.000Z",
+      actions: ["rewards.claim:gold", "rewards.claim:card", "rewards.proceed"],
+      notes: ["Rewards visible: 2."],
+      relics: [],
+      potions: [],
+      menuItems: [
+        { id: "rewards.claim:gold", label: "13 Gold", description: "13 Gold", enabled: true, selected: false },
+        { id: "rewards.claim:card", label: "Add a card to your deck.", description: "Add a card to your deck.", enabled: true, selected: false },
+      ],
+      topBar: { currentHp: 54, maxHp: 89, gold: 256, buttons: [] },
+    },
+  };
+
+  const view = buildCombatCommandView(result, { easy: true });
+  assert.deepEqual(view.state.actions, ["rewards.claim:gold", "rewards.claim:card", "rewards.proceed"]);
+  assert.equal(expectDefined(view.state.notes)[0], "Rewards visible: 2.");
+  assert.equal(expectDefined(expectDefined(view.state.menuItems)[0]).label, "13 Gold");
+});
+
+test("buildCombatCommandView keeps easy command output compact on merchant inventory", () => {
+  const result = {
+    ok: true,
+    actionCount: 1,
+    results: [
+      { action: "map.travel:5,2", id: "cmd-1", ackStatus: "completed", screenType: "merchant_inventory" },
+    ],
+    state: {
+      screenType: "merchant_inventory",
+      updatedAtUtc: "2026-03-17T12:07:00.000Z",
+      actions: ["merchant.buy:card-01", "merchant.close"],
+      notes: ["Merchant inventory is active."],
+      relics: [],
+      potions: [],
+      menuItems: [
+        { id: "card-01", label: "Burning Pact", description: "Cost: 77 gold.", enabled: true, selected: false },
+        { id: "close", label: "Close Merchant", description: "Close the merchant inventory.", enabled: true, selected: false },
+      ],
+      topBar: { currentHp: 54, maxHp: 89, gold: 256, buttons: [] },
+    },
+  };
+
+  const view = buildCombatCommandView(result, { easy: true });
+  assert.deepEqual(view.state.actions, ["merchant.buy:card-01", "merchant.close"]);
+  assert.equal(view.state.notes, undefined);
+  assert.equal(expectDefined(expectDefined(view.state.menuItems)[0]).label, "Burning Pact");
 });
 
 test("buildCombatView supports modal combat card choice overlays", () => {
@@ -54,7 +111,7 @@ test("buildCombatView supports modal combat card choice overlays", () => {
     },
   };
 
-  const view = buildCombatView(state, { notes: true });
+  const view = buildCombatView(state, { hard: true });
   assert.equal(view.notes[0], "Choose a card to exhaust.");
   assert.equal(expectDefined(view.combat).selectionPrompt, "Choose a card to Exhaust.");
   assert.deepEqual(view.actions, ["combat_card_select.select:strike-01", "combat_card_select.confirm"]);
@@ -171,11 +228,93 @@ test("buildGameplayView surfaces combat card transient states and unplayable cau
     },
   };
 
-  const view = buildGameplayView(state);
+  const view = buildGameplayView(state, { hard: true });
   const card = expectDefined(expectDefined(view.combat).hand[0]);
   assert.equal(expectDefined(card.affliction).title, "Bound");
   assert.equal(expectDefined(card.enchantment).title, "Empowered");
   assert.equal(expectDefined(card.unplayable).reason, "Already played a Bound card this turn.");
   assert.equal(card.glowsGold, true);
   assert.equal(card.glowsRed, true);
+});
+
+test("buildCombatView easy mode trims combat noise for routine turns", () => {
+  const state = {
+    screenType: "combat_room",
+    updatedAtUtc: "2026-03-17T12:50:00.000Z",
+    topBar: { currentHp: 29, maxHp: 80, gold: 45, buttons: [] },
+    relics: [],
+    notes: ["Combat state is model-backed."],
+    menuItems: [{ id: "cancel", label: "Cancel", description: null, enabled: true, selected: false }],
+    actions: ["combat.end_turn"],
+    combat: {
+      roundNumber: 6,
+      currentSide: "Player",
+      energy: 1,
+      handIsSettled: true,
+      activeHandCount: 4,
+      totalHandCount: 4,
+      pendingHandHolderCount: 0,
+      handAnimationActive: false,
+      cardPlayInProgress: false,
+      drawPileCount: 9,
+      discardPileCount: 4,
+      exhaustPileCount: 0,
+      canEndTurn: true,
+      hand: [
+        {
+          id: "bound-card-01",
+          title: "Uppercut",
+          costText: "2",
+          description: "Deal damage and apply Weak/Vulnerable.",
+          isPlayable: false,
+          validTargetIds: ["creature-1"],
+          affliction: {
+            kind: "Affliction",
+            typeName: "Bound",
+            title: "Bound",
+            description: "Only 1 Bound card can be played each turn.",
+            amount: 1,
+            status: "Active",
+            overlayPath: null,
+            glowsGold: false,
+            glowsRed: true,
+          },
+        },
+      ],
+      potions: [
+        { id: "potion-01:blood-potion", slotIndex: 1, hasPotion: true, title: "Blood Potion", description: "Heal 20%.", usage: "AnyTime", isUsable: true, canDiscard: true },
+        { id: "potion-02:empty", slotIndex: 2, hasPotion: false, title: "Empty Slot", description: null, usage: null, isUsable: false, canDiscard: false },
+      ],
+      creatures: [
+        {
+          id: "enemy-1",
+          name: "Soul Fysh",
+          side: "Enemy",
+          currentHp: 122,
+          maxHp: 122,
+          block: 0,
+          intents: [
+            {
+              kind: "SingleAttackIntent",
+              label: "18",
+              title: "Heavy Slam",
+              description: "Deal 18 damage.",
+              summary: "18 damage",
+              targets: ["player"],
+            },
+          ],
+          powers: [{ title: "Intangible", amount: 1, description: "Ignore most damage." }],
+        },
+      ],
+    },
+  };
+
+  const view = buildCombatView(state, { easy: true });
+  assert.deepEqual(view.notes, []);
+  assert.deepEqual(view.actions, []);
+  assert.deepEqual(view.menuItems, []);
+  assert.equal(expectDefined(view.combat).piles.draw, null);
+  assert.equal(expectDefined(expectDefined(view.combat).hand[0]).description, null);
+  assert.equal(expectDefined(expectDefined(expectDefined(view.combat).creatures[0]).intents[0]).description, null);
+  assert.equal(expectDefined(view.combat).potions.length, 1);
 });

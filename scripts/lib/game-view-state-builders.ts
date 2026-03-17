@@ -19,6 +19,7 @@ import {
   summarizeRelicLabel,
   summarizeRunHistory,
 } from './game-view-summarizers.ts';
+import { resolveViewMode, resolveViewPreferences } from './view-options.ts';
 
 function buildTopBarView(topBar: TopBarState | null | undefined): TopBarView | null {
   if (!topBar) {
@@ -65,15 +66,12 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
     };
   }
 
-  if (options.raw === true || options.raw === 'true') {
+  if (resolveViewMode(options) === 'full') {
     return state as unknown as GameplayView;
   }
 
-  const includeActions = options.actions !== false && options.actions !== 'false';
-  const includeMenuItems = options.menu === true || options.menu === 'true';
-  const includeNotes = options.notes === true || options.notes === 'true';
-  const includeRelicDetails = options.relics === true
-    || options.relics === 'true'
+  const viewPreferences = resolveViewPreferences(options);
+  const includeRelicDetails = viewPreferences.includeRelicDetails
     || state.screenType === 'merchant_room'
     || state.screenType === 'merchant_inventory';
 
@@ -84,14 +82,16 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
     relics: includeRelicDetails
       ? (state.relics ?? []).map(summarizeRelic)
       : (state.relics ?? []).map(summarizeRelicLabel),
-    potions: (state.potions ?? []).map(summarizePotion),
+    potions: (state.potions ?? [])
+      .map((potion) => summarizePotion(potion, viewPreferences.mode))
+      .filter((potion) => !viewPreferences.occupiedPotionsOnly || potion.occupied),
   };
 
-  if (includeActions) {
+  if (viewPreferences.includeActions) {
     view.actions = state.actions ?? [];
   }
 
-  if (includeNotes) {
+  if (viewPreferences.includeNotes) {
     view.notes = state.notes ?? [];
   }
 
@@ -112,35 +112,36 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
       };
       break;
     case 'map':
-      view.map = state.map ? summarizeMap(state.map) : null;
+    case 'map_screen':
+      view.map = state.map ? summarizeMap(state.map, viewPreferences.mode) : null;
       break;
     case 'combat_room':
     case 'combat_card_select':
     case 'combat_choice_select':
-      view.combat = state.combat ? summarizeCombat(state.combat) : null;
-      if ((state.menuItems ?? []).length > 0) {
+      view.combat = state.combat ? summarizeCombat(state.combat, viewPreferences.mode) : null;
+      if (viewPreferences.includeMenuItems) {
         view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
       }
       break;
     case 'deck_view':
     case 'card_pile':
-      view.cardBrowse = state.cardBrowse ? summarizeCardBrowse(state.cardBrowse) : null;
+      view.cardBrowse = state.cardBrowse ? summarizeCardBrowse(state.cardBrowse, viewPreferences.mode) : null;
       break;
     case 'run_history':
-      view.runHistory = state.runHistory ? summarizeRunHistory(state.runHistory) : null;
-      if (includeMenuItems || (state.menuItems ?? []).length > 0) {
+      view.runHistory = state.runHistory ? summarizeRunHistory(state.runHistory, viewPreferences.mode) : null;
+      if (viewPreferences.includeMenuItems) {
         view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
       }
       break;
     case 'merchant_room':
     case 'merchant_inventory':
-      view.cardBrowse = state.cardBrowse ? summarizeCardBrowse(state.cardBrowse) : null;
-      if (includeMenuItems || (state.menuItems ?? []).length > 0) {
+      view.cardBrowse = state.cardBrowse ? summarizeCardBrowse(state.cardBrowse, viewPreferences.mode) : null;
+      if (viewPreferences.includeMenuItems) {
         view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
       }
       break;
     default:
-      if (includeMenuItems || (state.menuItems ?? []).length > 0) {
+      if (viewPreferences.includeMenuItems) {
         view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
       }
       break;
@@ -163,9 +164,11 @@ export function buildCombatView(state: DisplayState | null | undefined, options:
     };
   }
 
-  if (options.raw === true || options.raw === 'true') {
+  if (resolveViewMode(options) === 'full') {
     return state as unknown as CombatViewScreen;
   }
+
+  const viewPreferences = resolveViewPreferences(options);
 
   if (state.screenType !== 'combat_room'
     && state.screenType !== 'combat_card_select'
@@ -177,15 +180,17 @@ export function buildCombatView(state: DisplayState | null | undefined, options:
     screenType: state.screenType ?? null,
     updatedAtUtc: state.updatedAtUtc ?? null,
     topBar: buildCombatTopBarView(state.topBar),
-    relics: options.relics === true || options.relics === 'true'
+    relics: viewPreferences.includeRelicDetails
       ? (state.relics ?? []).map(summarizeRelic)
       : (state.relics ?? []).map(summarizeRelicLabel),
-    notes: options.notes === true || options.notes === 'true' ? (state.notes ?? []) : [],
-    combat: state.combat ? summarizeCombat(state.combat) : null,
-    menuItems: (state.menuItems ?? []).map(summarizeMenuItem),
-    actions: (state.actions ?? []).filter((action) =>
-      action.startsWith('combat.')
-      || action.startsWith('combat_card_select.')
-      || action.startsWith('combat_choice_select.')),
+    notes: viewPreferences.includeNotes ? (state.notes ?? []) : [],
+    combat: state.combat ? summarizeCombat(state.combat, viewPreferences.mode) : null,
+    menuItems: viewPreferences.includeMenuItems ? (state.menuItems ?? []).map(summarizeMenuItem) : [],
+    actions: viewPreferences.includeActions
+      ? (state.actions ?? []).filter((action) =>
+        action.startsWith('combat.')
+        || action.startsWith('combat_card_select.')
+        || action.startsWith('combat_choice_select.'))
+      : [],
   };
 }

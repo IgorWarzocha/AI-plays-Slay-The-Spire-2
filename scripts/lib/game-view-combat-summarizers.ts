@@ -12,44 +12,48 @@ import type {
   PotionState,
   PotionView,
 } from './types.ts';
+import type { ViewMode } from './view-options.ts';
 
-export function summarizeCombatCard(card: CombatCardState): CombatCardView {
+function summarizeOverlay(
+  overlay: CombatCardState['affliction'] | CombatCardState['enchantment'],
+  mode: Exclude<ViewMode, 'full'>,
+): CombatCardView['affliction'] {
+  if (!overlay) {
+    return null;
+  }
+
+  const compact = mode === 'easy';
+  return {
+    kind: overlay.kind,
+    type: overlay.typeName ?? null,
+    title: overlay.title ?? null,
+    description: compact ? null : (overlay.description ?? null),
+    extraCardText: compact ? null : (overlay.extraCardText ?? null),
+    amount: overlay.amount ?? null,
+    status: overlay.status ?? null,
+    overlayPath: compact ? null : (overlay.overlayPath ?? null),
+    glowsGold: overlay.glowsGold ?? null,
+    glowsRed: overlay.glowsRed ?? null,
+  };
+}
+
+export function summarizeCombatCard(card: CombatCardState, mode: Exclude<ViewMode, 'full'> = 'hard'): CombatCardView {
+  const compact = mode === 'easy';
+
   return {
     id: card.id,
     title: card.title,
     cost: card.costText ?? null,
-    description: card.description ?? null,
+    description: compact ? null : (card.description ?? null),
     playable: card.isPlayable,
     upgraded: card.upgraded,
-    affliction: card.affliction ? {
-      kind: card.affliction.kind,
-      type: card.affliction.typeName ?? null,
-      title: card.affliction.title ?? null,
-      description: card.affliction.description ?? null,
-      extraCardText: card.affliction.extraCardText ?? null,
-      amount: card.affliction.amount ?? null,
-      status: card.affliction.status ?? null,
-      overlayPath: card.affliction.overlayPath ?? null,
-      glowsGold: card.affliction.glowsGold ?? null,
-      glowsRed: card.affliction.glowsRed ?? null,
-    } : null,
-    enchantment: card.enchantment ? {
-      kind: card.enchantment.kind,
-      type: card.enchantment.typeName ?? null,
-      title: card.enchantment.title ?? null,
-      description: card.enchantment.description ?? null,
-      extraCardText: card.enchantment.extraCardText ?? null,
-      amount: card.enchantment.amount ?? null,
-      status: card.enchantment.status ?? null,
-      overlayPath: card.enchantment.overlayPath ?? null,
-      glowsGold: card.enchantment.glowsGold ?? null,
-      glowsRed: card.enchantment.glowsRed ?? null,
-    } : null,
+    affliction: summarizeOverlay(card.affliction, mode),
+    enchantment: summarizeOverlay(card.enchantment, mode),
     unplayable: card.unplayable ? {
       reason: card.unplayable.reason ?? null,
       preventerType: card.unplayable.preventerType ?? null,
-      preventerTitle: card.unplayable.preventerTitle ?? null,
-      preventerDescription: card.unplayable.preventerDescription ?? null,
+      preventerTitle: compact ? null : (card.unplayable.preventerTitle ?? null),
+      preventerDescription: compact ? null : (card.unplayable.preventerDescription ?? null),
     } : null,
     glowsGold: card.glowsGold ?? false,
     glowsRed: card.glowsRed ?? false,
@@ -66,46 +70,59 @@ export function summarizeCostChange(change: CombatCostChange): CombatCostChange 
   };
 }
 
-export function summarizePotion(potion: PotionState): PotionView {
+export function summarizePotion(potion: PotionState, mode: Exclude<ViewMode, 'full'> = 'hard'): PotionView {
+  const compact = mode === 'easy';
+
   return {
     id: potion.id,
     slot: potion.slotIndex ?? null,
     occupied: potion.hasPotion ?? true,
     title: potion.title,
-    description: potion.description ?? null,
+    description: compact ? null : (potion.description ?? null),
     usable: potion.isUsable,
-    discardable: potion.canDiscard,
-    usage: potion.usage ?? null,
-    targets: potion.validTargetIds ?? [],
+    discardable: compact ? undefined : potion.canDiscard,
+    usage: compact ? null : (potion.usage ?? null),
+    targets: compact ? [] : (potion.validTargetIds ?? []),
   };
 }
 
-export function summarizeCreature(creature: CreatureState): CreatureView {
+export function summarizeCreature(creature: CreatureState, mode: Exclude<ViewMode, 'full'> = 'hard'): CreatureView {
+  const compact = mode === 'easy';
+
   return {
     id: creature.id,
     name: creature.name,
     side: creature.side,
     hp: `${creature.currentHp ?? 0}/${creature.maxHp ?? 0}`,
     block: creature.block,
-    powers: creature.powers ?? [],
+    powers: compact
+      ? (creature.powers ?? []).map((power) => ({
+        id: 'id' in power ? power.id : undefined,
+        label: 'label' in power ? power.label : undefined,
+        title: power.title,
+        amount: power.amount ?? null,
+      }))
+      : (creature.powers ?? []),
     intents: (creature.intents ?? []).map((intent: CreatureIntentState) => ({
       kind: intent.kind,
       label: intent.label ?? null,
       title: intent.title ?? null,
-      description: intent.description ?? null,
+      description: compact ? null : (intent.description ?? null),
       summary: intent.summary ?? null,
-      targets: intent.targets ?? [],
+      targets: compact ? [] : (intent.targets ?? []),
     })),
   };
 }
 
-export function summarizeCombat(combat: CombatState): CombatViewData {
+export function summarizeCombat(combat: CombatState, mode: Exclude<ViewMode, 'full'> = 'hard'): CombatViewData {
+  const compact = mode === 'easy';
+
   return {
     roundNumber: combat.roundNumber ?? null,
     currentSide: combat.currentSide ?? null,
     energy: combat.energy ?? null,
-    handIsSettled: combat.handIsSettled ?? null,
-    handMeta: combat.handIsSettled == null ? null : {
+    handIsSettled: compact ? null : (combat.handIsSettled ?? null),
+    handMeta: compact || combat.handIsSettled == null ? null : {
       active: combat.activeHandCount ?? null,
       total: combat.totalHandCount ?? null,
       pending: combat.pendingHandHolderCount ?? null,
@@ -113,20 +130,25 @@ export function summarizeCombat(combat: CombatState): CombatViewData {
       cardPlayInProgress: combat.cardPlayInProgress ?? null,
     },
     piles: {
-      draw: combat.drawPileCount ?? null,
-      discard: combat.discardPileCount ?? null,
-      exhaust: combat.exhaustPileCount ?? null,
+      draw: compact ? null : (combat.drawPileCount ?? null),
+      discard: compact ? null : (combat.discardPileCount ?? null),
+      exhaust: compact ? null : (combat.exhaustPileCount ?? null),
     },
     canEndTurn: combat.canEndTurn,
     selectionMode: combat.selectionMode ?? null,
     selectionPrompt: combat.selectionPrompt ?? null,
-    hand: (combat.hand ?? []).map(summarizeCombatCard),
-    potions: (combat.potions ?? []).map(summarizePotion),
-    creatures: (combat.creatures ?? []).map(summarizeCreature),
+    hand: (combat.hand ?? []).map((card) => summarizeCombatCard(card, mode)),
+    potions: (combat.potions ?? [])
+      .map((potion) => summarizePotion(potion, mode))
+      .filter((potion) => !compact || potion.occupied),
+    creatures: (combat.creatures ?? []).map((creature) => summarizeCreature(creature, mode)),
   };
 }
 
-export function summarizeCombatActionState(state: DisplayState | null | undefined): CombatActionStateView | null {
+export function summarizeCombatActionState(
+  state: DisplayState | null | undefined,
+  mode: Exclude<ViewMode, 'full'> = 'hard',
+): CombatActionStateView | null {
   if (!state) {
     return null;
   }
@@ -156,7 +178,7 @@ export function summarizeCombatActionState(state: DisplayState | null | undefine
       canEndTurn: combat.canEndTurn ?? null,
       selectionMode: combat.selectionMode ?? null,
       selectionPrompt: combat.selectionPrompt ?? null,
-      hand: (combat.hand ?? []).map(summarizeCombatCard),
+      hand: (combat.hand ?? []).map((card) => summarizeCombatCard(card, mode)),
     },
   };
 }

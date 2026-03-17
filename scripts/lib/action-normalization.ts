@@ -66,7 +66,31 @@ function normalizePotionActionForCurrentState(action: string, state: DisplayStat
   return matches.length === 1 ? (matches[0] ?? action) : action;
 }
 
+function normalizeProceedActionForCurrentState(action: string, state: DisplayState | null | undefined): string {
+  if (action !== 'proceed') {
+    return action;
+  }
+
+  const availableActions = Array.isArray(state?.actions) ? state.actions : [];
+  if (availableActions.includes('rewards.proceed')) {
+    return 'rewards.proceed';
+  }
+
+  if (state?.screenType === 'event') {
+    const proceedOption = (state.menuItems ?? [])
+      .find((item) => item?.enabled && (item.id === 'textkey:proceed' || item.label?.trim().toLowerCase() === 'proceed'));
+    if (typeof proceedOption?.id === 'string' && proceedOption.id.length > 0) {
+      return `event.choose:${proceedOption.id}`;
+    }
+  }
+
+  const matches = availableActions.filter((candidate) => candidate.endsWith('.proceed') || candidate.endsWith(':proceed'));
+  return matches.length === 1 ? (matches[0] ?? action) : action;
+}
+
 export function normalizeActionForCurrentState(action: string, state: DisplayState | null | undefined): string {
+  action = normalizeProceedActionForCurrentState(action, state);
+
   // The exporter can renumber merchant slots and potion slots after a state
   // change. Re-resolving against the latest surfaced actions keeps callers
   // stable without forcing every CLI surface to understand those shifts.

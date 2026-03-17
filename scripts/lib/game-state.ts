@@ -1,6 +1,5 @@
-import type { CommandAck, DisplayState, LiveStatus } from './types.ts';
+import type { CommandAck, DisplayState } from './types.ts';
 import { readOptionalJson } from './json-io.ts';
-import { readLiveStatus } from './monitor-client.ts';
 import { STS2_RUNTIME_PATHS } from './runtime-paths.ts';
 
 function parseInstant(value: string | null | undefined): number {
@@ -39,13 +38,9 @@ export function chooseNewestAck(liveAck: CommandAck | null, fileAck: CommandAck 
 }
 
 export function readState(): DisplayState | null {
-  const liveState = readLiveStatus()?.state ?? null;
-  const fileState = readOptionalJson<DisplayState>(STS2_RUNTIME_PATHS.statePath);
-  return chooseNewestState(liveState, fileState);
+  return readOptionalJson<DisplayState>(STS2_RUNTIME_PATHS.statePath);
 }
 
 export function readAck(): CommandAck | null {
-  const liveAck = readLiveStatus()?.ack ?? null;
-  const fileAck = readOptionalJson<CommandAck>(STS2_RUNTIME_PATHS.ackPath);
-  return chooseNewestAck(liveAck, fileAck);
+  return readOptionalJson<CommandAck>(STS2_RUNTIME_PATHS.ackPath);
 }

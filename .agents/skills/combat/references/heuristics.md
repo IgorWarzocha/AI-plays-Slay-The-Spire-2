@@ -36,6 +36,9 @@ Before committing a line, ask:
 - Potions are for breakpoint turns, not average smoothing.
 - Spend them when they change setup, survival, or lethal math.
 - In multi-body fights, a potion that removes or nearly removes a body can be worth more than a higher raw-damage potion used later.
+- Do not spend a potion just because the enemy is alive. If the enemy is not threatening this turn, the potion should usually need to change the next dangerous cycle, a phase breakpoint, or a clean kill.
+- Do not turn an already-winning line into a potion line. If the fight is under control without the potion, keep the potion.
+- Solve the whole turn before acting. Count energy, zero-cost cards, and potion outs as part of the line instead of discovering at end turn that clean value was left unused.
 
 ## Cost Display And Re-Reads
 

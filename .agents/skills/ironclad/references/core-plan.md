@@ -78,6 +78,9 @@ Selection rule:
 - Do not draft payoff first unless it is independently playable. `Fiend Fire` is fine early; `Pact's End` is not.
 - Once the deck has both `Feel No Pain` and `Dark Embrace`, exhaust cards become premium, not filler.
 - `Corruption` is strongest when the deck already has real skill density plus one of `Feel No Pain` or `Dark Embrace`.
+- `Dark Embrace` and `Feel No Pain` are fork-defining, and `Dark Embrace` must be judged with rare-card scarcity in mind. If the deck already has one or more strong exhaust enablers like `Burning Pact`, the first offered `Dark Embrace` deserves a much harder compare than STS1 habit would suggest.
+- `Burning Pact` is still a strong standalone card, including later copies when the deck can support them. The mistake is not "too many Burning Pacts" in the abstract; it is underweighting the rare engine that would have turned those cards into a real late-game shell.
+- If a rare engine was offered and passed, record that as a costly fork mistake. Do not excuse the skip by assuming another copy will show up.
 
 ### Self-damage strength
 
@@ -171,6 +174,7 @@ Ironclad usually wins by turning raw cards into a coherent damage engine faster 
 - Do not over-draft payoff before setup. One `Vulnerable` card plus one payoff card is better than three payoff cards and no setup.
 - Ironclad in this pool is rewarded for spending HP deliberately, not randomly. If the HP payment gives deck quality, tempo, or repeatable scaling, it is often correct.
 - Exhaust is not just cleanup. When the engine pieces are already present, it becomes one of the strongest late-game plans available.
+- The inverse matters too: if the rare engine piece was offered and passed, later support should be evaluated honestly, without pretending the payoff was easy to replace.
 - If a deterministic remove or transform is competing against an enchant option with unclear output, prefer the deterministic line. The local library does not fully surface enchant effect text, so opaque enchant outcomes should not be over-valued.
 
 ## Automation Relevance

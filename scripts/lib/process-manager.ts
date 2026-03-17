@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
 
-import { startMonitor } from "./monitor-client.ts";
 import { STS2_RUNTIME_PATHS } from "./runtime-paths.ts";
 import { run } from "./shell.ts";
 import { waitFor } from "./time.ts";
@@ -9,7 +8,6 @@ import { getWindow, isRunning } from "./window-detector.ts";
 
 export function launchGame({ timeoutMs = 45000, readyTimeoutMs = 20000 } = {}) {
   const launchStartedAtIso = new Date().toISOString();
-  startMonitor();
 
   if (isRunning()) {
     return getWindow();

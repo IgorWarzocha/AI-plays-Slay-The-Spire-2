@@ -124,6 +124,7 @@ export interface MapPointState {
   type?: string | null;
   state?: string | null;
   travelable?: boolean;
+  canModify?: boolean | null;
 }
 
 export interface MapState {

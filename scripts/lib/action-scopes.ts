@@ -17,6 +17,10 @@ const COMBAT_SCOPES = new Set<string>([
   'combat_choice_select',
 ]);
 
+function isExplicitTrue(value: unknown): boolean {
+  return value === true || value === 'true' || value === '1';
+}
+
 export function getActionScope(action: string): string {
   const [scope] = String(action ?? '').split('.', 1);
   return scope ?? '';
@@ -58,12 +62,19 @@ export function assertBootstrapActions(actions: readonly string[]): void {
   }
 }
 
-export function assertCombatActions(actions: readonly string[]): void {
+export function assertCombatActions(
+  actions: readonly string[],
+  options: { batch?: boolean | string } = {},
+): void {
   const invalid = actions.filter((action) => !isCombatAction(action) && !isSharedInRunAction(action));
   if (invalid.length > 0) {
     throw new Error(
       `sts2combat.ts only accepts combat actions. Use sts2ctl.ts for non-combat in-run actions or sts2run.ts for bootstrap actions: ${invalid.join(', ')}`,
     );
+  }
+
+  if (actions.length > 1 && !isExplicitTrue(options.batch)) {
+    throw new Error('sts2combat.ts requires --batch for multiple combat actions.');
   }
 }
 

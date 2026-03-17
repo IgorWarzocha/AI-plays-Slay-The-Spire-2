@@ -1,11 +1,21 @@
 ---
 name: merchant
-description: Use this when the current screen is a merchant or when planning a shop line from map pressure, gold, deck state, relics, and potions. Trigger it before buying, before leaving a shop, and when a forced elite or boss makes the shop an immediate survival checkpoint.
+description: Use this when the current screen is a merchant or when planning a shop line from map pressure, gold, deck state, relics, and potions. Trigger it before buying, before leaving a shop, and when a forced elite or boss makes the shop an immediate survival checkpoint. Shops are hard decisions, so prefer reading them with `--hard`.
 ---
 
 # Merchant
 
 Use this as the shop decision workflow for STS2 runs.
+
+## View Mode Rule
+
+Shops are hard.
+
+- Prefer `--hard` for merchant reads by default.
+- Do not rely on `--easy` for shop decisions unless you are only confirming a single already-settled follow-through.
+- Use `--full` only if the shop surface looks inconsistent or a state/export bug is suspected.
+
+Reason: merchant choices are dense and expensive. They combine gold, path pressure, deck shape, relic text, potion slots, and opportunity cost, so the compact view is usually too lossy for real shop decisions.
 
 ## Required Reading
 
@@ -44,6 +54,7 @@ If the next node is an elite or boss, also read:
    - empty potion slots before hard fights
 4. Spend to solve the real bottleneck, not to maximize raw quantity.
 5. After every buy, re-read the merchant state before the next buy if prices, inventory, or route pressure matter.
+   - default to re-reading with `--hard`
 6. Before leaving, confirm:
    - gold spent matches the intended line
    - potion slots are used correctly
@@ -72,6 +83,7 @@ If the next node is an elite or boss, also read:
 - Do not buy filler just because gold is available.
 - Do not assume a familiar STS1 card or relic is equally strong in STS2; read the live text.
 - Respect skip-equivalents in shops too: holding gold can be correct.
+- Treat the merchant as a hard-decision surface unless you are only executing an already-settled line.
 - If merchant state or post-buy settlement looks inconsistent, stop and fix the exporter or command flow before continuing.
 
 ## Maintenance

@@ -80,15 +80,14 @@ internal static class EventOptionDetails
     private static string DescribeRelic(RelicModel relic)
     {
         string title = AgentText.SafeText(relic.Title) ?? relic.GetType().Name;
-        string? description = AgentText.SafeText(relic.Description);
+        string? description = ModelTextResolver.ResolveRelicDescription(relic);
         return JoinParts($"Relic: {title}.", description) ?? $"Relic: {title}.";
     }
 
     private static string DescribePotion(PotionModel potion)
     {
         string title = AgentText.SafeText(potion.Title) ?? potion.GetType().Name;
-        string? description = AgentText.SafeText(potion.DynamicDescription)
-            ?? AgentText.SafeText(potion.Description);
+        string? description = ModelTextResolver.ResolvePotionDescription(potion);
         return JoinParts($"Potion: {title}.", description) ?? $"Potion: {title}.";
     }
 

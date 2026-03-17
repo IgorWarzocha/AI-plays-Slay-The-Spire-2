@@ -3,15 +3,17 @@ import { readAck, readState } from './game-state.ts';
 import { waitFor } from './time.ts';
 import { buildCombatStabilityKey, isCombatDisplayStable } from './combat-stability.ts';
 import {
+  isCombatCardSelectSelectionFollowThroughState,
   isDeckCardSelectFollowThroughState,
   isInteractiveFollowUpTransition,
   isMapTravelFollowThroughState,
   isMerchantActionFollowThroughState,
   isPotionUseFollowThroughState,
+  isRewardClaimFollowThroughState,
   isRewardPotionClaimFollowThroughState,
   shouldWaitForCombatFollowThrough,
 } from './follow-through-state.ts';
-import { hasStateMutated, isCombatStateSettled } from './command-state-utils.ts';
+import { hasStateMutated, isCombatStateSettled, stableJson } from './command-state-utils.ts';
 
 // Waiting logic is the fragile part of the command layer. Keeping it isolated
 // makes settlement/follow-through behavior easier to evolve without touching
@@ -100,20 +102,88 @@ export function waitForCommandSettlement(
 }
 
 function waitForMapTravelFollowThrough(beforeState: DisplayState | null | undefined, timeoutMs: number, commandId: string | null): DisplayState | null {
+  let lastKey: string | null = null;
+  let stableCount = 0;
+
   return waitFor(
     () => {
       const state = readState();
       if (!isMapTravelFollowThroughState(beforeState, state, commandId)) {
+        lastKey = null;
+        stableCount = 0;
         return null;
       }
 
       if (shouldWaitForCombatFollowThrough(state)) {
+        lastKey = null;
+        stableCount = 0;
+        return null;
+      }
+
+      if (!state || state.screenType === 'combat_room' || state.screenType === 'combat_card_select' || state.screenType === 'combat_choice_select') {
+        return state;
+      }
+
+      const key = stableJson({
+        screenType: state.screenType,
+        menuItems: state.menuItems ?? [],
+        actions: state.actions ?? [],
+        topBar: state.topBar ?? null,
+        map: state.map ?? null,
+        event: state.event ?? null,
+        cardBrowse: state.cardBrowse ?? null,
+        notes: state.notes ?? [],
+      });
+
+      if (key !== lastKey) {
+        lastKey = key;
+        stableCount = 1;
+        return null;
+      }
+
+      stableCount += 1;
+      if (stableCount < 4) {
         return null;
       }
 
       return state;
     },
     { timeoutMs, intervalMs: 200, description: 'map travel follow-through' },
+  );
+}
+
+function waitForRewardClaimFollowThrough(action: string, beforeState: DisplayState | null | undefined, timeoutMs: number): DisplayState | null {
+  let lastKey: string | null = null;
+  let stableCount = 0;
+
+  return waitFor(
+    () => {
+      const state = readState();
+      if (!isRewardClaimFollowThroughState(action, beforeState, state)) {
+        lastKey = null;
+        stableCount = 0;
+        return null;
+      }
+
+      const key = stableJson({
+        screenType: state?.screenType ?? null,
+        topBar: state?.topBar ?? null,
+        potions: state?.potions ?? [],
+        menuItems: state?.menuItems ?? [],
+        actions: state?.actions ?? [],
+        notes: state?.notes ?? [],
+      });
+
+      if (key !== lastKey) {
+        lastKey = key;
+        stableCount = 1;
+        return null;
+      }
+
+      stableCount += 1;
+      return stableCount >= 2 ? state : null;
+    },
+    { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
   );
 }
 
@@ -174,6 +244,10 @@ export function waitForFollowThrough(
     );
   }
 
+  if (action.startsWith('rewards.claim:')) {
+    return waitForRewardClaimFollowThrough(action, beforeState, timeoutMs);
+  }
+
   if (action.startsWith('potions.use:')) {
     const referenceState = beforeState ?? readState();
     return waitFor(
@@ -190,6 +264,16 @@ export function waitForFollowThrough(
       () => {
         const state = readState();
         return isDeckCardSelectFollowThroughState(action, beforeState, state) ? state : null;
+      },
+      { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
+    );
+  }
+
+  if (action.startsWith('combat_card_select.select:')) {
+    return waitFor(
+      () => {
+        const state = readState();
+        return isCombatCardSelectSelectionFollowThroughState(action, beforeState, state) ? state : null;
       },
       { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
     );

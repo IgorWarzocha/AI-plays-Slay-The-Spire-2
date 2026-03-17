@@ -5,6 +5,8 @@ import path from 'node:path';
 import type { DisplayState } from './types.ts';
 import type {
   Coord,
+  RouteOption,
+  RoutePreview,
   RunSummary,
   SaveNode,
   SaveRun,
@@ -103,6 +105,120 @@ function buildPointIndex(points: SaveNode[]): Map<string, SaveNode> {
   return index;
 }
 
+function normalizeNodeType(type: string | null | undefined): string {
+  return String(type ?? '').toLowerCase();
+}
+
+function countRoutePreview(path: SimplifiedNode[]): RoutePreview['counts'] {
+  const counts: RoutePreview['counts'] = {
+    monsters: 0,
+    unknowns: 0,
+    elites: 0,
+    rests: 0,
+    shops: 0,
+    treasures: 0,
+  };
+
+  for (const node of path) {
+    switch (normalizeNodeType(node.type)) {
+      case 'monster':
+        counts.monsters += 1;
+        break;
+      case 'unknown':
+        counts.unknowns += 1;
+        break;
+      case 'elite':
+        counts.elites += 1;
+        break;
+      case 'rest_site':
+      case 'restsite':
+        counts.rests += 1;
+        break;
+      case 'shop':
+        counts.shops += 1;
+        break;
+      case 'treasure':
+        counts.treasures += 1;
+        break;
+      default:
+        break;
+    }
+  }
+
+  return counts;
+}
+
+function findBossRow(points: SaveNode[], minimumRowExclusive: number): number | null {
+  const bossRows = points
+    .filter((point) => normalizeNodeType(point.type) === 'boss' && point.coord.row > minimumRowExclusive)
+    .map((point) => point.coord.row)
+    .sort((left, right) => left - right);
+
+  return bossRows[0] ?? null;
+}
+
+function buildRouteOptions(currentNode: SaveNode | null, points: SaveNode[], pointIndex: Map<string, SaveNode>): RouteOption[] {
+  if (!currentNode) {
+    return [];
+  }
+
+  const targetRow = findBossRow(points, currentNode.coord.row);
+  const starts = (currentNode.children ?? [])
+    .map((coord) => pointIndex.get(coordKey(coord)) ?? null)
+    .filter((node): node is SaveNode => node !== null);
+
+  return starts
+    .map((startNode): RouteOption | null => {
+      const start = simplifyNode(startNode);
+      if (!start) {
+        return null;
+      }
+
+      const previews: RoutePreview[] = [];
+      const seen = new Set<string>();
+
+      const visit = (node: SaveNode, path: SimplifiedNode[]): void => {
+        const simplified = simplifyNode(node);
+        if (!simplified) {
+          return;
+        }
+
+        const nextPath = [...path, simplified];
+        const children = (node.children ?? [])
+          .map((coord) => pointIndex.get(coordKey(coord)) ?? null)
+          .filter((child): child is SaveNode => child !== null);
+        const reachedTargetRow = targetRow != null && node.coord.row >= targetRow;
+
+        if (reachedTargetRow || children.length === 0) {
+          const signature = nextPath.map((entry) => coordKey(entry.coord)).join('>');
+          if (seen.has(signature)) {
+            return;
+          }
+
+          seen.add(signature);
+          previews.push({
+            path: nextPath,
+            counts: countRoutePreview(nextPath),
+          });
+          return;
+        }
+
+        for (const child of children) {
+          visit(child, nextPath);
+        }
+      };
+
+      visit(startNode, []);
+
+      return {
+        start,
+        targetRow,
+        previews,
+      };
+    })
+    .filter((option): option is RouteOption => option !== null);
+}
+
 function buildSummaryScreen(screenState: ScreenStateWithPath | null): RunSummary['screen'] {
   if (!screenState) {
     return null;
@@ -128,6 +244,7 @@ function buildSummaryScreen(screenState: ScreenStateWithPath | null): RunSummary
     characterSelection: screenState.characterSelection ?? null,
     topBar: screenState.topBar ?? null,
     relics: Array.isArray(screenState.relics) ? screenState.relics : [],
+    potions: Array.isArray(screenState.potions) ? screenState.potions : [],
     map: screenState.map ?? null,
     cardBrowse: screenState.cardBrowse ?? null,
     combat: screenState.combat ?? null,
@@ -164,6 +281,8 @@ function summarizeRun(run: SaveRun, savePath: string, screenState: ScreenStateWi
     .filter((node): node is SaveNode => node !== null)
     .map(simplifyNode)
     .filter((node): node is SimplifiedNode => node !== null);
+  const currentFloor = Math.max(0, visited.length - 1);
+  const routeOptions = buildRouteOptions(currentNode, points, pointIndex);
 
   const deck = Array.isArray(player.deck)
     ? player.deck.map((card) => ({
@@ -196,12 +315,16 @@ function summarizeRun(run: SaveRun, savePath: string, screenState: ScreenStateWi
       shortId: stripPrefix(act.id),
       ancientId: act.rooms?.ancient_id ?? null,
       bossId: act.rooms?.boss_id ?? null,
+      bossShortId: act.rooms?.boss_id ? stripPrefix(act.rooms.boss_id) : null,
     },
     position: {
       visitedCount: visited.length,
+      currentFloor,
+      nextFloor: nextNodes.length > 0 ? currentFloor + 1 : null,
       visitedCoords: visited,
       currentNode: simplifyNode(currentNode),
       nextNodes,
+      routeOptions,
     },
     player: {
       characterId: player.character_id,

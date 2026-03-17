@@ -142,13 +142,23 @@ export interface MapPointView {
   type: string | null | undefined;
   state: string | null | undefined;
   travelable: boolean | undefined;
+  canModify?: boolean | null;
+}
+
+export interface MapRowView {
+  row: number;
+  nodes: MapPointView[];
 }
 
 export interface MapView {
   visible: boolean | undefined;
   travelEnabled: boolean | undefined;
   traveling: boolean | undefined;
-  points: MapPointView[];
+  current: MapPointView | null;
+  travelablePoints: MapPointView[];
+  traveledCount: number;
+  pointCount: number;
+  rows: MapRowView[];
 }
 
 export interface CardBrowseView {

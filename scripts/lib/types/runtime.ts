@@ -58,10 +58,6 @@ export interface LiveStatus {
 
 export interface AdminStatus {
   running: boolean;
-  monitor: {
-    running: boolean;
-    pid: number | null;
-  };
   window: GameWindow | null;
   state: {
     screenType: string | null;

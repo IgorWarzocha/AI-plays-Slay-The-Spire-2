@@ -38,6 +38,16 @@ function readTimeoutOption(value: number | string | undefined, fallback: number)
   return Number(value ?? fallback);
 }
 
+function shouldPreferFollowThroughBeforeSettlement(action: string): boolean {
+  return action === 'combat.end_turn'
+    || action.startsWith('map.travel:')
+    || action.startsWith('rewards.claim:')
+    || action.startsWith('potions.use:')
+    || action.startsWith('deck_card_select.select:')
+    || action.startsWith('combat_card_select.select:')
+    || action.startsWith('merchant.');
+}
+
 export function writeCommand(command: CommandPayload): void {
   fs.writeFileSync(STS2_RUNTIME_PATHS.commandPath, `${JSON.stringify(command, null, 2)}\n`);
 }
@@ -47,7 +57,11 @@ export function sendAction(action: string, options: RuntimeCommandOptions = {}):
   const beforeState = readState();
   const resolvedAction = normalizeActionForCurrentState(action, beforeState);
   const settleTimeoutMs = readTimeoutOption(options['settle-timeout-ms'] ?? options.settleTimeoutMs, 12000);
-  const followThroughTimeoutMs = readTimeoutOption(options['follow-through-timeout-ms'] ?? options.followThroughTimeoutMs, 12000);
+  const defaultFollowThroughTimeoutMs = resolvedAction.startsWith('map.travel:') ? 45000 : 12000;
+  const followThroughTimeoutMs = readTimeoutOption(
+    options['follow-through-timeout-ms'] ?? options.followThroughTimeoutMs,
+    defaultFollowThroughTimeoutMs,
+  );
 
   writeCommand(buildCommandPayload(id, resolvedAction, options));
   const ack = waitForAck(id);
@@ -61,7 +75,7 @@ export function sendAction(action: string, options: RuntimeCommandOptions = {}):
 
   let followThroughState: DisplayState | null = null;
   const requiresStrictSettlement = resolvedAction.startsWith('map.travel:');
-  if (resolvedAction === 'combat.end_turn' || requiresStrictSettlement) {
+  if (shouldPreferFollowThroughBeforeSettlement(resolvedAction)) {
     try {
       followThroughState = waitForFollowThrough(resolvedAction, beforeState, {
         timeoutMs: followThroughTimeoutMs,

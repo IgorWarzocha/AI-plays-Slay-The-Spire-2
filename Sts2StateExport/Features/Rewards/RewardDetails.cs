@@ -109,7 +109,7 @@ internal static class RewardDetails
         }
 
         string title = AgentText.SafeText(relic.Title) ?? relic.GetType().Name;
-        string? description = AgentText.SafeText(relic.Description);
+        string? description = ModelTextResolver.ResolveRelicDescription(relic);
         return JoinParts($"Relic: {title}.", description) ?? $"Relic: {title}.";
     }
 
@@ -121,8 +121,7 @@ internal static class RewardDetails
         }
 
         string title = AgentText.SafeText(potion.Title) ?? potion.GetType().Name;
-        string? description = AgentText.SafeText(potion.DynamicDescription)
-            ?? AgentText.SafeText(potion.Description);
+        string? description = ModelTextResolver.ResolvePotionDescription(potion);
         return JoinParts($"Potion: {title}.", description) ?? $"Potion: {title}.";
     }
 
@@ -134,7 +133,7 @@ internal static class RewardDetails
         }
 
         string title = AgentText.SafeText(card.TitleLocString) ?? card.Title;
-        string? description = AgentText.SafeText(card.Description);
+        string? description = ModelTextResolver.ResolveCardDescription(card);
         return JoinParts($"Card: {title}.", description) ?? $"Card: {title}.";
     }
 

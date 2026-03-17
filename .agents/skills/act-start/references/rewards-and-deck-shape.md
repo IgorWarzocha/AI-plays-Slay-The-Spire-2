@@ -32,6 +32,14 @@ When reconstructing the deck, answer:
 - Prioritize cards that solve immediate failures before speculative payoff cards.
 - Do not over-draft synergy. Payoff is earned only after the shell exists.
 - If a card is only good after two more hits, it is usually not the pick unless the current run is already stable.
+- Rare rewards deserve an explicit pivot check. Do not autopick the card that best matches the current lane until you compare it against any premium engine or lane-opening rare.
+- On rare rewards, ask three questions in order:
+  1. what is the best immediate card
+  2. what is the strongest card here if the deck pivots or broadens one step
+  3. is now a realistic time to enable that stronger lane
+- A rare can be correct even when it is not the current deck's obvious card if it meaningfully upgrades the run's future ceiling without making the next few floors unsafe.
+- Premium engine rares must be weighted with their true scarcity. If a card like `Dark Embrace` is the real payoff for cards you already own, the compare cannot be "I can always take it later" unless the pool actually makes that realistic.
+- In practice: when the payoff is rare, the first offered copy matters much more than it did in STS1-style thinking. Passing it should be treated as a costly fork decision, not a casual deferral.
 
 ### Potions
 
@@ -58,6 +66,7 @@ When reconstructing the deck, answer:
 ## Failure Modes To Avoid
 
 - drafting for a future shell that the current run has not opened
+- treating a rare engine as replaceable and only later realizing the shell was not likely to reopen
 - taking immediate value, then pathing like a high-roll deck anyway
 - using rewards to widen the deck instead of sharpening the plan
 - valuing unknown or weakly surfaced outputs above concrete upgrades to deck quality

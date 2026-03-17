@@ -12,9 +12,9 @@ import type { DisplayState, RuntimeCommandOptions } from "./lib/types.ts";
 
 function usage(): void {
   console.log(`Usage:
-  sts2combat.ts status [--relics] [--notes] [--raw]
-  sts2combat.ts command <action> [action...] [--strict false] [--settle-timeout-ms <ms>] [--relics] [--notes] [--raw]
-  sts2combat.ts wait-screen <screenType> [--relics] [--notes] [--raw]
+  sts2combat.ts status [--easy | --hard | --full]
+  sts2combat.ts command <action> [action...] [--batch] [--strict false] [--settle-timeout-ms <ms>] [--easy | --hard | --full]
+  sts2combat.ts wait-screen <screenType> [--easy | --hard | --full]
 `);
 }
 
@@ -36,7 +36,7 @@ function main(): void {
         throw new Error("command requires at least one action.");
       }
 
-      assertCombatActions(actions);
+      assertCombatActions(actions, options);
       console.log(JSON.stringify(buildCombatCommandView(runActions(actions, options), options), null, 2));
       return;
     }

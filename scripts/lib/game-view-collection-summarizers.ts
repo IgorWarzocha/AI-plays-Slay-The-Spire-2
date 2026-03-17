@@ -3,6 +3,7 @@ import type {
   CardBrowseView,
   CombatCardState,
   CombatCardView,
+  MapPointView,
   MapPointState,
   MapState,
   MapView,
@@ -16,23 +17,54 @@ import type {
   RunHistoryView,
 } from './types.ts';
 import { summarizeRelic } from './game-view-common-summarizers.ts';
+import type { ViewMode } from './view-options.ts';
 
-export function summarizeMap(map: MapState): MapView {
+function summarizeMapPoint(point: MapPointState): MapPointView {
+  return {
+    id: point.id,
+    coord: `${point.col},${point.row}`,
+    type: point.type,
+    state: point.state,
+    travelable: point.travelable,
+    canModify: point.canModify ?? null,
+  };
+}
+
+function compareMapPointOrder(left: MapPointView, right: MapPointView): number {
+  const [leftCol = 0, leftRow = 0] = left.coord.split(',').map((value) => Number.parseInt(value, 10));
+  const [rightCol = 0, rightRow = 0] = right.coord.split(',').map((value) => Number.parseInt(value, 10));
+  return leftRow - rightRow || leftCol - rightCol;
+}
+
+export function summarizeMap(map: MapState, mode: Exclude<ViewMode, 'full'> = 'hard'): MapView {
+  const points = (map.points ?? []).map(summarizeMapPoint).sort(compareMapPointOrder);
+  const current = [...points].reverse().find((point) => point.state === 'Traveled') ?? null;
+  const travelablePoints = points.filter((point) => point.travelable);
+  const rows = Array.from(
+    points.reduce((groups, point) => {
+      const [, rowText = '0'] = point.coord.split(',', 2);
+      const row = Number.parseInt(rowText, 10);
+      const existing = groups.get(row) ?? [];
+      existing.push(point);
+      groups.set(row, existing);
+      return groups;
+    }, new Map<number, MapPointView[]>()),
+    ([row, nodes]) => ({ row, nodes }),
+  ).sort((left, right) => left.row - right.row);
+
   return {
     visible: map.visible,
     travelEnabled: map.travelEnabled,
     traveling: map.traveling,
-    points: (map.points ?? []).map((point: MapPointState) => ({
-      id: point.id,
-      coord: `${point.col},${point.row}`,
-      type: point.type,
-      state: point.state,
-      travelable: point.travelable,
-    })),
+    current,
+    travelablePoints,
+    traveledCount: points.filter((point) => point.state === 'Traveled').length,
+    pointCount: points.length,
+    rows: mode === 'easy' ? [] : rows,
   };
 }
 
-export function summarizeCardBrowse(cardBrowse: CardBrowseState): CardBrowseView {
+export function summarizeCardBrowse(cardBrowse: CardBrowseState, mode: Exclude<ViewMode, 'full'> = 'hard'): CardBrowseView {
   return {
     kind: cardBrowse.kind,
     title: cardBrowse.title,
@@ -44,7 +76,7 @@ export function summarizeCardBrowse(cardBrowse: CardBrowseState): CardBrowseView
       title: card.title,
       cost: card.costText ?? null,
       upgraded: card.upgraded,
-      description: card.description ?? null,
+      description: mode === 'easy' ? null : (card.description ?? null),
       playable: card.isPlayable,
       affliction: null,
       enchantment: null,
@@ -105,7 +137,7 @@ function summarizeRunHistoryDeckCard(card: RunHistoryCardRecord): RunHistoryDeck
   };
 }
 
-export function summarizeRunHistory(runHistory: RunHistoryState): RunHistoryView {
+export function summarizeRunHistory(runHistory: RunHistoryState, mode: Exclude<ViewMode, 'full'> = 'hard'): RunHistoryView {
   return {
     fileName: runHistory.fileName ?? null,
     selectedIndex: runHistory.selectedIndex ?? null,
@@ -129,8 +161,8 @@ export function summarizeRunHistory(runHistory: RunHistoryState): RunHistoryView
       : `${runHistory.currentHp}/${runHistory.maxHp}`,
     gold: runHistory.currentGold ?? null,
     potionSlotCount: runHistory.potionSlotCount ?? null,
-    floors: (runHistory.floors ?? []).map(summarizeRunHistoryFloor),
-    deck: (runHistory.deck ?? []).map(summarizeRunHistoryDeckCard),
+    floors: mode === 'easy' ? [] : (runHistory.floors ?? []).map(summarizeRunHistoryFloor),
+    deck: mode === 'easy' ? [] : (runHistory.deck ?? []).map(summarizeRunHistoryDeckCard),
     relics: (runHistory.relics ?? []).map(summarizeRelic),
   };
 }

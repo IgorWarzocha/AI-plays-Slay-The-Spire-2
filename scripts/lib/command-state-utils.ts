@@ -55,7 +55,32 @@ export function isCombatStateSettled(state: DisplayState | null | undefined): bo
     return false;
   }
 
-  return combat.handIsSettled === true;
+   const noVisibleAnimation = combat.cardPlayInProgress !== true
+    && combat.handAnimationActive !== true
+    && (combat.pendingHandHolderCount ?? 0) === 0;
+
+  if (state.screenType === 'combat_card_select') {
+    const hasSelectionPrompt = typeof combat.selectionPrompt === 'string' && combat.selectionPrompt.length > 0;
+    const hasSelectionActions = Array.isArray(state.actions) && state.actions.some((action) => typeof action === 'string' && action.startsWith('combat_card_select.'));
+    const hasSelectionMenuItems = Array.isArray(state.menuItems) && state.menuItems.length > 0;
+
+    if (hasSelectionPrompt && (hasSelectionActions || hasSelectionMenuItems) && noVisibleAnimation) {
+      return true;
+    }
+  }
+
+  if (combat.handIsSettled === true) {
+    return true;
+  }
+
+  if (combat.handIsSettled === false) {
+    return false;
+  }
+
+  const hasRenderableHand = Array.isArray(combat.hand) && combat.hand.length > 0;
+  const canReasonFromPlayerTurn = combat.currentSide === 'Player' && typeof combat.canEndTurn === 'boolean';
+
+  return hasRenderableHand && canReasonFromPlayerTurn && noVisibleAnimation;
 }
 
 export function isQuietSinceLastUpdate(state: DisplayState | null | undefined, quietPeriodMs = 500): boolean {

@@ -2,14 +2,11 @@
 
 import {
   buildAdminStatus,
+  captureLiveStatus,
   launchGame,
   parseArgs,
   quitGame,
-  readMonitorPid,
   restartGame,
-  startMonitor,
-  stopMonitor,
-  isMonitorRunning,
 } from "./lib/sts2-runtime.ts";
 
 function usage() {
@@ -18,9 +15,7 @@ function usage() {
   sts2admin.ts launch
   sts2admin.ts quit
   sts2admin.ts restart
-  sts2admin.ts monitor-start
-  sts2admin.ts monitor-stop
-  sts2admin.ts monitor-status
+  sts2admin.ts monitor-capture
 `);
 }
 
@@ -48,14 +43,8 @@ function main() {
       restartGame();
       printStatus();
       return;
-    case "monitor-start":
-      console.log(JSON.stringify({ pid: startMonitor() }, null, 2));
-      return;
-    case "monitor-stop":
-      console.log(JSON.stringify({ stopped: stopMonitor() }, null, 2));
-      return;
-    case "monitor-status":
-      console.log(JSON.stringify({ running: isMonitorRunning(), pid: readMonitorPid() }, null, 2));
+    case "monitor-capture":
+      console.log(JSON.stringify(captureLiveStatus(), null, 2));
       return;
     default:
       usage();

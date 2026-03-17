@@ -1,0 +1,4 @@
+interface:
+  display_name: "Act 1"
+  short_description: "Run Act 1 with route, threshold, elite, and boss discipline"
+  default_prompt: "Use $act1 to read the Act 1 route, threshold, elite, and boss notes before making Act 1 pathing or reward decisions."

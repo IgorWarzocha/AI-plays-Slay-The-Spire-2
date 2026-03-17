@@ -61,3 +61,20 @@ test("non-combat potion actions re-resolve when slot ids shift", () => {
     "potions.discard:potion-01:blood-potion",
   );
 });
+
+test("generic proceed resolves to the current surface proceed action", () => {
+  const eventState = {
+    screenType: "event",
+    actions: ["event.choose:textkey:proceed", "top_bar.deck"],
+    menuItems: [
+      { id: "textkey:proceed", label: "Proceed", enabled: true, selected: false },
+    ],
+  };
+  const rewardState = {
+    screenType: "rewards_screen",
+    actions: ["rewards.proceed"],
+  };
+
+  assert.equal(normalizeActionForCurrentState("proceed", eventState), "event.choose:textkey:proceed");
+  assert.equal(normalizeActionForCurrentState("proceed", rewardState), "rewards.proceed");
+});

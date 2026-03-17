@@ -12,12 +12,12 @@ Use this skill for any hard-fight threshold check, fight plan, or post mortem in
 Read these before acting:
 
 - `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/prep.md`
-- `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/encounters.md`
 - `/home/igorw/Work/STS2/.agents/skills/combat/references/heuristics.md`
 - `/home/igorw/Work/STS2/.agents/skills/act-start/references/planning.md`
 - the current run log under `/home/igorw/Work/STS2/vault/runs`
+- the current act skill's specific encounter note if one exists
 
-If the encounter is still unknown even after checking `encounters.md`, treat that as missing prep. Before acting, force this loop:
+If the encounter is still unknown even after checking the current act skill, treat that as missing prep. Before acting, force this loop:
 
 - What am I actually seeing?
 - What is the real clock or loss condition?
@@ -52,6 +52,7 @@ Then make the safest defensible decision available and update the skill referenc
 - Set up when the fight demands setup; do not hide behind fake efficiency.
 - Re-evaluate threat priority every turn if summons, phases, or intent shifts appear.
 - If the fight exposes a new pattern, stop and classify it before autopiloting: race, setup, board control, breakpoint, or phase-management.
+- Do not confuse a hard fight with hard execution on every click. Once a turn is solved, use the combat skill's `--easy` / `--batch` posture and execute cleanly.
 
 ## Post Mortem
 

@@ -13,10 +13,10 @@ import type { DisplayState, RuntimeCommandOptions } from "./lib/types.ts";
 
 function usage(): void {
   console.log(`Usage:
-  sts2run.ts status [--menu] [--notes] [--raw]
-  sts2run.ts command <action> [action...] [--character <id>] [--seed <seed>] [--act1 <act>] [--strict false] [--settle-timeout-ms <ms>] [--menu] [--notes] [--raw]
-  sts2run.ts wait-screen <screenType> [--menu] [--notes] [--raw]
-  sts2run.ts start-standard [--character <id>] [--seed <seed>] [--act1 <act>] [--menu] [--notes] [--raw]
+  sts2run.ts status [--easy | --hard | --full]
+  sts2run.ts command <action> [action...] [--character <id>] [--seed <seed>] [--act1 <act>] [--strict false] [--settle-timeout-ms <ms>] [--easy | --hard | --full]
+  sts2run.ts wait-screen <screenType> [--easy | --hard | --full]
+  sts2run.ts start-standard [--character <id>] [--seed <seed>] [--act1 <act>] [--easy | --hard | --full]
 `);
 }
 

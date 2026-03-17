@@ -42,6 +42,8 @@ If the current decision is an elite or boss commitment, also read `/home/igorw/W
 - Prioritize cards that solve immediate deck failures: weak turn 1s, no vulnerable, no draw smoothing, no AoE, or no scaling.
 - Respect skip. A filler attack or block card can be worse than preserving future draw quality.
 - Treat synergy as earned. Do not draft for a payoff line that the deck has not actually started supporting.
+- Rare rewards require a second pass. After identifying the obvious on-plan card, explicitly ask whether another rare would open or enable a stronger Ironclad lane that the deck can realistically support soon.
+- Premium engine rares like draw or exhaust enablers should not be dismissed just because the current deck is winning with a different package. Consider whether the reward is offering a real pivot, not just an immediate fit.
 
 ## Planning Lens
 

@@ -12,9 +12,9 @@ import type { DisplayState, RuntimeCommandOptions } from "./lib/types.ts";
 
 function usage(): void {
   console.log(`Usage:
-  sts2ctl.ts status [--relics] [--notes] [--menu] [--raw]
-  sts2ctl.ts command <action> [action...] [--character <id>] [--seed <seed>] [--act1 <act>] [--strict false] [--settle-timeout-ms <ms>] [--relics] [--notes] [--menu] [--raw]
-  sts2ctl.ts wait-screen <screenType> [--relics] [--notes] [--menu] [--raw]
+  sts2ctl.ts status [--easy | --hard | --full]
+  sts2ctl.ts command <action> [action...] [--character <id>] [--seed <seed>] [--act1 <act>] [--strict false] [--settle-timeout-ms <ms>] [--easy | --hard | --full]
+  sts2ctl.ts wait-screen <screenType> [--easy | --hard | --full]
 `);
 }
 

@@ -1,72 +1,20 @@
-import type { LiveStatus } from './types.ts';
-import fs from "node:fs";
-import { spawn } from "node:child_process";
+import type { CommandAck, DisplayState, LiveStatus } from './types.ts';
 
 import { readOptionalJson } from "./json-io.ts";
 import { STS2_RUNTIME_PATHS } from "./runtime-paths.ts";
+import { getWindow } from './window-detector.ts';
 
-function ensureRuntimeDir(): void {
-  fs.mkdirSync(STS2_RUNTIME_PATHS.runtimeDir, { recursive: true });
-}
+export function captureLiveStatus(): LiveStatus {
+  const window = getWindow();
+  const running = Boolean(window);
+  const state = readOptionalJson<DisplayState>(STS2_RUNTIME_PATHS.statePath);
+  const ack = readOptionalJson<CommandAck>(STS2_RUNTIME_PATHS.ackPath);
 
-export function readLiveStatus(): LiveStatus | null {
-  return readOptionalJson<LiveStatus>(STS2_RUNTIME_PATHS.liveStatusPath);
-}
-
-export function readMonitorPid(): number | null {
-  if (!fs.existsSync(STS2_RUNTIME_PATHS.monitorPidPath)) {
-    return null;
-  }
-
-  const pid = Number(fs.readFileSync(STS2_RUNTIME_PATHS.monitorPidPath, "utf8").trim());
-  return Number.isInteger(pid) && pid > 0 ? pid : null;
-}
-
-export function isMonitorRunning(): boolean {
-  const pid = readMonitorPid();
-  if (!pid) {
-    return false;
-  }
-
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function startMonitor(): number | null {
-  if (isMonitorRunning()) {
-    return readMonitorPid();
-  }
-
-  ensureRuntimeDir();
-  const child = spawn(process.execPath, [STS2_RUNTIME_PATHS.monitorScript], {
-    cwd: STS2_RUNTIME_PATHS.repoRoot,
-    detached: true,
-    stdio: "ignore",
-  });
-  child.unref();
-  fs.writeFileSync(STS2_RUNTIME_PATHS.monitorPidPath, `${child.pid}\n`);
-  return child.pid ?? null;
-}
-
-export function stopMonitor(): boolean {
-  const pid = readMonitorPid();
-  if (!pid) {
-    return false;
-  }
-
-  try {
-    process.kill(pid, "SIGTERM");
-  } catch {
-    // Ignore stale pidfiles; cleanup below removes the dead pidfile.
-  }
-
-  try {
-    fs.rmSync(STS2_RUNTIME_PATHS.monitorPidPath, { force: true });
-  } catch {}
-
-  return true;
+  return {
+    capturedAtUtc: new Date().toISOString(),
+    running,
+    window,
+    state,
+    ack,
+  };
 }

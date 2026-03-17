@@ -17,7 +17,7 @@ Read these before acting:
 - `/home/igorw/Work/STS2/.agents/skills/merchant/references/heuristics.md`
 - the current character skill for the run
 - the current run log under `/home/igorw/Work/STS2/vault/runs`
-- `/home/igorw/Work/STS2/.agents/skills/boss-and-elite-fights/references/encounters.md` if the incoming act contains a known hard-fight threat
+- the current act skill's boss or elite notes if the incoming act contains a known hard-fight threat
 
 ## Core Doctrine
 

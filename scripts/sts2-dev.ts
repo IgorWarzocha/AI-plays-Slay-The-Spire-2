@@ -15,7 +15,6 @@ const testDir = path.join(repoRoot, "scripts", "tests");
 function usage(): void {
   console.log(`Usage:
   npm run build
-  npm run build:no-restart
   npm test
   npm run typecheck
   npm run check
@@ -50,9 +49,6 @@ function main(): void {
     case "build":
       runOrThrow("dotnet", ["build", modProjectPath]);
       runOrThrow(process.execPath, [adminCliPath, "restart"]);
-      return;
-    case "build-no-restart":
-      runOrThrow("dotnet", ["build", modProjectPath]);
       return;
     case "test":
       runOrThrow(process.execPath, ["--test", ...listTestFiles()]);

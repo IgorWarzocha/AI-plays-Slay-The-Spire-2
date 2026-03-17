@@ -30,6 +30,22 @@ Powerful, but only with support:
 - `Stoke`
 - `Tear Asunder`
 
+Premium rares and engines to reconsider even when they are not the current deck's obvious card:
+
+- `Dark Embrace`
+- `Impervious`
+- `Fiend Fire`
+- `Corruption`
+- `Offering`
+
+Rule:
+
+- Do not treat these as automatic picks, but do force an explicit compare against the "obvious" reward.
+- Ask whether the card is merely off-plan now, or whether it would actually create a better plan over the next few floors.
+- This matters most on rare rewards, where the highest-upside card is often not the one that best matches the deck's current surface description.
+- If you already have one or more exhaust enablers, `Dark Embrace` specifically deserves a stronger compare than most premium rares because it converts those cards from support into a real engine.
+- The main correction is about the rare itself, not a blanket downgrade to later `Burning Pact`s. Because `Dark Embrace` is rare here, the first offered copy must be taken more seriously than old STS1 instinct suggests.
+
 Usually lower priority in solo unless the reason is concrete:
 
 - `Demonic Shield`

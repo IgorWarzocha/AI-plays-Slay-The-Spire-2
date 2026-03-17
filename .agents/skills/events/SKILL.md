@@ -28,6 +28,7 @@ If the event is immediately upstream of an elite or boss, also read:
    - title
    - event text
    - every option with concrete payload text
+   - trust the live option payload text first; only fall back to local references if the event state is still not concrete enough to choose
 2. Reconstruct the live run context:
    - HP and max HP
    - gold

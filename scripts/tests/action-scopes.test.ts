@@ -29,8 +29,11 @@ test("bootstrap and gameplay action scopes stay separated", () => {
   assert.doesNotThrow(() =>
     assertHistoryActions(["main_menu.compendium", "compendium.run_history", "run_history.next"]),
   );
+  assert.doesNotThrow(() => assertCombatActions(["combat.end_turn"]));
+  assert.doesNotThrow(() => assertCombatActions(["combat_card_select.confirm"]));
+  assert.doesNotThrow(() => assertCombatActions(["card_pile.close"]));
   assert.doesNotThrow(() =>
-    assertCombatActions(["combat.end_turn", "combat_card_select.confirm", "card_pile.close"]),
+    assertCombatActions(["combat.play:bash-01@creature-1", "combat.end_turn"], { batch: true }),
   );
 
   assert.throws(() => assertBootstrapActions(["combat.end_turn"]));
@@ -38,4 +41,8 @@ test("bootstrap and gameplay action scopes stay separated", () => {
   assert.throws(() => assertGameplayActions(["combat.end_turn"]));
   assert.throws(() => assertHistoryActions(["combat.end_turn"]));
   assert.throws(() => assertCombatActions(["merchant.open"]));
+  assert.throws(
+    () => assertCombatActions(["combat.play:bash-01@creature-1", "combat.end_turn"]),
+    /requires --batch/,
+  );
 });

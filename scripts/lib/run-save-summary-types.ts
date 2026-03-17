@@ -59,7 +59,7 @@ export interface SaveRun {
   extra_fields?: {
     started_with_neow?: boolean;
   } | null;
-  pre_finished_room?: boolean | null;
+  pre_finished_room?: unknown;
   win_time?: number | null;
 }
 
@@ -75,6 +75,24 @@ export interface SimplifiedNode {
   type: string | null | undefined;
   canModify: boolean | null;
   nextCoords: Coord[];
+}
+
+export interface RoutePreview {
+  path: SimplifiedNode[];
+  counts: {
+    monsters: number;
+    unknowns: number;
+    elites: number;
+    rests: number;
+    shops: number;
+    treasures: number;
+  };
+}
+
+export interface RouteOption {
+  start: SimplifiedNode;
+  targetRow: number | null;
+  previews: RoutePreview[];
 }
 
 export interface RunSummary {
@@ -93,12 +111,16 @@ export interface RunSummary {
     shortId: string;
     ancientId: string | null;
     bossId: string | null;
+    bossShortId: string | null;
   };
   position: {
     visitedCount: number;
+    currentFloor: number;
+    nextFloor: number | null;
     visitedCoords: Coord[];
     currentNode: SimplifiedNode | null;
     nextNodes: SimplifiedNode[];
+    routeOptions: RouteOption[];
   };
   player: {
     characterId: string;
@@ -113,7 +135,7 @@ export interface RunSummary {
   };
   flags: {
     startedWithNeow: boolean;
-    preFinishedRoom: boolean | null;
+    preFinishedRoom: unknown;
     won: boolean;
   };
   screen: {
@@ -128,6 +150,7 @@ export interface RunSummary {
     characterSelection: string | null;
     topBar: ScreenStateWithPath['topBar'];
     relics: DisplayState['relics'];
+    potions: DisplayState['potions'];
     map: DisplayState['map'];
     cardBrowse: ScreenStateWithPath['cardBrowse'];
     combat: DisplayState['combat'];
