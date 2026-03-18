@@ -51,7 +51,7 @@ test("buildGameplayView hides admin noise and surfaces relic details only on dem
   assert.equal(expectRelic(expectDefined(detailed.relics[1])).count, 3);
 
   const hard = buildGameplayView(state, { hard: true });
-  assert.deepEqual(hard.actions, ["combat.end_turn"]);
+  assert.deepEqual(hard.choices, []);
 });
 
 test("buildGameplayView includes deck snapshot and detailed relics for merchant screens", () => {
@@ -96,7 +96,8 @@ test("buildGameplayView includes deck snapshot and detailed relics for merchant 
   assert.equal(expectDefined(view.potions[1]).occupied, false);
   assert.equal(expectDefined(expectDefined(view.topBar).potionSlots).total, 3);
   assert.equal(expectDefined(expectDefined(view.cardBrowse).cards[1]).upgraded, true);
-  assert.equal(expectDefined(expectDefined(view.menuItems)[0]).label, "Lantern");
+  assert.equal(expectDefined(expectDefined(view.choices)[0]).action, "merchant.buy:1");
+  assert.equal(expectDefined(expectDefined(view.choices)[0]).label, "Lantern");
 });
 
 test("buildGameplayView preserves readable combat intent summaries", () => {
@@ -151,7 +152,7 @@ test("buildGameplayView preserves card reward alternatives like skip", () => {
     topBar: { currentHp: 44, maxHp: 80, gold: 120, buttons: [] },
     relics: [],
     potions: [],
-    actions: ["rewards.claim:skip"],
+    actions: ["rewards.claim:card-1", "rewards.claim:skip"],
     menuItems: [
       { id: "rewards.claim:card-1", label: "Battle Trance", description: "Draw 3 cards.", enabled: true, selected: false },
       { id: "rewards.claim:skip", label: "Skip", description: "Take nothing.", enabled: true, selected: false },
@@ -159,8 +160,9 @@ test("buildGameplayView preserves card reward alternatives like skip", () => {
   };
 
   const view = buildGameplayView(state, { hard: true });
-  assert.equal(expectDefined(expectDefined(view.menuItems)[1]).label, "Skip");
-  assert.deepEqual(view.actions, ["rewards.claim:skip"]);
+  assert.equal(expectDefined(expectDefined(view.choices)[0]).action, "rewards.claim:card");
+  assert.equal(expectDefined(expectDefined(view.choices)[1]).label, "Skip");
+  assert.equal(expectDefined(expectDefined(view.choices)[1]).action, "rewards.claim:skip");
 });
 
 test("buildCommandView keeps next actions, notes, and menu items in easy mode", () => {
@@ -186,9 +188,9 @@ test("buildCommandView keeps next actions, notes, and menu items in easy mode", 
   };
 
   const view = buildCommandView(result, { easy: true });
-  assert.deepEqual(view.state.actions, ["rewards.claim:gold", "rewards.claim:card", "rewards.proceed"]);
+  assert.deepEqual(expectDefined(view.state.choices).map((choice) => choice.action), ["rewards.claim:gold", "rewards.claim:card", "proceed"]);
   assert.equal(expectDefined(view.state.notes)[0], "Rewards visible: 2.");
-  assert.equal(expectDefined(expectDefined(view.state.menuItems)[1]).label, "Add a card to your deck.");
+  assert.equal(expectDefined(expectDefined(view.state.choices)[1]).label, "Add a card to your deck.");
 });
 
 test("buildCommandView keeps treasure relic descriptions in easy mode", () => {
@@ -219,9 +221,9 @@ test("buildCommandView keeps treasure relic descriptions in easy mode", () => {
   };
 
   const view = buildCommandView(result, { easy: true });
-  assert.deepEqual(view.state.actions, ["treasure_relic.choose:relic-0-BowlerHat"]);
-  assert.equal(expectDefined(expectDefined(view.state.menuItems)[0]).label, "Bowler Hat");
-  assert.equal(expectDefined(expectDefined(view.state.menuItems)[0]).description, "Gain 20% additional Gold.");
+  assert.deepEqual(expectDefined(view.state.choices).map((choice) => choice.action), ["treasure_relic.choose:relic-0-BowlerHat"]);
+  assert.equal(expectDefined(expectDefined(view.state.choices)[0]).label, "Bowler Hat");
+  assert.equal(expectDefined(expectDefined(view.state.choices)[0]).description, "Gain 20% additional Gold.");
   assert.equal(view.state.notes, undefined);
 });
 
@@ -254,9 +256,9 @@ test("buildCommandView keeps easy command output compact on non-choice screens",
   };
 
   const view = buildCommandView(result, { easy: true });
-  assert.deepEqual(view.state.actions, ["map.travel:3,1"]);
+  assert.deepEqual(expectDefined(view.state.choices).map((choice) => choice.action), ["map.travel:3,1"]);
   assert.equal(view.state.notes, undefined);
-  assert.equal(view.state.menuItems, undefined);
+  assert.equal(view.state.choices?.[0]?.description, "Monster");
 });
 
 test("buildGameplayView shows a compact full-map summary on map screens", () => {
@@ -394,8 +396,73 @@ test("buildGameplayView easy mode strips noisy collections and empty potion slot
   };
 
   const view = buildGameplayView(state, { easy: true });
-  assert.equal(view.actions, undefined);
-  assert.equal(view.menuItems, undefined);
+  assert.equal(expectDefined(view.choices).length, 2);
   assert.equal(expectDefined(view.potions).length, 1);
   assert.equal(expectDefined(expectDefined(view.cardBrowse).cards[0]).description, null);
+});
+
+test("buildGameplayView disambiguates duplicate card-select labels while preserving exact actions", () => {
+  const state = {
+    screenType: "deck_card_select",
+    updatedAtUtc: "2026-03-17T12:40:00.000Z",
+    topBar: { currentHp: 50, maxHp: 80, gold: 120, buttons: [] },
+    relics: [],
+    potions: [],
+    actions: [
+      "deck_card_select.select:strike-01",
+      "deck_card_select.select:strike-02",
+      "deck_card_select.select:strike-plus-01",
+    ],
+    menuItems: [
+      { id: "strike-01", label: "Strike", description: "Deal 6 damage.", enabled: true, selected: false },
+      { id: "strike-02", label: "Strike", description: "Deal 6 damage.", enabled: true, selected: false },
+      { id: "strike-plus-01", label: "Strike+", description: "Deal 9 damage.", enabled: true, selected: false },
+    ],
+    notes: ["Prompt: Choose a card to remove."],
+  };
+
+  const view = buildGameplayView(state, { easy: true });
+  assert.deepEqual(expectDefined(view.choices).map((choice) => choice.action), [
+    "deck_card_select.select:strike-01",
+    "deck_card_select.select:strike-02",
+    "deck_card_select.select:strike-plus-01",
+  ]);
+  assert.deepEqual(expectDefined(view.choices).map((choice) => choice.label), [
+    "Strike [1/2]",
+    "Strike [2/2]",
+    "Strike+",
+  ]);
+});
+
+test("buildGameplayView uses surfaced potion metadata for potion choices", () => {
+  const state = {
+    screenType: "event",
+    updatedAtUtc: "2026-03-17T12:45:00.000Z",
+    topBar: { currentHp: 60, maxHp: 80, gold: 120, buttons: [] },
+    relics: [],
+    potions: [
+      {
+        id: "potion-01:strength-potion",
+        slotIndex: 1,
+        hasPotion: true,
+        title: "Strength Potion",
+        description: "Gain 2 Strength.",
+        usage: "CombatOnly",
+        isUsable: false,
+        canDiscard: true,
+      },
+    ],
+    actions: ["potions.discard:potion-01:strength-potion"],
+    eventTitle: "Orobas",
+    eventDescription: "Proceed.",
+  };
+
+  const view = buildGameplayView(state, { hard: true });
+  assert.deepEqual(expectDefined(view.choices), [
+    {
+      action: "potions.discard:potion-01:strength-potion",
+      label: "Strength Potion",
+      description: "Gain 2 Strength.",
+    },
+  ]);
 });

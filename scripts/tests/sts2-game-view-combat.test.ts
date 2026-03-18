@@ -28,7 +28,7 @@ test("buildCombatCommandView falls back to gameplay view when combat actions exi
 
   const view = buildCombatCommandView(result, { hard: true });
   assert.equal(view.state.screenType, "rewards_screen");
-  assert.deepEqual(view.state.actions, ["rewards.proceed"]);
+  assert.deepEqual(expectDefined(view.state.choices).map((choice) => choice.action), ["proceed"]);
 });
 
 test("buildCombatCommandView keeps next actions and reward choices in easy mode after exiting combat", () => {
@@ -55,9 +55,9 @@ test("buildCombatCommandView keeps next actions and reward choices in easy mode 
   };
 
   const view = buildCombatCommandView(result, { easy: true });
-  assert.deepEqual(view.state.actions, ["rewards.claim:gold", "rewards.claim:card", "rewards.proceed"]);
+  assert.deepEqual(expectDefined(view.state.choices).map((choice) => choice.action), ["rewards.claim:gold", "rewards.claim:card", "proceed"]);
   assert.equal(expectDefined(view.state.notes)[0], "Rewards visible: 2.");
-  assert.equal(expectDefined(expectDefined(view.state.menuItems)[0]).label, "13 Gold");
+  assert.equal(expectDefined(expectDefined(view.state.choices)[0]).label, "13 Gold");
 });
 
 test("buildCombatCommandView keeps easy command output compact on merchant inventory", () => {
@@ -83,9 +83,9 @@ test("buildCombatCommandView keeps easy command output compact on merchant inven
   };
 
   const view = buildCombatCommandView(result, { easy: true });
-  assert.deepEqual(view.state.actions, ["merchant.buy:card-01", "merchant.close"]);
+  assert.deepEqual(expectDefined(view.state.choices).map((choice) => choice.action), ["merchant.buy:card-01", "merchant.close"]);
   assert.equal(view.state.notes, undefined);
-  assert.equal(expectDefined(expectDefined(view.state.menuItems)[0]).label, "Burning Pact");
+  assert.equal(expectDefined(expectDefined(view.state.choices)[0]).label, "Burning Pact");
 });
 
 test("buildCombatView supports modal combat card choice overlays", () => {
@@ -114,7 +114,7 @@ test("buildCombatView supports modal combat card choice overlays", () => {
   const view = buildCombatView(state, { hard: true });
   assert.equal(view.notes[0], "Choose a card to exhaust.");
   assert.equal(expectDefined(view.combat).selectionPrompt, "Choose a card to Exhaust.");
-  assert.deepEqual(view.actions, ["combat_card_select.select:strike-01", "combat_card_select.confirm"]);
+  assert.deepEqual(view.choices.map((choice) => choice.action), ["combat_card_select.select:strike-01", "combat_card_select.confirm"]);
 });
 
 test("buildCombatCommandView surfaces combat cost changes per action", () => {
@@ -432,8 +432,7 @@ test("buildCombatView easy mode trims combat noise for routine turns", () => {
 
   const view = buildCombatView(state, { easy: true });
   assert.deepEqual(view.notes, []);
-  assert.deepEqual(view.actions, []);
-  assert.deepEqual(view.menuItems, []);
+  assert.deepEqual(view.choices, []);
   assert.equal(expectDefined(view.combat).piles.draw, null);
   assert.equal(expectDefined(expectDefined(view.combat).hand[0]).description, null);
   assert.equal(expectDefined(expectDefined(expectDefined(view.combat).creatures[0]).intents[0]).description, null);

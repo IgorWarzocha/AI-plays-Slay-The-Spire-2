@@ -7,18 +7,17 @@ import type {
   TopBarView,
 } from './types.ts';
 import {
-  summarizeButton,
   summarizeCardBrowse,
   summarizeCharacter,
   summarizeCombat,
   summarizeMap,
-  summarizeMenuItem,
   summarizePotion,
   summarizeProfile,
   summarizeRelic,
   summarizeRelicLabel,
   summarizeRunHistory,
 } from './game-view-summarizers.ts';
+import { buildCombatChoices, buildGameplayChoices } from './game-view-choice-builders.ts';
 import { resolveViewMode, resolveViewPreferences } from './view-options.ts';
 
 function buildTopBarView(topBar: TopBarState | null | undefined): TopBarView | null {
@@ -36,7 +35,6 @@ function buildTopBarView(topBar: TopBarState | null | undefined): TopBarView | n
       filled: topBar.filledPotionSlotCount ?? null,
       empty: topBar.emptyPotionSlotCount ?? null,
     },
-    buttons: (topBar.buttons ?? []).map(summarizeButton),
   };
 }
 
@@ -61,7 +59,6 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
       topBar: null,
       relics: [],
       potions: [],
-      actions: [],
       notes: [],
     };
   }
@@ -85,11 +82,8 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
     potions: (state.potions ?? [])
       .map((potion) => summarizePotion(potion, viewPreferences.mode))
       .filter((potion) => !viewPreferences.occupiedPotionsOnly || potion.occupied),
+    choices: buildGameplayChoices(state, viewPreferences.mode),
   };
-
-  if (viewPreferences.includeActions) {
-    view.actions = state.actions ?? [];
-  }
 
   if (viewPreferences.includeNotes) {
     view.notes = state.notes ?? [];
@@ -108,7 +102,6 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
       view.event = {
         title: state.eventTitle ?? null,
         description: state.eventDescription ?? null,
-        options: (state.menuItems ?? []).map(summarizeMenuItem),
       };
       break;
     case 'map':
@@ -119,9 +112,6 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
     case 'combat_card_select':
     case 'combat_choice_select':
       view.combat = state.combat ? summarizeCombat(state.combat, viewPreferences.mode) : null;
-      if (viewPreferences.includeMenuItems) {
-        view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
-      }
       break;
     case 'deck_view':
     case 'card_pile':
@@ -129,21 +119,12 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
       break;
     case 'run_history':
       view.runHistory = state.runHistory ? summarizeRunHistory(state.runHistory, viewPreferences.mode) : null;
-      if (viewPreferences.includeMenuItems) {
-        view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
-      }
       break;
     case 'merchant_room':
     case 'merchant_inventory':
       view.cardBrowse = state.cardBrowse ? summarizeCardBrowse(state.cardBrowse, viewPreferences.mode) : null;
-      if (viewPreferences.includeMenuItems) {
-        view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
-      }
       break;
     default:
-      if (viewPreferences.includeMenuItems) {
-        view.menuItems = (state.menuItems ?? []).map(summarizeMenuItem);
-      }
       break;
   }
 
@@ -159,8 +140,7 @@ export function buildCombatView(state: DisplayState | null | undefined, options:
       relics: [],
       notes: [],
       combat: null,
-      menuItems: [],
-      actions: [],
+      choices: [],
     };
   }
 
@@ -185,12 +165,6 @@ export function buildCombatView(state: DisplayState | null | undefined, options:
       : (state.relics ?? []).map(summarizeRelicLabel),
     notes: viewPreferences.includeNotes ? (state.notes ?? []) : [],
     combat: state.combat ? summarizeCombat(state.combat, viewPreferences.mode) : null,
-    menuItems: viewPreferences.includeMenuItems ? (state.menuItems ?? []).map(summarizeMenuItem) : [],
-    actions: viewPreferences.includeActions
-      ? (state.actions ?? []).filter((action) =>
-        action.startsWith('combat.')
-        || action.startsWith('combat_card_select.')
-        || action.startsWith('combat_choice_select.'))
-      : [],
+    choices: buildCombatChoices(state, viewPreferences.mode),
   };
 }

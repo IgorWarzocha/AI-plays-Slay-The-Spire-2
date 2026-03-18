@@ -8,6 +8,29 @@ Goal: reduce token consumption and repeated information during live STS play via
 
 Implementation note: keep the operator surface simple. Do not add new operator-facing flags for pruning, hashing, timestamps, or pretty printing. The compact behavior should be the default behavior.
 
+## Current implementation status
+
+### Implemented
+
+- P0 compact JSON default output for agent-facing CLIs
+- P0 stripping `updatedAtUtc` from non-full output
+- P0 pruning null/empty output noise in compact modes
+- P0 semantic unchanged-state suppression for repeated `status` polling
+- P1 canonical `choices` surface for compact gameplay and selection screens
+- P1 default suppression of compact top-bar button boilerplate
+- P1 duplicate-label disambiguation for exact card-select actions such as `Strike` vs `Strike+` and multiple `Strike` copies
+- P1 preservation of exact control by keeping exact actions whenever aliasing would lose information
+
+### Partially implemented
+
+- P1 text cleanup: hotkey-only boilerplate is suppressed and some presentation tags are normalized, but rich-text cleanup is not yet comprehensive
+
+### Not yet implemented
+
+- stable-context hashing for relics/deck/map snapshots
+- broader screen-specific compact schemas beyond the current `choices` translation layer
+- TOON presentation layer
+
 ## Key findings
 
 ### 1. `updatedAtUtc` causes constant semantic churn
@@ -97,6 +120,8 @@ Important caveat: do **not** blindly remove all `false` values. Some `false` val
 
 Instead of separate `actions` and `menuItems`, emit a single canonical `choices` list in agent mode.
 
+Important constraint: canonicalization must never collapse distinct actionable options into one if the operator would lose control. When multiple choices look similar, keep distinct actions and disambiguate the surfaced labels instead of merging them.
+
 Example shape:
 
 ```json
@@ -117,10 +142,10 @@ Keep the raw split only in `--full`.
 
 Top bar buttons are usually boilerplate and duplicate action availability.
 
-Recommended behavior:
+Implemented behavior:
 
-- omit by default in agent-oriented views
-- include only when they differ from defaults, are selected/disabled, or are explicitly requested via `--buttons`
+- omit by default in compact agent-oriented views
+- preserve them in existing full output
 
 #### 7. Suppress empty potion slots more aggressively
 
@@ -147,6 +172,8 @@ Recommended behavior:
 - emit plain text in agent/easy/hard compact modes
 
 Also drop boilerplate like hotkey-only descriptions unless explicitly requested.
+
+Current caveat: only a limited cleanup pass is implemented so far. Do not aggressively strip markup that may still carry gameplay meaning until there is good coverage for those cases.
 
 #### 9. Split stable run context from volatile screen context
 
@@ -250,6 +277,8 @@ Potential future flags can be reconsidered only if a real need appears after the
 6. omit top bar buttons by default
 7. strip formatting markup in compact/agent mode
 
+Status: 5 and 6 are implemented. 7 is only partially implemented.
+
 ### Phase 3: best long-term architecture
 
 8. stable-context hashing for relics/deck/map
@@ -287,3 +316,9 @@ If implementing only the most important improvements first, the strongest order 
 3. prune null/empty/default fields
 4. add semantic unchanged-state suppression by default for status reads
 5. replace duplicated `actions` + `menuItems` with canonical `choices` in compact mode
+
+Current next slice:
+
+1. finish careful text normalization for compact `choices` and other compact descriptions without losing gameplay semantics
+2. add stable-context hashing/delta ideas for large persistent sections like relics/deck/map
+3. consider broader screen-specific compact schemas once the `choices` layer has stabilized in live play

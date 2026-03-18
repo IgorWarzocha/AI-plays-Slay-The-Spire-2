@@ -31,6 +31,14 @@ export interface MenuItemView {
   selected: boolean | undefined;
 }
 
+export interface ChoiceView {
+  action: string;
+  label?: string;
+  description?: string;
+  enabled?: boolean;
+  selected?: boolean;
+}
+
 export interface CardOverlayView {
   kind: string;
   type: string | null;
@@ -237,7 +245,7 @@ export interface GameplayView {
   topBar: TopBarView | null;
   relics: Array<string | RelicState>;
   potions: PotionView[];
-  actions?: string[];
+  choices?: ChoiceView[];
   notes?: string[];
   profiles?: ProfileState[];
   characters?: CharacterState[];
@@ -245,13 +253,11 @@ export interface GameplayView {
   event?: {
     title: string | null;
     description: string | null;
-    options: MenuItemView[];
   };
   map?: MapView | null;
   combat?: CombatViewData | null;
   cardBrowse?: CardBrowseView | null;
   runHistory?: RunHistoryView | null;
-  menuItems?: MenuItemView[];
 }
 
 export interface CombatViewScreen {
@@ -261,8 +267,7 @@ export interface CombatViewScreen {
   relics: Array<string | RelicState>;
   notes: string[];
   combat: CombatViewData | null;
-  menuItems: MenuItemView[];
-  actions: string[];
+  choices: ChoiceView[];
 }
 
 export interface ActionSummaryView {
