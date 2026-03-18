@@ -22,6 +22,52 @@ test("merchant actions re-resolve when slot indices shift after a purchase", () 
     normalizeActionForCurrentState("merchant.buy:remove-13-remove-a-card", state),
     "merchant.buy:remove-11-remove-a-card",
   );
+  assert.equal(
+    normalizeActionForCurrentState("merchant.buy:card-tremble", state),
+    "merchant.buy:card-02-tremble",
+  );
+  assert.equal(
+    normalizeActionForCurrentState("merchant.buy:remove-a-card", state),
+    "merchant.buy:remove-11-remove-a-card",
+  );
+});
+
+test("merchant aliases fail clearly for disabled inventory entries", () => {
+  const state = {
+    screenType: "merchant_inventory",
+    actions: [
+      "merchant.buy:card-00-pommel-strike",
+      "merchant.close",
+    ],
+    menuItems: [
+      { id: "card-00-pommel-strike", label: "Pommel Strike", enabled: true },
+      { id: "relic-01-cloak-clasp", label: "Cloak Clasp", enabled: false },
+    ],
+  };
+
+  assert.throws(
+    () => normalizeActionForCurrentState("merchant.buy:relic-cloak-clasp", state),
+    /currently unavailable/,
+  );
+});
+
+test("merchant aliases fail clearly when ambiguous", () => {
+  const state = {
+    screenType: "merchant_inventory",
+    actions: [
+      "merchant.buy:card-00-shrug-it-off",
+      "merchant.buy:card-01-shrug-it-off",
+    ],
+    menuItems: [
+      { id: "card-00-shrug-it-off", label: "Shrug It Off", enabled: true },
+      { id: "card-01-shrug-it-off", label: "Shrug It Off", enabled: true },
+    ],
+  };
+
+  assert.throws(
+    () => normalizeActionForCurrentState("merchant.buy:card-shrug-it-off", state),
+    /ambiguous/,
+  );
 });
 
 test("combat potion actions re-resolve when earlier potion use shifts potion ids", () => {

@@ -201,6 +201,28 @@ function inferRewardKind(action: string, label?: string, description?: string | 
   return null;
 }
 
+function canonicalMerchantEntryId(entryId: string): string {
+  const normalized = entryId.replace(/^([a-z]+)-\d{2}-/i, '$1-');
+  return normalized.replace(/^remove-remove-/i, 'remove-');
+}
+
+function buildMerchantAliasCounts(state: DisplayState): Map<string, number> {
+  const counts = new Map<string, number>();
+
+  for (const menuItem of state.menuItems ?? []) {
+    const rawAction = deriveMerchantActionFromMenuItem(menuItem);
+    if (!rawAction?.startsWith('merchant.buy:')) {
+      continue;
+    }
+
+    const entryId = rawAction.slice('merchant.buy:'.length);
+    const alias = `merchant.buy:${canonicalMerchantEntryId(entryId)}`;
+    counts.set(alias, (counts.get(alias) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
 function buildRewardKindCounts(actions: readonly string[], menuItems: readonly MenuItemState[] = []): Map<string, number> {
   const counts = new Map<string, number>();
 
@@ -221,7 +243,12 @@ function buildRewardKindCounts(actions: readonly string[], menuItems: readonly M
   return counts;
 }
 
-function canonicalizeAction(action: string, menuItem: MenuItemState | null, rewardKindCounts: ReadonlyMap<string, number>): string {
+function canonicalizeAction(
+  action: string,
+  menuItem: MenuItemState | null,
+  rewardKindCounts: ReadonlyMap<string, number>,
+  merchantAliasCounts: ReadonlyMap<string, number>,
+): string {
   if (action === 'rewards.proceed' || action === 'event.choose:textkey:proceed' || action.endsWith('.proceed')) {
     return 'proceed';
   }
@@ -234,6 +261,14 @@ function canonicalizeAction(action: string, menuItem: MenuItemState | null, rewa
     const kind = inferRewardKind(action, menuItem?.label, menuItem?.description ?? null);
     if (kind && (rewardKindCounts.get(kind) ?? 0) === 1) {
       return `rewards.claim:${kind}`;
+    }
+  }
+
+  if (action.startsWith('merchant.buy:')) {
+    const entryId = action.slice('merchant.buy:'.length);
+    const alias = `merchant.buy:${canonicalMerchantEntryId(entryId)}`;
+    if ((merchantAliasCounts.get(alias) ?? 0) === 1) {
+      return alias;
     }
   }
 
@@ -362,7 +397,12 @@ function enrichDraftFromState(draft: ChoiceDraft, state: DisplayState): ChoiceDr
 
   return {
     ...draft,
-    action: canonicalizeAction(draft.rawAction, menuItem, buildRewardKindCounts(state.actions ?? [], state.menuItems ?? [])),
+    action: canonicalizeAction(
+      draft.rawAction,
+      menuItem,
+      buildRewardKindCounts(state.actions ?? [], state.menuItems ?? []),
+      buildMerchantAliasCounts(state),
+    ),
     label: label ?? undefined,
     description,
     enabled: menuItem?.enabled === false ? false : undefined,

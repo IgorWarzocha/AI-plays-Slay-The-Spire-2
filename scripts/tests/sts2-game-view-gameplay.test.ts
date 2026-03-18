@@ -136,13 +136,57 @@ test("buildGameplayView includes disabled merchant inventory entries with cleane
 
   const view = buildGameplayView(state, { hard: true });
   assert.deepEqual(expectDefined(view.choices).map((choice) => choice.action), [
-    "merchant.buy:card-00-pommel-strike",
-    "merchant.buy:relic-01-cloak-clasp",
-    "merchant.buy:remove-02-remove-a-card",
+    "merchant.buy:card-pommel-strike",
+    "merchant.buy:relic-cloak-clasp",
+    "merchant.buy:remove-a-card",
     "merchant.close",
   ]);
   assert.equal(expectDefined(expectDefined(view.choices)[1]).enabled, false);
   assert.equal(expectDefined(expectDefined(view.choices)[2]).description, "Cost: 100 gold.");
+});
+
+test("buildGameplayView uses stable merchant aliases when unique", () => {
+  const state = {
+    screenType: "merchant_inventory",
+    updatedAtUtc: "2026-03-17T12:11:30.000Z",
+    topBar: {
+      currentHp: 86,
+      maxHp: 89,
+      gold: 299,
+      potionSlotCount: 3,
+      filledPotionSlotCount: 1,
+      emptyPotionSlotCount: 2,
+      buttons: [],
+    },
+    relics: [],
+    potions: [],
+    menuItems: [
+      { id: "card-03-forgotten-ritual", label: "Forgotten Ritual", description: "Gain 3 Energy. Cost: 38 gold.", enabled: true, selected: false },
+      { id: "relic-08-cloak-clasp", label: "Cloak Clasp", description: "Gain 1 Block per card in hand. Cost: 331 gold. Not enough gold.", enabled: false, selected: false },
+      { id: "remove-13-remove-a-card", label: "Remove a card", description: "100 Cost: 100 gold.", enabled: true, selected: false },
+      { id: "close", label: "Close Merchant", description: "Close the merchant inventory.", enabled: true, selected: false },
+    ],
+    cardBrowse: {
+      kind: "deck_snapshot",
+      title: "Current Deck",
+      pileType: "Deck",
+      cardCount: 1,
+      canClose: false,
+      cards: [
+        { id: "c1", title: "Strike", costText: "1", upgraded: false, description: "Deal 6 damage." },
+      ],
+    },
+    actions: ["merchant.buy:card-03-forgotten-ritual", "merchant.close"],
+  };
+
+  const view = buildGameplayView(state, { easy: true });
+  assert.deepEqual(expectDefined(view.choices).map((choice) => choice.action), [
+    "merchant.buy:card-forgotten-ritual",
+    "merchant.buy:relic-cloak-clasp",
+    "merchant.buy:remove-a-card",
+    "merchant.close",
+  ]);
+  assert.equal(expectDefined(expectDefined(view.choices)[1]).enabled, false);
 });
 
 test("buildGameplayView preserves readable combat intent summaries", () => {

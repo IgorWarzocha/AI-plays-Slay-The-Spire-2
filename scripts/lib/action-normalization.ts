@@ -1,7 +1,9 @@
 import type { DisplayState } from './types.ts';
 
 function normalizeMerchantEntryId(entryId: string): string {
-  return entryId.replace(/^([a-z]+)-\d{2}-/i, '$1-');
+  return entryId
+    .replace(/^([a-z]+)-\d{2}-/i, '$1-')
+    .replace(/^remove-remove-/i, 'remove-');
 }
 
 function normalizeRewardEntryId(entryId: string): string {
@@ -228,7 +230,29 @@ export function normalizeActionForCurrentState(action: string, state: DisplaySta
       .filter((candidate) =>
         normalizeMerchantEntryId(candidate.slice('merchant.buy:'.length)) === normalizedTarget);
 
-    return matches.length === 1 ? (matches[0] ?? action) : action;
+    if (matches.length === 1) {
+      return matches[0] ?? action;
+    }
+
+    if (state?.screenType === 'merchant_inventory') {
+      const matchingMenuItems = (state.menuItems ?? [])
+        .filter((item) => typeof item?.id === 'string')
+        .filter((item) => normalizeMerchantEntryId(item.id) === normalizedTarget);
+
+      if (matchingMenuItems.length === 1) {
+        const item = matchingMenuItems[0];
+        const label = item?.label?.trim() || item?.id || targetId;
+        if (item?.enabled === false) {
+          throw new Error(`Merchant item '${label}' is currently unavailable.`);
+        }
+      }
+
+      if (matchingMenuItems.length > 1 || matches.length > 1) {
+        throw new Error(`Merchant action '${action}' is ambiguous on the current inventory.`);
+      }
+    }
+
+    return action;
   }
 
   return normalizePotionActionForCurrentState(action, state);
