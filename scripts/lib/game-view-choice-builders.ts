@@ -221,6 +221,10 @@ function canonicalizeAction(action: string, menuItem: MenuItemState | null, rewa
     return 'proceed';
   }
 
+  if (action === 'card_reward.skip' || action.startsWith('card_reward.alternate:')) {
+    return 'card_reward.skip';
+  }
+
   if (action.startsWith('rewards.claim:')) {
     const kind = inferRewardKind(action, menuItem?.label, menuItem?.description ?? null);
     if (kind && (rewardKindCounts.get(kind) ?? 0) === 1) {
@@ -331,6 +335,30 @@ function disambiguateDuplicateLabels(drafts: ChoiceDraft[]): ChoiceDraft[] {
   return drafts;
 }
 
+function dedupeEquivalentChoices(drafts: ChoiceDraft[]): ChoiceDraft[] {
+  const seen = new Set<string>();
+  const deduped: ChoiceDraft[] = [];
+
+  for (const draft of drafts) {
+    const key = JSON.stringify({
+      action: draft.action,
+      label: draft.label ?? null,
+      description: draft.description ?? null,
+      enabled: draft.enabled ?? null,
+      selected: draft.selected ?? null,
+    });
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    deduped.push(draft);
+  }
+
+  return deduped;
+}
+
 function shouldIncludeGameplayChoices(state: DisplayState | null | undefined, mode: CompactViewMode): boolean {
   if (!state || !Array.isArray(state.actions) || state.actions.length === 0) {
     return false;
@@ -361,10 +389,10 @@ function shouldIncludeCombatChoices(state: DisplayState | null | undefined): boo
 }
 
 function buildChoicesFromState(state: DisplayState, rawActions: string[]): ChoiceView[] {
-  const drafts = rawActions
+  const drafts = dedupeEquivalentChoices(rawActions
     .filter((action) => !isSkippedAction(action))
     .map((rawAction, order) => ({ rawAction, action: rawAction, order }))
-    .map((draft) => enrichDraftFromState(draft, state));
+    .map((draft) => enrichDraftFromState(draft, state)));
 
   disambiguateDuplicateLabels(drafts);
 

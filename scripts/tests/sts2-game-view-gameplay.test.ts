@@ -165,6 +165,32 @@ test("buildGameplayView preserves card reward alternatives like skip", () => {
   assert.equal(expectDefined(expectDefined(view.choices)[1]).action, "rewards.claim:skip");
 });
 
+test("buildGameplayView dedupes equivalent card reward skip actions", () => {
+  const state = {
+    screenType: "card_reward_selection",
+    updatedAtUtc: "2026-03-17T12:21:00.000Z",
+    topBar: { currentHp: 44, maxHp: 80, gold: 120, buttons: [] },
+    relics: [],
+    potions: [],
+    actions: ["card_reward.select:reward-card-1", "card_reward.alternate:Skip", "card_reward.skip"],
+    menuItems: [
+      { id: "reward-card-1", label: "Shrug It Off", description: "Gain 8 Block. Draw 1 card.", enabled: true, selected: false },
+      { id: "Skip", label: "Skip", description: "Hotkey: ui_cancel", enabled: true, selected: false },
+    ],
+    notes: ["Card reward screen is active."],
+  };
+
+  const view = buildGameplayView(state, { easy: true });
+  assert.deepEqual(expectDefined(view.choices).map((choice) => choice.action), [
+    "card_reward.select:reward-card-1",
+    "card_reward.skip",
+  ]);
+  assert.deepEqual(expectDefined(view.choices).map((choice) => choice.label), [
+    "Shrug It Off",
+    "Skip",
+  ]);
+});
+
 test("buildCommandView keeps next actions, notes, and menu items in easy mode", () => {
   const result = {
     ok: true,
