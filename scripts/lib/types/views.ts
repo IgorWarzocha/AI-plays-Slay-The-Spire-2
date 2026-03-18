@@ -292,3 +292,13 @@ export interface CombatCommandView {
   actions: ActionSummaryView[];
   state: GameplayView | CombatViewScreen;
 }
+
+export interface DeckInspectView {
+  ok: boolean;
+  actionCount: number;
+  actions: ActionSummaryView[];
+  state: GameplayView | CombatViewScreen;
+  deckView: GameplayView;
+  sourceScreenType: string | null;
+  restoredScreenType: string | null;
+}

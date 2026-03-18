@@ -41,6 +41,12 @@ export interface RunActionsResult {
   state: DisplayState | null;
 }
 
+export interface DeckInspectionResult extends RunActionsResult {
+  deckState: DisplayState;
+  sourceScreenType: string | null;
+  restoredScreenType: string | null;
+}
+
 export interface GameWindow {
   address?: string;
   class?: string;

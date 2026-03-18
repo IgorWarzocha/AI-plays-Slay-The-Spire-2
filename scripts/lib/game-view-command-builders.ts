@@ -1,4 +1,4 @@
-import type { ActionSummaryView, CombatCommandView, CommandView, DisplayState, RunActionsResult, RuntimeCommandOptions } from './types.ts';
+import type { ActionSummaryView, CombatCommandView, CommandView, DeckInspectView, DeckInspectionResult, DisplayState, RunActionsResult, RuntimeCommandOptions } from './types.ts';
 import { summarizeCombatActionState, summarizeCostChange } from './game-view-summarizers.ts';
 import { buildCombatView, buildGameplayView } from './game-view-state-builders.ts';
 import { resolveViewMode } from './view-options.ts';
@@ -76,5 +76,20 @@ export function buildCombatCommandView(result: RunActionsResult, options: Runtim
     actionCount: result.actionCount,
     actions: (result.results ?? []).map((entry) => summarizeActionEntry(entry, options)),
     state: renderedState,
+  };
+}
+
+export function buildDeckInspectView(result: DeckInspectionResult, options: RuntimeCommandOptions = {}): DeckInspectView {
+  const standard = result.state?.screenType === 'combat_room'
+    || result.state?.screenType === 'combat_card_select'
+    || result.state?.screenType === 'combat_choice_select'
+    ? buildCombatCommandView(result, options)
+    : buildCommandView(result, options);
+
+  return {
+    ...standard,
+    deckView: buildGameplayView(result.deckState, options),
+    sourceScreenType: result.sourceScreenType,
+    restoredScreenType: result.restoredScreenType,
   };
 }

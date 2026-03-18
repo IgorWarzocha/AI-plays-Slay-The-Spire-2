@@ -3,13 +3,13 @@
 import {
   parseArgs,
   readDisplayState,
-  sendAction,
   runActions,
   waitForScreen,
 } from "./lib/sts2-runtime.ts";
 import { assertGameplayActions } from "./lib/action-scopes.ts";
 import { buildStatusCacheKey, printCliOutput } from "./lib/cli-output.ts";
-import { buildCommandView, buildGameplayView } from "./lib/sts2-game-view.ts";
+import { buildCommandView, buildDeckInspectView, buildGameplayView } from "./lib/sts2-game-view.ts";
+import { inspectDeck } from "./lib/deck-inspection.ts";
 import type { DisplayState, RuntimeCommandOptions } from "./lib/types.ts";
 
 function usage(): void {
@@ -36,40 +36,6 @@ function printGameplayState(
   });
 }
 
-async function inspectDeck(options: RuntimeCommandOptions): Promise<void> {
-  const state = await readDisplayState();
-  if (state?.screenType === "combat_room" || state?.screenType === "combat_card_select" || state?.screenType === "combat_choice_select") {
-    throw new Error("inspect-deck is for non-combat in-run reads. Use sts2combat.ts status for combat state.");
-  }
-
-  if (!state) {
-    throw new Error("Cannot inspect deck without a live gameplay state.");
-  }
-
-  const sourceScreenType = state.screenType ?? null;
-  const alreadyOpen = state.screenType === "deck_view" || state.screenType === "card_pile";
-
-  const deckState = alreadyOpen
-    ? state
-    : (await sendAction("top_bar.deck", options)).state;
-
-  if (!deckState || (deckState.screenType !== "deck_view" && deckState.screenType !== "card_pile")) {
-    throw new Error(`Deck inspect expected deck_view or card_pile, got '${deckState?.screenType ?? "unknown"}'.`);
-  }
-
-  let restoredScreenType = deckState.screenType ?? null;
-  if (!alreadyOpen && (deckState.actions ?? []).includes("top_bar.deck")) {
-    const restored = await sendAction("top_bar.deck", options);
-    restoredScreenType = restored.state?.screenType ?? restoredScreenType;
-  }
-
-  printCliOutput({
-    sourceScreenType,
-    restoredScreenType,
-    deckView: buildGameplayView(deckState, options),
-  }, { options });
-}
-
 async function main(): Promise<void> {
   const { positional, options } = parseArgs(process.argv.slice(2));
   const command = positional[0];
@@ -78,9 +44,15 @@ async function main(): Promise<void> {
     case "status":
       printGameplayState(await readDisplayState(), options, { dedupe: true });
       return;
-    case "inspect-deck":
-      await inspectDeck(options);
+    case "inspect-deck": {
+      const state = await readDisplayState();
+      if (state?.screenType === "combat_room" || state?.screenType === "combat_card_select" || state?.screenType === "combat_choice_select") {
+        throw new Error("inspect-deck is for non-combat in-run reads. Use sts2combat.ts inspect-deck or sts2play.ts inspect-deck from combat.");
+      }
+
+      printCliOutput(buildDeckInspectView(await inspectDeck(options), options), { options });
       return;
+    }
     case "command": {
       const actions = positional.slice(1);
       if (actions.length === 0) {

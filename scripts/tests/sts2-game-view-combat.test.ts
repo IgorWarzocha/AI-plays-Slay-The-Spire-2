@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildCombatCommandView, buildCombatView, buildGameplayView } from "../lib/sts2-game-view.ts";
+import { buildCombatCommandView, buildCombatView, buildDeckInspectView, buildGameplayView } from "../lib/sts2-game-view.ts";
 
 function expectDefined<T>(value: T): NonNullable<T> {
   assert.notEqual(value, null);
@@ -288,6 +288,95 @@ test("buildCombatCommandView keeps rich combatAfter details even in easy mode", 
   assert.equal(expectDefined(expectDefined(combatAfter).creatures[0]).intents[0]?.summary, "12 damage");
   assert.equal(expectDefined(combatAfter).piles.draw, 7);
   assert.equal(expectDefined(combatAfter).handMeta?.active, 3);
+});
+
+test("buildDeckInspectView returns restored combat state plus captured deck view", () => {
+  const result = {
+    ok: true,
+    actionCount: 2,
+    results: [
+      { action: "top_bar.deck", id: "cmd-open", ackStatus: "completed", screenType: "deck_view" },
+      {
+        action: "top_bar.deck",
+        id: "cmd-close",
+        ackStatus: "completed",
+        screenType: "combat_room",
+        state: {
+          screenType: "combat_room",
+          updatedAtUtc: "2026-03-17T12:45:00.000Z",
+          topBar: { currentHp: 87, maxHp: 90, gold: 282 },
+          relics: [],
+          notes: [],
+          actions: ["combat.end_turn"],
+          combat: {
+            roundNumber: 1,
+            currentSide: "Player",
+            energy: 6,
+            handIsSettled: true,
+            activeHandCount: 5,
+            totalHandCount: 5,
+            pendingHandHolderCount: 0,
+            handAnimationActive: false,
+            cardPlayInProgress: false,
+            canEndTurn: true,
+            hand: [{ id: "strike-01", title: "Strike", costText: "1", isPlayable: true, validTargetIds: ["enemy-1"] }],
+            potions: [],
+            creatures: [{ id: "enemy-1", name: "Spiny Toad", side: "Enemy", currentHp: 119, maxHp: 119, block: 0, intents: [] }],
+          },
+        },
+      },
+    ],
+    state: {
+      screenType: "combat_room",
+      updatedAtUtc: "2026-03-17T12:45:00.000Z",
+      topBar: { currentHp: 87, maxHp: 90, gold: 282 },
+      relics: [],
+      notes: [],
+      actions: ["combat.end_turn"],
+      combat: {
+        roundNumber: 1,
+        currentSide: "Player",
+        energy: 6,
+        handIsSettled: true,
+        activeHandCount: 5,
+        totalHandCount: 5,
+        pendingHandHolderCount: 0,
+        handAnimationActive: false,
+        cardPlayInProgress: false,
+        canEndTurn: true,
+        hand: [{ id: "strike-01", title: "Strike", costText: "1", isPlayable: true, validTargetIds: ["enemy-1"] }],
+        potions: [],
+        creatures: [{ id: "enemy-1", name: "Spiny Toad", side: "Enemy", currentHp: 119, maxHp: 119, block: 0, intents: [] }],
+      },
+    },
+    deckState: {
+      screenType: "deck_view",
+      updatedAtUtc: "2026-03-17T12:44:00.000Z",
+      topBar: { currentHp: 87, maxHp: 90, gold: 282, potionSlotCount: 3, filledPotionSlotCount: 2, emptyPotionSlotCount: 1 },
+      relics: [{ id: "BurningBlood", label: "Burning Blood", description: "Heal 6 HP.", count: null, status: "Active" }],
+      potions: [{ id: "potion-01", slotIndex: 1, hasPotion: true, title: "Strength Potion", description: "Gain 2 Strength.", usage: "CombatOnly", isUsable: false, canDiscard: true }],
+      actions: ["top_bar.deck"],
+      menuItems: [{ id: "obtained", label: "Obtained", description: "Sort deck by obtained.", enabled: true, selected: false }],
+      cardBrowse: {
+        kind: "deck_view",
+        title: "Deck",
+        pileType: "Deck",
+        cardCount: 1,
+        canClose: true,
+        cards: [{ id: "c1", title: "Strike", costText: "1", upgraded: false, description: "Deal 6 damage." }],
+      },
+    },
+    sourceScreenType: "combat_room",
+    restoredScreenType: "combat_room",
+  };
+
+  const view = buildDeckInspectView(result, { easy: true });
+  assert.equal(view.state.screenType, "combat_room");
+  assert.equal(view.restoredScreenType, "combat_room");
+  assert.equal(view.sourceScreenType, "combat_room");
+  assert.equal(expectDefined(view.deckView.cardBrowse).cardCount, 1);
+  assert.equal(view.deckView.relics, undefined);
+  assert.equal(view.deckView.potions, undefined);
 });
 
 test("buildGameplayView surfaces combat card transient states and unplayable causes", () => {
