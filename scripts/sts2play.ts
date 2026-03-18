@@ -3,6 +3,7 @@
 import {
   parseArgs,
   readDisplayState,
+  sendAction,
   runActions,
   startStandardRun,
   waitForScreen,
@@ -22,6 +23,7 @@ function usage(): void {
   console.log(`Usage:
   sts2play.ts status [--easy | --hard | --full]
   sts2play.ts command <action> [action...] [--batch] [--character <id>] [--seed <seed>] [--act1 <act>] [--strict false] [--settle-timeout-ms <ms>] [--easy | --hard | --full]
+  sts2play.ts inspect-deck [--easy | --hard | --full]
   sts2play.ts wait-screen <screenType> [--easy | --hard | --full]
   sts2play.ts start-standard [--character <id>] [--seed <seed>] [--act1 <act>] [--easy | --hard | --full]
 `);
@@ -50,6 +52,39 @@ function printCommandResult(result: RunActionsResult, options: RuntimeCommandOpt
   printCliOutput(view, { options });
 }
 
+async function inspectDeck(options: RuntimeCommandOptions): Promise<void> {
+  const state = await readDisplayState();
+  if (!state) {
+    throw new Error("Cannot inspect deck without a live gameplay state.");
+  }
+
+  if (isCombatScreenType(state.screenType)) {
+    throw new Error("inspect-deck is currently only supported from non-combat in-run screens.");
+  }
+
+  const sourceScreenType = state.screenType ?? null;
+  const alreadyOpen = state.screenType === "deck_view" || state.screenType === "card_pile";
+  const deckState = alreadyOpen
+    ? state
+    : (await sendAction("top_bar.deck", options)).state;
+
+  if (!deckState || (deckState.screenType !== "deck_view" && deckState.screenType !== "card_pile")) {
+    throw new Error(`Deck inspect expected deck_view or card_pile, got '${deckState?.screenType ?? "unknown"}'.`);
+  }
+
+  let restoredScreenType = deckState.screenType ?? null;
+  if (!alreadyOpen && (deckState.actions ?? []).includes("top_bar.deck")) {
+    const restored = await sendAction("top_bar.deck", options);
+    restoredScreenType = restored.state?.screenType ?? restoredScreenType;
+  }
+
+  printCliOutput({
+    sourceScreenType,
+    restoredScreenType,
+    deckView: buildGameplayView(deckState, options),
+  }, { options });
+}
+
 async function main(): Promise<void> {
   const { positional, options } = parseArgs(process.argv.slice(2));
   const command = positional[0];
@@ -57,6 +92,9 @@ async function main(): Promise<void> {
   switch (command) {
     case "status":
       printState(await readDisplayState(), options, { dedupe: true });
+      return;
+    case "inspect-deck":
+      await inspectDeck(options);
       return;
     case "command": {
       const actions = positional.slice(1);
