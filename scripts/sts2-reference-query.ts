@@ -5,6 +5,7 @@ import { fileExists, readJson } from "/home/igorw/Work/STS2/reference/src/io/fs.
 import { searchLibrary } from "/home/igorw/Work/STS2/reference/src/query/search.ts";
 import type { EntityKind, ReferenceLibrary, SearchResult } from "/home/igorw/Work/STS2/reference/src/types.ts";
 import { parseArgs } from "./lib/args.ts";
+import { printJson } from "./lib/json-output.ts";
 import type { ParsedArgs } from "./lib/types.ts";
 
 function printTextResult(results: SearchResult[]): void {
@@ -69,7 +70,7 @@ function main(): void {
   });
 
   if (options.json) {
-    console.log(JSON.stringify(results, null, 2));
+    printJson(results);
     return;
   }
 

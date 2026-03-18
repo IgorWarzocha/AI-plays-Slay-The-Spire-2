@@ -6,6 +6,7 @@ import path from "node:path";
 import { RUNTIME_REFERENCE_PATH, RUNTIME_SOURCE_SUMMARY_PATH } from "/home/igorw/Work/STS2/reference/src/config.ts";
 import { fileExists, readJson, writeJson } from "/home/igorw/Work/STS2/reference/src/io/fs.ts";
 import type { BaseEntity, CardEntity, EventEntity, ReferenceLibrary, RelicEntity, SourceSummary } from "/home/igorw/Work/STS2/reference/src/types.ts";
+import { printJson } from "./lib/json-output.ts";
 
 const VAULT_DIR = "/home/igorw/Work/STS2/runtime/vault";
 const INDEX_PATH = path.join(VAULT_DIR, "index.json");
@@ -172,7 +173,7 @@ function main(): void {
 
   writeJson(INDEX_PATH, index);
 
-  console.log(JSON.stringify({
+  printJson({
     ok: true,
     indexPath: INDEX_PATH,
     vaultDir: VAULT_DIR,
@@ -182,7 +183,7 @@ function main(): void {
       relics: library.relics.length,
       events: library.events.length,
     },
-  }, null, 2));
+  });
 }
 
 main();

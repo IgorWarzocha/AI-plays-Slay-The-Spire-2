@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { buildRunSummary, printRunSummary } from './scripts/lib/run-save-summary.ts';
+import { printJson } from './scripts/lib/json-output.ts';
 
 function abbreviateNodeType(type: string | null | undefined): string {
   switch (String(type ?? '').toLowerCase()) {
@@ -34,7 +35,7 @@ const summary = buildRunSummary(explicitPath);
 if (fullMode) {
   printRunSummary(summary, { full: true });
 } else {
-  console.log(JSON.stringify({
+  printJson({
     floor: summary.position.currentFloor,
     boss: summary.act.bossShortId ?? summary.act.bossId,
     currentNode: summary.position.currentNode,
@@ -48,5 +49,5 @@ if (fullMode) {
           .join(' -> '),
       })),
     })),
-  }, null, 2));
+  });
 }

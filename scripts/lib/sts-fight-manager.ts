@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { toCompactJson } from './json-output.ts';
 import { readDisplayState, sendAction } from './sts2-runtime.ts';
 import { buildCombatView, buildGameplayView } from './sts2-game-view.ts';
 import type { DisplayState } from './types.ts';
@@ -169,7 +170,7 @@ export function ensureStsManagerDataDir(): void {
 
 export function writeLastFightReport(report: unknown): void {
   ensureStsManagerDataDir();
-  fs.writeFileSync(STS_LAST_REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(STS_LAST_REPORT_PATH, `${toCompactJson(report)}\n`, 'utf8');
 }
 
 export function readLastFightReport(): string | null {
@@ -194,7 +195,7 @@ export function buildHardView(state: DisplayState | null | undefined): unknown {
 }
 
 export function buildHardViewText(state: DisplayState | null | undefined): string {
-  return JSON.stringify(buildHardView(state), null, 2);
+  return toCompactJson(buildHardView(state));
 }
 
 export async function readHardState(): Promise<{ state: DisplayState | null; view: unknown; text: string }> {
@@ -203,7 +204,7 @@ export async function readHardState(): Promise<{ state: DisplayState | null; vie
   return {
     state,
     view,
-    text: JSON.stringify(view, null, 2),
+    text: toCompactJson(view),
   };
 }
 
@@ -219,7 +220,7 @@ export async function runActionWithHardView(action: string): Promise<{
   return {
     state,
     view,
-    text: JSON.stringify(view, null, 2),
+    text: toCompactJson(view),
     resolvedAction: result.resolvedAction ?? action,
   };
 }

@@ -8,6 +8,7 @@ import {
   quitGame,
   restartGame,
 } from "./lib/sts2-runtime.ts";
+import { printJson } from "./lib/json-output.ts";
 
 function usage() {
   console.log(`Usage:
@@ -21,7 +22,7 @@ function usage() {
 
 function printStatus() {
   return buildAdminStatus().then((status) => {
-    console.log(JSON.stringify(status, null, 2));
+    printJson(status);
   });
 }
 
@@ -46,7 +47,7 @@ async function main() {
       await printStatus();
       return;
     case "monitor-capture":
-      console.log(JSON.stringify(await captureLiveStatus(), null, 2));
+      printJson(await captureLiveStatus());
       return;
     default:
       usage();
