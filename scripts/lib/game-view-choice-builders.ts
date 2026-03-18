@@ -8,6 +8,7 @@ import type {
   PotionState,
 } from './types.ts';
 import type { ChoiceView, ViewMode } from './types/views.ts';
+import { normalizeGameText } from './text-normalization.ts';
 
 type CompactViewMode = Exclude<ViewMode, 'full'>;
 
@@ -30,15 +31,7 @@ function isSkippedAction(action: string): boolean {
 }
 
 function collapseWhitespace(value: string | null | undefined): string | null {
-  if (!value) {
-    return null;
-  }
-
-  const normalized = value
-    .replace(/\[(?:\/?(?:center|left|right|gold|blue|green|red|purple|orange|white|black|gray|grey|small|tiny|large|bold|italic|b|i|u))\]/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return normalized.length > 0 ? normalized : null;
+  return normalizeGameText(value);
 }
 
 function parsePotionChoiceAction(action: string): { mode: 'use' | 'discard'; potionId: string } | null {

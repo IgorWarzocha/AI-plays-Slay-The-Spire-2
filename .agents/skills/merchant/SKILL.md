@@ -15,6 +15,11 @@ Shops are hard.
 - Do not rely on `--easy` for shop decisions unless you are only confirming a single already-settled follow-through.
 - Use `--full` only if the shop surface looks inconsistent or a state/export bug is suspected.
 
+Interpret the modes like this:
+
+- `--easy` is the execution surface for an already-settled shop line.
+- `--hard` is the planning surface for actually deciding what to buy, skip, remove, or leave behind.
+
 Reason: merchant choices are dense and expensive. They combine gold, path pressure, deck shape, relic text, potion slots, and opportunity cost, so the compact view is usually too lossy for real shop decisions.
 
 ## Required Reading

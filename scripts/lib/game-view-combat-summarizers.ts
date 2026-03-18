@@ -12,6 +12,7 @@ import type {
   PotionState,
   PotionView,
 } from './types.ts';
+import { normalizeGameText } from './text-normalization.ts';
 import type { ViewMode } from './view-options.ts';
 
 function summarizeOverlay(
@@ -27,8 +28,8 @@ function summarizeOverlay(
     kind: overlay.kind,
     type: overlay.typeName ?? null,
     title: overlay.title ?? null,
-    description: compact ? null : (overlay.description ?? null),
-    extraCardText: compact ? null : (overlay.extraCardText ?? null),
+    description: compact ? null : normalizeGameText(overlay.description),
+    extraCardText: compact ? null : normalizeGameText(overlay.extraCardText),
     amount: overlay.amount ?? null,
     status: overlay.status ?? null,
     overlayPath: compact ? null : (overlay.overlayPath ?? null),
@@ -44,7 +45,7 @@ export function summarizeCombatCard(card: CombatCardState, mode: Exclude<ViewMod
     id: card.id,
     title: card.title,
     cost: card.costText ?? null,
-    description: compact ? null : (card.description ?? null),
+    description: compact ? null : normalizeGameText(card.description),
     playable: card.isPlayable,
     upgraded: card.upgraded,
     affliction: summarizeOverlay(card.affliction, mode),
@@ -53,7 +54,7 @@ export function summarizeCombatCard(card: CombatCardState, mode: Exclude<ViewMod
       reason: card.unplayable.reason ?? null,
       preventerType: card.unplayable.preventerType ?? null,
       preventerTitle: compact ? null : (card.unplayable.preventerTitle ?? null),
-      preventerDescription: compact ? null : (card.unplayable.preventerDescription ?? null),
+      preventerDescription: compact ? null : normalizeGameText(card.unplayable.preventerDescription),
     } : null,
     glowsGold: card.glowsGold ?? false,
     glowsRed: card.glowsRed ?? false,
@@ -78,7 +79,7 @@ export function summarizePotion(potion: PotionState, mode: Exclude<ViewMode, 'fu
     slot: potion.slotIndex ?? null,
     occupied: potion.hasPotion ?? true,
     title: potion.title,
-    description: compact ? null : (potion.description ?? null),
+    description: compact ? null : normalizeGameText(potion.description),
     usable: potion.isUsable,
     discardable: compact ? undefined : potion.canDiscard,
     usage: compact ? null : (potion.usage ?? null),
@@ -107,8 +108,8 @@ export function summarizeCreature(creature: CreatureState, mode: Exclude<ViewMod
       kind: intent.kind,
       label: intent.label ?? null,
       title: intent.title ?? null,
-      description: compact ? null : (intent.description ?? null),
-      summary: intent.summary ?? null,
+      description: compact ? null : normalizeGameText(intent.description),
+      summary: normalizeGameText(intent.summary),
       targets: compact ? [] : (intent.targets ?? []),
     })),
   };

@@ -1,4 +1,5 @@
 import type { ButtonView, CharacterState, MenuItemState, MenuItemView, ProfileState, RelicState } from './types.ts';
+import { normalizeGameText } from './text-normalization.ts';
 
 export function summarizeButton(button: { id: string; enabled?: boolean; selected?: boolean }): ButtonView {
   return {
@@ -16,7 +17,7 @@ export function summarizeRelic(relic: RelicState): RelicState {
   return {
     id: relic.id,
     label: relic.label,
-    description: relic.description ?? null,
+    description: normalizeGameText(relic.description),
     count: relic.count ?? null,
     status: relic.status ?? null,
   };
@@ -26,7 +27,7 @@ export function summarizeMenuItem(item: MenuItemState): MenuItemView {
   return {
     id: item.id,
     label: item.label,
-    description: item.description ?? null,
+    description: normalizeGameText(item.description),
     enabled: item.enabled,
     selected: item.selected,
   };

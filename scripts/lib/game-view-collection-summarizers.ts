@@ -17,6 +17,7 @@ import type {
   RunHistoryView,
 } from './types.ts';
 import { summarizeRelic } from './game-view-common-summarizers.ts';
+import { normalizeGameText } from './text-normalization.ts';
 import type { ViewMode } from './view-options.ts';
 
 function summarizeMapPoint(point: MapPointState): MapPointView {
@@ -77,7 +78,7 @@ export function summarizeCardBrowse(cardBrowse: CardBrowseState, mode: Exclude<V
       title: card.title,
       cost: card.costText ?? null,
       upgraded: card.upgraded,
-      description: mode === 'easy' ? null : (card.description ?? null),
+      description: mode === 'easy' ? null : normalizeGameText(card.description),
       playable: card.isPlayable,
       affliction: null,
       enchantment: null,
@@ -134,7 +135,7 @@ function summarizeRunHistoryDeckCard(card: RunHistoryCardRecord): RunHistoryDeck
     upgraded: card.upgraded ?? false,
     count: card.count ?? 1,
     floorsAdded: card.floorsAdded ?? [],
-    description: card.description ?? null,
+    description: normalizeGameText(card.description),
   };
 }
 

@@ -18,6 +18,7 @@ import {
   summarizeRunHistory,
 } from './game-view-summarizers.ts';
 import { buildCombatChoices, buildGameplayChoices } from './game-view-choice-builders.ts';
+import { normalizeGameText, normalizeGameTextList } from './text-normalization.ts';
 import { resolveViewMode, resolveViewPreferences } from './view-options.ts';
 
 function buildTopBarView(topBar: TopBarState | null | undefined): TopBarView | null {
@@ -86,7 +87,7 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
   };
 
   if (viewPreferences.includeNotes) {
-    view.notes = state.notes ?? [];
+    view.notes = normalizeGameTextList(state.notes ?? []);
   }
 
   switch (state.screenType) {
@@ -101,7 +102,7 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
     case 'event':
       view.event = {
         title: state.eventTitle ?? null,
-        description: state.eventDescription ?? null,
+        description: normalizeGameText(state.eventDescription),
       };
       break;
     case 'map':
@@ -163,7 +164,7 @@ export function buildCombatView(state: DisplayState | null | undefined, options:
     relics: viewPreferences.includeRelicDetails
       ? (state.relics ?? []).map(summarizeRelic)
       : (state.relics ?? []).map(summarizeRelicLabel),
-    notes: viewPreferences.includeNotes ? (state.notes ?? []) : [],
+    notes: viewPreferences.includeNotes ? normalizeGameTextList(state.notes ?? []) : [],
     combat: state.combat ? summarizeCombat(state.combat, viewPreferences.mode) : null,
     choices: buildCombatChoices(state, viewPreferences.mode),
   };

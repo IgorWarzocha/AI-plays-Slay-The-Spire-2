@@ -55,6 +55,12 @@ Then make the safest defensible decision available and update the skill referenc
 - If the fight exposes a new pattern, stop and classify it before autopiloting: race, setup, board control, breakpoint, or phase-management.
 - Do not confuse a hard fight with hard execution on every click. Once a turn is solved, use the combat skill's `--easy` / `--batch` posture and execute cleanly.
 
+View-mode reminder:
+
+- Use `--hard` to solve the turn or the fight phase.
+- Use `--easy` only after the line is solved and you are mostly executing immediate choices.
+- If new information appears mid-turn, the posture flips back to `--hard` immediately.
+
 ## Post Mortem
 
 - After every elite or boss fight, update the run log and the matching reference note with the smallest reusable lesson set.

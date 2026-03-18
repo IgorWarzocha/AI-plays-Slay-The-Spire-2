@@ -20,10 +20,11 @@ Implementation note: keep the operator surface simple. Do not add new operator-f
 - P1 default suppression of compact top-bar button boilerplate
 - P1 duplicate-label disambiguation for exact card-select actions such as `Strike` vs `Strike+` and multiple `Strike` copies
 - P1 preservation of exact control by keeping exact actions whenever aliasing would lose information
+- P2 partial compact text normalization for notes, event text, choice descriptions, and common compact combat/relic/potion/card descriptions
 
 ### Partially implemented
 
-- P1 text cleanup: hotkey-only boilerplate is suppressed and some presentation tags are normalized, but rich-text cleanup is not yet comprehensive
+- broader rich-text cleanup is still incomplete; the current pass handles common formatting tags and energy icon normalization, but it is intentionally conservative
 
 ### Not yet implemented
 
@@ -277,7 +278,7 @@ Potential future flags can be reconsidered only if a real need appears after the
 6. omit top bar buttons by default
 7. strip formatting markup in compact/agent mode
 
-Status: 5 and 6 are implemented. 7 is only partially implemented.
+Status: 5 and 6 are implemented. 7 is partially implemented with a conservative normalization pass.
 
 ### Phase 3: best long-term architecture
 
@@ -319,6 +320,6 @@ If implementing only the most important improvements first, the strongest order 
 
 Current next slice:
 
-1. finish careful text normalization for compact `choices` and other compact descriptions without losing gameplay semantics
-2. add stable-context hashing/delta ideas for large persistent sections like relics/deck/map
+1. extend text normalization only where live evidence shows more safe wins
+2. add stable-context hashing/delta ideas for large persistent sections like relics/deck/map, with `--hard` kept conservative
 3. consider broader screen-specific compact schemas once the `choices` layer has stabilized in live play

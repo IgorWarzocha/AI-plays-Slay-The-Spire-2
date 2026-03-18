@@ -55,8 +55,8 @@ If the fight is an elite or boss, also read:
 
 ## View Modes: Easy Turn vs Hard Turn
 
-- `--easy`: use this when the next decision is genuinely simple and the turn is mostly execution.
-- `--hard`: use this when the turn is genuinely strategic, branching, dangerous, or information-dense.
+- `--easy`: use this when the next decision is genuinely simple and the turn is mostly execution. Treat this as a **compressed execution surface**: it should be biased toward immediate choices, obvious follow-through, and low-ambiguity state.
+- `--hard`: use this when the turn is genuinely strategic, branching, dangerous, or information-dense. Treat this as the **planning surface**: it should be biased toward preserving the context needed for meaningful combat reasoning.
 - `--full`: raw debug dump. Use this only when the structured surfaces are insufficient or a surface/export bug is suspected.
 
 Default posture:
@@ -65,6 +65,13 @@ Default posture:
 - switch to `--hard` before meaningful planning, potion decisions, unusual mechanics, elites, bosses, or any uncertain lethal/survival math
 - if an `--easy` read leads into new draw, generated cards, cost changes, a prompt, changed targeting, or any branch you did not already understand, stop and re-read with `--hard`
 - switch to `--full` only for debugging or surface validation
+
+Another way to phrase it:
+
+- `--easy` answers: **"What are my immediate choices, and is this turn already solved?"**
+- `--hard` answers: **"What do I need to know to plan this turn correctly?"**
+
+Do not expect `--easy` to carry every stable detail. It is intentionally more filtered. If the line depends on richer context, that is a sign to switch to `--hard`, not a reason to force `--easy` to behave like a planning read.
 
 The important distinction is not just combat vs non-combat, but **easy turn vs hard turn**. A combat turn can start easy and become hard mid-turn.
 
