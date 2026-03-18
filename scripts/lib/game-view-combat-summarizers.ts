@@ -103,14 +103,18 @@ export function summarizeCreature(creature: CreatureState, mode: Exclude<ViewMod
         ...(power.title != null ? { title: power.title } : {}),
         amount: power.amount ?? null,
       }))
-      : (creature.powers ?? []),
+      : (creature.powers ?? []).map((power) => ({
+        ...power,
+        ...('description' in power && typeof power.description === 'string'
+          ? { description: normalizeGameText(power.description) }
+          : {}),
+      })),
     intents: (creature.intents ?? []).map((intent: CreatureIntentState) => ({
       kind: intent.kind,
       label: intent.label ?? null,
       title: intent.title ?? null,
       description: compact ? null : normalizeGameText(intent.description),
       summary: normalizeGameText(intent.summary),
-      targets: compact ? [] : (intent.targets ?? []),
     })),
   };
 }

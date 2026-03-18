@@ -23,10 +23,18 @@ Implementation note: keep the operator surface simple. Do not add new operator-f
 - P2 partial compact text normalization for notes, event text, choice descriptions, and common compact combat/relic/potion/card descriptions
 - easy-mode status output now omits some unchanged stable sections, currently focused on relics and merchant deck snapshots, while `--hard` remains conservative
 - added dedicated live card-browse inspection commands that open deck/draw/discard/exhaust overlays, capture the live browse view, restore the prior screen, and return a standard command-style payload with the restored state plus the captured snapshot
+- command and inspect surfaces now participate in easy-mode nested stable-section omission while preserving the returned post-command overview
+- easy deck and pile browse snapshots now omit overlay-context noise such as relics, potions, and false glow flags where safe
+- reward/card-reward choice cleanup now dedupes equivalent skip actions into a single surfaced skip choice
+- merchant inventory now includes disabled or unaffordable entries in compact views via `enabled: false` instead of hiding them
+- merchant compact choices now use stable aliases without volatile slot indices when the alias is unique, while command normalization resolves those aliases back to the live raw action ids
+- merchant alias normalization fails hard on ambiguous aliases and on disabled or unavailable entries instead of guessing
+- merchant buy follow-through now waits for settled gold after purchases rather than accepting early stale inventory frames
 
 ### Partially implemented
 
 - broader rich-text cleanup is still incomplete; the current pass handles common formatting tags and energy icon normalization, but it is intentionally conservative
+- stable-section omission is intentionally selective rather than comprehensive; the current pass covers known-safe easy-mode sections but is not yet a generalized hash/delta architecture
 
 ### Not yet implemented
 
@@ -206,6 +214,8 @@ Then allow explicit expansion when needed.
 
 Current implementation note: the first safe pass is intentionally smaller. In easy-mode status polling, some unchanged stable sections can now be omitted between reads. Hard-mode reads remain conservative and should continue to surface the richer planning context.
 
+Current implementation note: command and inspect payloads now also support easy-mode nested omission for unchanged stable subviews such as returned `state`, `deckView`, and `pileView`, while still preserving action results and restored-state context.
+
 #### 10. Use minimal screen-specific schemas
 
 Rather than one generalized view carrying too much optional structure, prefer screen-specific minimal forms.
@@ -326,6 +336,7 @@ If implementing only the most important improvements first, the strongest order 
 
 Current next slice:
 
-1. extend text normalization only where live evidence shows more safe wins
-2. expand stable-context handling only where live evidence shows safe wins, with `--hard` kept conservative
-3. consider broader screen-specific compact schemas once the `choices` layer has stabilized in live play
+1. extend text normalization only where live evidence shows more safe wins, especially remaining repetitive merchant, reward, and potion wrapper text
+2. expand easy-only stable-context handling only where live evidence shows safe wins, with `--hard` kept conservative
+3. continue validating specialized live surfaces that are now implemented, especially combat choice overlays, multi-enemy intent screens, and exhaust-pile inspection when available
+4. consider broader screen-specific compact schemas once the `choices` layer and stable aliases have stabilized in live play

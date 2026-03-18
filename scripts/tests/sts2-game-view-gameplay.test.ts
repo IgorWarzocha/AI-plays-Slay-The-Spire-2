@@ -222,16 +222,20 @@ test("buildGameplayView preserves readable combat intent summaries", () => {
               targets: ["player"],
             },
           ],
-          powers: [{ title: "Intangible", amount: 1 }],
+          powers: [{ title: "Intangible", amount: 1, description: "Ignore [gold]most[/gold] damage." }],
         },
       ],
     },
   };
 
   const view = buildGameplayView(state, { hard: true });
-  assert.equal(expectDefined(expectDefined(expectDefined(view.combat).creatures[0]).intents[0]).summary, "18 damage");
-  assert.equal(expectDefined(expectDefined(expectDefined(view.combat).creatures[0]).intents[0]).title, "Heavy Slam");
-  assert.equal(expectDefined(expectDefined(view.combat).creatures[0]).powers[0]?.title, "Intangible");
+  const creature = expectDefined(expectDefined(view.combat).creatures[0]);
+  const intent = expectDefined(creature.intents[0]);
+  assert.equal(intent.summary, "18 damage");
+  assert.equal(intent.title, "Heavy Slam");
+  assert.equal(intent.targets, undefined);
+  assert.equal(creature.powers[0]?.title, "Intangible");
+  assert.equal(creature.powers[0]?.description, "Ignore most damage.");
 });
 
 test("buildGameplayView preserves card reward alternatives like skip", () => {

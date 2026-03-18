@@ -92,7 +92,7 @@ export interface CreatureIntentView {
   title: string | null;
   description: string | null;
   summary: string | null;
-  targets: string[];
+  targets?: string[];
 }
 
 export interface CreatureView {

@@ -8,6 +8,7 @@ import {
 } from "./lib/sts2-runtime.ts";
 import { assertCombatActions } from "./lib/action-scopes.ts";
 import { buildStatusCacheKey, printCliOutput } from "./lib/cli-output.ts";
+import { assertPileInspectOptions } from "./lib/inspect-options.ts";
 import { buildCombatCommandView, buildCombatView, buildDeckInspectView, buildPileInspectView } from "./lib/sts2-game-view.ts";
 import { inspectDeck, inspectPile } from "./lib/deck-inspection.ts";
 import type { DisplayState, RuntimeCommandOptions } from "./lib/types.ts";
@@ -17,9 +18,9 @@ function usage(): void {
   sts2combat.ts status [--easy | --hard | --full]
   sts2combat.ts command <action> [action...] [--batch] [--strict false] [--settle-timeout-ms <ms>] [--easy | --hard | --full]
   sts2combat.ts inspect-deck [--easy | --hard | --full]
-  sts2combat.ts inspect-draw [--easy | --hard | --full]
-  sts2combat.ts inspect-discard [--easy | --hard | --full]
-  sts2combat.ts inspect-exhaust [--easy | --hard | --full]
+  sts2combat.ts inspect-draw [--easy]
+  sts2combat.ts inspect-discard [--easy]
+  sts2combat.ts inspect-exhaust [--easy]
   sts2combat.ts wait-screen <screenType> [--easy | --hard | --full]
 `);
 }
@@ -50,18 +51,21 @@ async function main(): Promise<void> {
       });
       return;
     case "inspect-draw":
+      assertPileInspectOptions(options);
       printCliOutput(buildPileInspectView(await inspectPile("draw", options), options), {
         options,
         cacheKey: buildStatusCacheKey('sts2combat:inspect-draw', options),
       });
       return;
     case "inspect-discard":
+      assertPileInspectOptions(options);
       printCliOutput(buildPileInspectView(await inspectPile("discard", options), options), {
         options,
         cacheKey: buildStatusCacheKey('sts2combat:inspect-discard', options),
       });
       return;
     case "inspect-exhaust":
+      assertPileInspectOptions(options);
       printCliOutput(buildPileInspectView(await inspectPile("exhaust", options), options), {
         options,
         cacheKey: buildStatusCacheKey('sts2combat:inspect-exhaust', options),
