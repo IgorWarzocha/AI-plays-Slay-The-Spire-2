@@ -401,6 +401,51 @@ test("buildGameplayView easy mode strips noisy collections and empty potion slot
   assert.equal(expectDefined(expectDefined(view.cardBrowse).cards[0]).description, null);
 });
 
+test("buildGameplayView easy deck view focuses on the deck list", () => {
+  const state = {
+    screenType: "deck_view",
+    updatedAtUtc: "2026-03-17T12:41:00.000Z",
+    topBar: {
+      currentHp: 87,
+      maxHp: 90,
+      gold: 282,
+      potionSlotCount: 3,
+      filledPotionSlotCount: 2,
+      emptyPotionSlotCount: 1,
+      buttons: [],
+    },
+    relics: [
+      { id: "BurningBlood", label: "Burning Blood", description: "Heal 6 HP.", count: null, status: "Active" },
+    ],
+    potions: [
+      { id: "potion-01:strength-potion", slotIndex: 1, hasPotion: true, title: "Strength Potion", description: "Gain 2 Strength.", usage: "CombatOnly", isUsable: false, canDiscard: true },
+      { id: "potion-02:energy-potion", slotIndex: 2, hasPotion: true, title: "Energy Potion", description: "Gain 2 Energy.", usage: "CombatOnly", isUsable: false, canDiscard: true },
+    ],
+    actions: ["deck_view.sort:obtained", "top_bar.deck"],
+    menuItems: [
+      { id: "obtained", label: "Obtained", description: "Sort deck by obtained.", enabled: true, selected: false },
+    ],
+    cardBrowse: {
+      kind: "deck_view",
+      title: "Deck",
+      pileType: "Deck",
+      cardCount: 1,
+      canClose: true,
+      cards: [
+        { id: "c1", title: "Strike", costText: "1", upgraded: false, description: "Deal 6 damage.", glowsGold: false, glowsRed: false },
+      ],
+    },
+  };
+
+  const view = buildGameplayView(state, { easy: true });
+  assert.equal(view.relics, undefined);
+  assert.equal(view.potions, undefined);
+  assert.equal(expectDefined(expectDefined(view.cardBrowse).cards[0]).description, null);
+  assert.equal(expectDefined(expectDefined(view.cardBrowse).cards[0]).glowsGold, undefined);
+  assert.equal(expectDefined(expectDefined(view.cardBrowse).cards[0]).glowsRed, undefined);
+  assert.equal(expectDefined(view.topBar).hp, "87/90");
+});
+
 test("buildGameplayView disambiguates duplicate card-select labels while preserving exact actions", () => {
   const state = {
     screenType: "deck_card_select",

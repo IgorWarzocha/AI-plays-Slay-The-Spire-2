@@ -68,8 +68,8 @@ export interface CombatCardView {
   affliction: CardOverlayView | null;
   enchantment: CardOverlayView | null;
   unplayable: UnplayableView | null;
-  glowsGold: boolean;
-  glowsRed: boolean;
+  glowsGold: boolean | undefined;
+  glowsRed: boolean | undefined;
   targets: string[];
   upgraded: boolean | undefined;
 }
@@ -243,8 +243,8 @@ export interface GameplayView {
   screenType: string | null;
   updatedAtUtc: string | null;
   topBar: TopBarView | null;
-  relics: Array<string | RelicState>;
-  potions: PotionView[];
+  relics?: Array<string | RelicState>;
+  potions?: PotionView[];
   choices?: ChoiceView[];
   notes?: string[];
   profiles?: ProfileState[];

@@ -83,8 +83,12 @@ export function summarizeCardBrowse(cardBrowse: CardBrowseState, mode: Exclude<V
       affliction: null,
       enchantment: null,
       unplayable: null,
-      glowsGold: card.glowsGold ?? false,
-      glowsRed: card.glowsRed ?? false,
+      glowsGold: mode === 'easy'
+        ? (card.glowsGold ? true : undefined)
+        : (card.glowsGold ?? false),
+      glowsRed: mode === 'easy'
+        ? (card.glowsRed ? true : undefined)
+        : (card.glowsRed ?? false),
       targets: card.validTargetIds ?? [],
     })),
   };

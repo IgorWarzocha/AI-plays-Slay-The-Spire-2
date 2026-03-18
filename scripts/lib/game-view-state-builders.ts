@@ -72,17 +72,20 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
   const includeRelicDetails = viewPreferences.includeRelicDetails
     || state.screenType === 'merchant_room'
     || state.screenType === 'merchant_inventory';
+  const omitDeckOverlayContext = viewPreferences.mode === 'easy' && state.screenType === 'deck_view';
+  const relics = includeRelicDetails
+    ? (state.relics ?? []).map(summarizeRelic)
+    : (state.relics ?? []).map(summarizeRelicLabel);
+  const potions = (state.potions ?? [])
+    .map((potion) => summarizePotion(potion, viewPreferences.mode))
+    .filter((potion) => !viewPreferences.occupiedPotionsOnly || potion.occupied);
 
   const view: GameplayView = {
     screenType: state.screenType ?? null,
     updatedAtUtc: state.updatedAtUtc ?? null,
     topBar: buildTopBarView(state.topBar),
-    relics: includeRelicDetails
-      ? (state.relics ?? []).map(summarizeRelic)
-      : (state.relics ?? []).map(summarizeRelicLabel),
-    potions: (state.potions ?? [])
-      .map((potion) => summarizePotion(potion, viewPreferences.mode))
-      .filter((potion) => !viewPreferences.occupiedPotionsOnly || potion.occupied),
+    ...(omitDeckOverlayContext ? {} : { relics }),
+    ...(omitDeckOverlayContext ? {} : { potions }),
     choices: buildGameplayChoices(state, viewPreferences.mode),
   };
 
