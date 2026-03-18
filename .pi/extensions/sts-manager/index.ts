@@ -27,6 +27,7 @@ const SUBAGENT_MODE_ENV = "PI_STS_SUBAGENT_MODE";
 const SUBAGENT_KIND_ENV = "PI_STS_SUBAGENT_KIND";
 const SUBAGENT_LOAD_FIGHT_ENV = "PI_STS_SUBAGENT_LOAD_FIGHT";
 const SUBAGENT_PREFIGHT_STATE_ENV = "PI_STS_SUBAGENT_PREFIGHT_STATE";
+const SUBAGENT_RESULT_PATH_ENV = "PI_STS_SUBAGENT_RESULT_PATH";
 
 const MAIN_SYSTEM_APPENDIX = `
 STS combat delegation is extension-owned in this repo.
@@ -85,7 +86,41 @@ interface StartFightDetails {
   loadFight: string;
   summary: string;
   completedAtUtc: string;
+  completedFight: boolean;
+  incompleteReason?: string;
+  rewardAction?: string | null;
+  rewardState?: string;
+  logPath?: string;
   stderr?: string;
+}
+
+interface EndFightCapture {
+  kind: FightKind;
+  logPath: string;
+  executedAction: string | null;
+  rewardText: string;
+}
+
+function getLastAssistantTextFromMessages(
+  messages: Array<{ role?: string; content?: Array<{ type: string; text?: string }> }> | undefined,
+): string {
+  if (!Array.isArray(messages)) {
+    return "";
+  }
+
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (message?.role !== "assistant") {
+      continue;
+    }
+
+    const text = stringifyTextContent(message.content ?? []);
+    if (text) {
+      return text;
+    }
+  }
+
+  return "";
 }
 
 function isCombatScreen(screenType: string | null | undefined): boolean {
@@ -140,7 +175,15 @@ function writePromptToTempFile(prefix: string, body: string): { dir: string; fil
 async function spawnFightSubagent(
   params: StartFightParamsType,
   signal: AbortSignal | undefined,
-): Promise<{ summary: string; stderr: string; model: string; loadFight: string }> {
+): Promise<{
+  summary: string;
+  stderr: string;
+  model: string;
+  loadFight: string;
+  endFight: EndFightCapture | null;
+  sawAgentEnd: boolean;
+  exitCode: number;
+}> {
   const config = readFightAgentConfig(params.fight_type);
   const model = buildSubagentModel(config);
   const prefightState = await readHardState();
@@ -151,6 +194,7 @@ async function spawnFightSubagent(
   }
 
   const { dir, filePath } = writePromptToTempFile(params.fight_type, config.promptBody);
+  const resultPath = path.join(dir, "end-fight-result.json");
 
   const args = [
     "--mode", "json",
@@ -168,9 +212,10 @@ async function spawnFightSubagent(
       [SUBAGENT_KIND_ENV]: params.fight_type,
       [SUBAGENT_LOAD_FIGHT_ENV]: loadFight,
       [SUBAGENT_PREFIGHT_STATE_ENV]: prefightState.text,
+      [SUBAGENT_RESULT_PATH_ENV]: resultPath,
     };
 
-    const result = await new Promise<{ exitCode: number; summary: string; stderr: string }>((resolve) => {
+    const result = await new Promise<{ exitCode: number; summary: string; stderr: string; sawAgentEnd: boolean }>((resolve) => {
       const proc = spawn("pi", args, {
         cwd: process.cwd(),
         env: childEnv,
@@ -181,12 +226,13 @@ async function spawnFightSubagent(
       let stdoutBuffer = "";
       let stderr = "";
       let lastAssistantText = "";
+      let sawAgentEnd = false;
       let settled = false;
 
       const finish = (exitCode: number) => {
         if (settled) return;
         settled = true;
-        resolve({ exitCode, summary: lastAssistantText.trim(), stderr: stderr.trim() });
+        resolve({ exitCode, summary: lastAssistantText.trim(), stderr: stderr.trim(), sawAgentEnd });
       };
 
       const processLine = (line: string) => {
@@ -198,10 +244,19 @@ async function spawnFightSubagent(
               role?: string;
               content?: Array<{ type: string; text?: string }>;
             };
+            messages?: Array<{ role?: string; content?: Array<{ type: string; text?: string }> }>;
           };
 
           if (event.type === "message_end" && event.message?.role === "assistant") {
             const text = stringifyTextContent(event.message.content ?? []);
+            if (text) {
+              lastAssistantText = text;
+            }
+          }
+
+          if (event.type === "agent_end") {
+            sawAgentEnd = true;
+            const text = getLastAssistantTextFromMessages(event.messages);
             if (text) {
               lastAssistantText = text;
             }
@@ -247,14 +302,28 @@ async function spawnFightSubagent(
       }
     });
 
-    if (result.exitCode !== 0) {
-      throw new Error(result.stderr || `Fight subagent exited with code ${result.exitCode}.`);
-    }
-    if (!result.summary) {
-      throw new Error("Fight subagent finished without a final summary.");
+    let endFight: EndFightCapture | null = null;
+    if (fs.existsSync(resultPath)) {
+      try {
+        endFight = JSON.parse(fs.readFileSync(resultPath, "utf8")) as EndFightCapture;
+      } catch {
+        endFight = null;
+      }
     }
 
-    return { summary: result.summary, stderr: result.stderr, model, loadFight };
+    if (result.exitCode !== 0 && !endFight && !result.summary && !result.sawAgentEnd) {
+      throw new Error(result.stderr || `Fight subagent exited with code ${result.exitCode}.`);
+    }
+
+    return {
+      summary: result.summary || "(No final assistant summary captured.)",
+      stderr: result.stderr,
+      model,
+      loadFight,
+      endFight,
+      sawAgentEnd: result.sawAgentEnd,
+      exitCode: result.exitCode,
+    };
   } finally {
     try {
       fs.unlinkSync(filePath);
@@ -285,8 +354,9 @@ function buildBootstrapMessage(kind: FightKind, loadFight: string, prefightState
 
 function buildCompactFightResult(details: StartFightDetails): string[] {
   return [
-    `✓ ${details.fightType} fight delegated via ${details.model}`,
+    `${details.completedFight ? "✓" : "!"} ${details.fightType} fight delegated via ${details.model}`,
     `load_fight: ${details.loadFight}`,
+    `reward action: ${details.rewardAction ?? "none"}`,
     truncate(details.summary.replace(/\s+/g, " "), 160),
   ];
 }
@@ -300,6 +370,13 @@ function registerFightDelegationTool(pi: ExtensionAPI): void {
     async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
       const startParams = params as StartFightParamsType;
       const outcome = await spawnFightSubagent(startParams, signal);
+      const incompleteReason = outcome.endFight
+        ? undefined
+        : (outcome.sawAgentEnd
+            ? "The subagent ended its turn without calling end_fight."
+            : (outcome.exitCode !== 0
+                ? `The subagent exited early with code ${outcome.exitCode}.`
+                : "The subagent did not produce an end_fight handoff."));
       const details: StartFightDetails = {
         fightType: startParams.fight_type,
         model: outcome.model,
@@ -307,13 +384,45 @@ function registerFightDelegationTool(pi: ExtensionAPI): void {
         loadFight: outcome.loadFight,
         summary: outcome.summary,
         completedAtUtc: new Date().toISOString(),
+        completedFight: Boolean(outcome.endFight),
+        ...(incompleteReason ? { incompleteReason } : {}),
+        ...(outcome.endFight ? {
+          rewardAction: outcome.endFight.executedAction,
+          rewardState: outcome.endFight.rewardText,
+          logPath: outcome.endFight.logPath,
+        } : {}),
         ...(outcome.stderr ? { stderr: outcome.stderr } : {}),
       };
 
       writeLastFightReport(details);
 
       return {
-        content: [{ type: "text", text: outcome.summary }],
+        content: [{
+          type: "text",
+          text: [
+            outcome.endFight
+              ? "## Delegate Status\n- Fight handoff completed via end_fight."
+              : [
+                  "## Delegate Status",
+                  `- ${incompleteReason ?? "The fight handoff is incomplete."}`,
+                  "- The final assistant message from the subagent is included below.",
+                ].join("\n"),
+            "",
+            outcome.summary,
+            outcome.endFight
+              ? [
+                  "",
+                  "## End Fight Tool Output",
+                  `- Reward transition action: ${outcome.endFight.executedAction ?? "none"}`,
+                  `- Run log path: ${outcome.endFight.logPath}`,
+                  "",
+                  "## Reward Screen Hard State",
+                  outcome.endFight.rewardText,
+                ].join("\n")
+              : "",
+          ].filter(Boolean).join("\n"),
+        }],
+        isError: !outcome.endFight,
         details,
       };
     },
@@ -336,13 +445,19 @@ function registerFightDelegationTool(pi: ExtensionAPI): void {
 
       const fullText = stringifyTextContent(result.content as Array<{ type: string; text?: string }>) || details.summary;
       const lines = [
-        theme.fg("success", `Fight delegated: ${details.fightType}`),
+        details.completedFight
+          ? theme.fg("success", `Fight delegated: ${details.fightType}`)
+          : theme.fg("warning", `Fight delegation incomplete: ${details.fightType}`),
         `Model: ${details.model}`,
         `Prompt file: ${details.promptFile}`,
         `load_fight: ${details.loadFight}`,
+        `reward action: ${details.rewardAction ?? "none"}`,
         "",
         fullText,
       ];
+      if (details.incompleteReason) {
+        lines.splice(5, 0, theme.fg("warning", details.incompleteReason), "");
+      }
       if (details.stderr) {
         lines.push("", theme.fg("warning", `stderr: ${details.stderr}`));
       }
@@ -565,6 +680,20 @@ export default function registerStsFightManager(pi: ExtensionAPI): void {
       }
 
       const appended = appendToLatestRunLog(endParams.summary_output);
+
+      const resultPath = process.env[SUBAGENT_RESULT_PATH_ENV];
+      if (resultPath) {
+        try {
+          fs.writeFileSync(resultPath, JSON.stringify({
+            kind: subagentKind,
+            logPath: appended.path,
+            executedAction,
+            rewardText,
+          }, null, 2));
+        } catch {
+          // best effort only
+        }
+      }
 
       return {
         content: [{
