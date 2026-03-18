@@ -112,6 +112,58 @@ export function isMerchantInventoryConsistent(state: DisplayState | null | undef
   return true;
 }
 
+function parseMerchantBuyTargetId(action: string): string | null {
+  if (!action.startsWith('merchant.buy:')) {
+    return null;
+  }
+
+  const targetId = action.slice('merchant.buy:'.length);
+  return targetId.length > 0 ? targetId : null;
+}
+
+function parseMerchantItemCost(description: string | null | undefined): number | null {
+  if (typeof description !== 'string') {
+    return null;
+  }
+
+  const match = description.match(/Cost:\s*(\d+)\s*gold/i);
+  if (!match) {
+    return null;
+  }
+
+  const cost = Number.parseInt(match[1] ?? '', 10);
+  return Number.isFinite(cost) ? cost : null;
+}
+
+function isMerchantBuyGoldSettled(
+  action: string,
+  beforeState: DisplayState | null | undefined,
+  state: DisplayState | null | undefined,
+): boolean {
+  if (state?.screenType !== 'merchant_inventory') {
+    return true;
+  }
+
+  const beforeGold = beforeState?.topBar?.gold ?? null;
+  const currentGold = state.topBar?.gold ?? null;
+  if (beforeGold == null || currentGold == null) {
+    return true;
+  }
+
+  const targetId = parseMerchantBuyTargetId(action);
+  if (!targetId) {
+    return true;
+  }
+
+  const beforeItem = (beforeState?.menuItems ?? []).find((item) => item.id === targetId);
+  const expectedCost = parseMerchantItemCost(beforeItem?.description ?? null);
+  if (expectedCost == null) {
+    return currentGold !== beforeGold;
+  }
+
+  return currentGold === beforeGold - expectedCost;
+}
+
 export function isDeckCardSelectFollowThroughState(
   action: string,
   beforeState: DisplayState | null | undefined,
@@ -244,7 +296,8 @@ export function isMerchantActionFollowThroughState(
     return false;
   }
 
-  return isMerchantInventoryConsistent(state);
+  return isMerchantInventoryConsistent(state)
+    && isMerchantBuyGoldSettled(action, beforeState, state);
 }
 
 export function isPotionUseFollowThroughState(action: string, referenceState: DisplayState | null | undefined, state: DisplayState | null | undefined): boolean {

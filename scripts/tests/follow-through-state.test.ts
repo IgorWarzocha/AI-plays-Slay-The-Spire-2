@@ -284,17 +284,19 @@ test("merchant buy follow-through waits for a quiet consistent inventory frame",
   const beforeState = {
     screenType: "merchant_inventory",
     updatedAtUtc: "2026-03-17T10:22:00.000Z",
+    topBar: { gold: 160 },
+    menuItems: [{ id: "card-02-shrug-it-off", description: "Cost: 71 gold." }],
   };
   const inconsistentMerchant = {
     screenType: "merchant_inventory",
     updatedAtUtc: new Date(Date.now()).toISOString(),
-    topBar: { gold: 193 },
+    topBar: { gold: 160 },
     menuItems: [{ id: "card-01", description: "Cost: 71 gold\nNot enough gold." }],
   };
   const settledMerchant = {
     screenType: "merchant_inventory",
     updatedAtUtc: new Date(Date.now() - 1000).toISOString(),
-    topBar: { gold: 122 },
+    topBar: { gold: 89 },
     menuItems: [{ id: "card-01", description: "Cost: 71 gold" }],
   };
 
@@ -304,6 +306,36 @@ test("merchant buy follow-through waits for a quiet consistent inventory frame",
   );
   assert.equal(
     isMerchantActionFollowThroughState("merchant.buy:card-02-shrug-it-off", beforeState, settledMerchant),
+    true,
+  );
+});
+
+test("merchant buy follow-through waits for gold to settle after inventory shifts", () => {
+  const beforeState = {
+    screenType: "merchant_inventory",
+    updatedAtUtc: "2026-03-17T10:22:30.000Z",
+    topBar: { gold: 299 },
+    menuItems: [{ id: "card-03-forgotten-ritual", description: "Cost: 38 gold. On sale." }],
+  };
+  const staleGold = {
+    screenType: "merchant_inventory",
+    updatedAtUtc: new Date().toISOString(),
+    topBar: { gold: 299 },
+    menuItems: [{ id: "card-03-feel-no-pain", description: "Cost: 73 gold." }],
+  };
+  const settledMerchant = {
+    screenType: "merchant_inventory",
+    updatedAtUtc: new Date(Date.now() - 1000).toISOString(),
+    topBar: { gold: 261 },
+    menuItems: [{ id: "card-03-feel-no-pain", description: "Cost: 73 gold." }],
+  };
+
+  assert.equal(
+    isMerchantActionFollowThroughState("merchant.buy:card-03-forgotten-ritual", beforeState, staleGold),
+    false,
+  );
+  assert.equal(
+    isMerchantActionFollowThroughState("merchant.buy:card-03-forgotten-ritual", beforeState, settledMerchant),
     true,
   );
 });
