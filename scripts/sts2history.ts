@@ -7,6 +7,7 @@ import {
   runActions,
 } from "./lib/sts2-runtime.ts";
 import { assertHistoryActions } from "./lib/action-scopes.ts";
+import { buildStatusCacheKey, printCliOutput } from "./lib/cli-output.ts";
 import { buildCommandView, buildGameplayView } from "./lib/sts2-game-view.ts";
 import type { DisplayState, RuntimeCommandOptions } from "./lib/types.ts";
 
@@ -18,8 +19,15 @@ function usage(): void {
 `);
 }
 
-function printState(state: DisplayState | null | undefined, options: RuntimeCommandOptions): void {
-  console.log(JSON.stringify(buildGameplayView(state, options), null, 2));
+function printState(
+  state: DisplayState | null | undefined,
+  options: RuntimeCommandOptions,
+  { dedupe = false }: { dedupe?: boolean } = {},
+): void {
+  printCliOutput(buildGameplayView(state, options), {
+    options,
+    cacheKey: dedupe ? buildStatusCacheKey('sts2history:state', options) : undefined,
+  });
 }
 
 async function ensureLatestRunHistory(options: RuntimeCommandOptions): Promise<DisplayState | null> {
@@ -47,7 +55,7 @@ async function main(): Promise<void> {
 
   switch (command) {
     case "status":
-      printState(await readDisplayState(), options);
+      printState(await readDisplayState(), options, { dedupe: true });
       return;
     case "latest":
       printState(await ensureLatestRunHistory(options), options);
@@ -59,7 +67,7 @@ async function main(): Promise<void> {
       }
 
       assertHistoryActions(actions);
-      console.log(JSON.stringify(buildCommandView(await runActions(actions, options), options), null, 2));
+      printCliOutput(buildCommandView(await runActions(actions, options), options), { options });
       return;
     }
     default:

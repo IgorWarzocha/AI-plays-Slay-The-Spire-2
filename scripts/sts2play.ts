@@ -14,6 +14,7 @@ import {
   isCombatScreenType,
   resolveCommandSurface,
 } from "./lib/action-scopes.ts";
+import { buildStatusCacheKey, printCliOutput } from "./lib/cli-output.ts";
 import { buildCommandView, buildCombatCommandView, buildCombatView, buildGameplayView } from "./lib/sts2-game-view.ts";
 import type { DisplayState, RunActionsResult, RuntimeCommandOptions } from "./lib/types.ts";
 
@@ -26,12 +27,19 @@ function usage(): void {
 `);
 }
 
-function printState(state: DisplayState | null | undefined, options: RuntimeCommandOptions): void {
+function printState(
+  state: DisplayState | null | undefined,
+  options: RuntimeCommandOptions,
+  { dedupe = false }: { dedupe?: boolean } = {},
+): void {
   const view = isCombatScreenType(state?.screenType)
     ? buildCombatView(state, options)
     : buildGameplayView(state, options);
 
-  console.log(JSON.stringify(view, null, 2));
+  printCliOutput(view, {
+    options,
+    cacheKey: dedupe ? buildStatusCacheKey('sts2play:state', options) : undefined,
+  });
 }
 
 function printCommandResult(result: RunActionsResult, options: RuntimeCommandOptions): void {
@@ -39,7 +47,7 @@ function printCommandResult(result: RunActionsResult, options: RuntimeCommandOpt
     ? buildCombatCommandView(result, options)
     : buildCommandView(result, options);
 
-  console.log(JSON.stringify(view, null, 2));
+  printCliOutput(view, { options });
 }
 
 async function main(): Promise<void> {
@@ -48,7 +56,7 @@ async function main(): Promise<void> {
 
   switch (command) {
     case "status":
-      printState(await readDisplayState(), options);
+      printState(await readDisplayState(), options, { dedupe: true });
       return;
     case "command": {
       const actions = positional.slice(1);

@@ -7,6 +7,7 @@ import {
   waitForScreen,
 } from "./lib/sts2-runtime.ts";
 import { assertCombatActions } from "./lib/action-scopes.ts";
+import { buildStatusCacheKey, printCliOutput } from "./lib/cli-output.ts";
 import { buildCombatCommandView, buildCombatView } from "./lib/sts2-game-view.ts";
 import type { DisplayState, RuntimeCommandOptions } from "./lib/types.ts";
 
@@ -18,8 +19,15 @@ function usage(): void {
 `);
 }
 
-function printState(state: DisplayState | null | undefined, options: RuntimeCommandOptions): void {
-  console.log(JSON.stringify(buildCombatView(state, options), null, 2));
+function printState(
+  state: DisplayState | null | undefined,
+  options: RuntimeCommandOptions,
+  { dedupe = false }: { dedupe?: boolean } = {},
+): void {
+  printCliOutput(buildCombatView(state, options), {
+    options,
+    cacheKey: dedupe ? buildStatusCacheKey('sts2combat:state', options) : undefined,
+  });
 }
 
 async function main(): Promise<void> {
@@ -28,7 +36,7 @@ async function main(): Promise<void> {
 
   switch (command) {
     case "status":
-      printState(await readDisplayState(), options);
+      printState(await readDisplayState(), options, { dedupe: true });
       return;
     case "command": {
       const actions = positional.slice(1);
@@ -37,7 +45,7 @@ async function main(): Promise<void> {
       }
 
       assertCombatActions(actions, options);
-      console.log(JSON.stringify(buildCombatCommandView(await runActions(actions, options), options), null, 2));
+      printCliOutput(buildCombatCommandView(await runActions(actions, options), options), { options });
       return;
     }
     case "wait-screen": {

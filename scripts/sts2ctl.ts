@@ -7,6 +7,7 @@ import {
   waitForScreen,
 } from "./lib/sts2-runtime.ts";
 import { assertGameplayActions } from "./lib/action-scopes.ts";
+import { buildStatusCacheKey, printCliOutput } from "./lib/cli-output.ts";
 import { buildCommandView, buildGameplayView } from "./lib/sts2-game-view.ts";
 import type { DisplayState, RuntimeCommandOptions } from "./lib/types.ts";
 
@@ -18,12 +19,19 @@ function usage(): void {
 `);
 }
 
-function printGameplayState(state: DisplayState | null | undefined, options: RuntimeCommandOptions): void {
+function printGameplayState(
+  state: DisplayState | null | undefined,
+  options: RuntimeCommandOptions,
+  { dedupe = false }: { dedupe?: boolean } = {},
+): void {
   if (state?.screenType === "combat_room" || state?.screenType === "combat_card_select") {
     throw new Error("sts2ctl.ts does not render combat state. Use sts2combat.ts status instead.");
   }
 
-  console.log(JSON.stringify(buildGameplayView(state, options), null, 2));
+  printCliOutput(buildGameplayView(state, options), {
+    options,
+    cacheKey: dedupe ? buildStatusCacheKey('sts2ctl:state', options) : undefined,
+  });
 }
 
 async function main(): Promise<void> {
@@ -32,7 +40,7 @@ async function main(): Promise<void> {
 
   switch (command) {
     case "status":
-      printGameplayState(await readDisplayState(), options);
+      printGameplayState(await readDisplayState(), options, { dedupe: true });
       return;
     case "command": {
       const actions = positional.slice(1);
@@ -41,7 +49,7 @@ async function main(): Promise<void> {
       }
 
       assertGameplayActions(actions);
-      console.log(JSON.stringify(buildCommandView(await runActions(actions, options), options), null, 2));
+      printCliOutput(buildCommandView(await runActions(actions, options), options), { options });
       return;
     }
     case "wait-screen": {

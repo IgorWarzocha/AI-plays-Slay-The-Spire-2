@@ -6,6 +6,7 @@ import {
   sendAction,
   waitForScreen,
 } from "./lib/sts2-runtime.ts";
+import { buildStatusCacheKey, printCliOutput } from "./lib/cli-output.ts";
 import { buildCombatView, buildGameplayView } from "./lib/sts2-game-view.ts";
 import { waitForAsync } from "./lib/time.ts";
 import type { DisplayState, RuntimeCommandOptions } from "./lib/types.ts";
@@ -23,11 +24,18 @@ function isCombatScreen(state: DisplayState | null | undefined): boolean {
   return state?.screenType === "combat_room" || state?.screenType === "combat_card_select";
 }
 
-function printState(state: DisplayState | null | undefined, options: RuntimeCommandOptions): void {
+function printState(
+  state: DisplayState | null | undefined,
+  options: RuntimeCommandOptions,
+  { dedupe = false }: { dedupe?: boolean } = {},
+): void {
   const view = isCombatScreen(state)
     ? buildCombatView(state, options)
     : buildGameplayView(state, options);
-  console.log(JSON.stringify(view, null, 2));
+  printCliOutput(view, {
+    options,
+    cacheKey: dedupe ? buildStatusCacheKey('sts2reload:state', options) : undefined,
+  });
 }
 
 function readWaitTimeout(value: RuntimeCommandOptions['waitTimeoutMs'], fallback: number): number {
@@ -116,7 +124,7 @@ async function main(): Promise<void> {
 
   switch (command) {
     case "status":
-      printState(await readDisplayState(), options);
+      printState(await readDisplayState(), options, { dedupe: true });
       return;
     case "save-quit":
       printState(await saveQuit(options), options);
