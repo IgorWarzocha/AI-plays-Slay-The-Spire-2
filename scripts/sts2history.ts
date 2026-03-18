@@ -67,7 +67,10 @@ async function main(): Promise<void> {
       }
 
       assertHistoryActions(actions);
-      printCliOutput(buildCommandView(await runActions(actions, options), options), { options });
+      printCliOutput(buildCommandView(await runActions(actions, options), options), {
+        options,
+        cacheKey: buildStatusCacheKey('sts2history:command', options),
+      });
       return;
     }
     default:

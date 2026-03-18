@@ -213,3 +213,52 @@ test('renderCliOutput omits unchanged merchant deck snapshot in easy mode', () =
     fs.rmSync(cacheDir, { recursive: true, force: true });
   }
 });
+
+test('renderCliOutput omits unchanged nested command state sections in easy mode', () => {
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sts2-cli-output-test-'));
+  const cachePath = path.join(cacheDir, 'cache.json');
+
+  try {
+    renderCliOutput({
+      ok: true,
+      actionCount: 1,
+      actions: [{ action: 'map.travel:0,3', id: 'cmd-1', ackStatus: 'completed', screenType: 'event' }],
+      state: {
+        screenType: 'event',
+        updatedAtUtc: '1',
+        topBar: { gold: 10 },
+        relics: ['Burning Blood'],
+        choices: [{ action: 'proceed', label: 'Proceed' }],
+      },
+    }, {
+      options: { easy: true },
+      cacheKey: 'command:easy',
+      cachePath,
+    });
+
+    const second = renderCliOutput({
+      ok: true,
+      actionCount: 1,
+      actions: [{ action: 'map.travel:0,4', id: 'cmd-2', ackStatus: 'completed', screenType: 'event' }],
+      state: {
+        screenType: 'event',
+        updatedAtUtc: '2',
+        topBar: { gold: 11 },
+        relics: ['Burning Blood'],
+        choices: [{ action: 'proceed', label: 'Proceed' }],
+      },
+    }, {
+      options: { easy: true },
+      cacheKey: 'command:easy',
+      cachePath,
+    });
+
+    assert.equal(second.suppressed, false);
+    assert.equal(
+      second.text,
+      '{"ok":true,"actionCount":1,"actions":[{"action":"map.travel:0,4","id":"cmd-2","ackStatus":"completed","screenType":"event"}],"state":{"screenType":"event","topBar":{"gold":11},"choices":[{"action":"proceed","label":"Proceed"}]}}',
+    );
+  } finally {
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+  }
+});

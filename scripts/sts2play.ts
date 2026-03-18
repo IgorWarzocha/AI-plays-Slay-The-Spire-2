@@ -52,7 +52,10 @@ function printCommandResult(result: RunActionsResult, options: RuntimeCommandOpt
     ? buildCombatCommandView(result, options)
     : buildCommandView(result, options);
 
-  printCliOutput(view, { options });
+  printCliOutput(view, {
+    options,
+    cacheKey: buildStatusCacheKey('sts2play:command', options),
+  });
 }
 
 async function main(): Promise<void> {
@@ -64,16 +67,28 @@ async function main(): Promise<void> {
       printState(await readDisplayState(), options, { dedupe: true });
       return;
     case "inspect-deck":
-      printCliOutput(buildDeckInspectView(await inspectDeck(options), options), { options });
+      printCliOutput(buildDeckInspectView(await inspectDeck(options), options), {
+        options,
+        cacheKey: buildStatusCacheKey('sts2play:inspect-deck', options),
+      });
       return;
     case "inspect-draw":
-      printCliOutput(buildPileInspectView(await inspectPile("draw", options), options), { options });
+      printCliOutput(buildPileInspectView(await inspectPile("draw", options), options), {
+        options,
+        cacheKey: buildStatusCacheKey('sts2play:inspect-draw', options),
+      });
       return;
     case "inspect-discard":
-      printCliOutput(buildPileInspectView(await inspectPile("discard", options), options), { options });
+      printCliOutput(buildPileInspectView(await inspectPile("discard", options), options), {
+        options,
+        cacheKey: buildStatusCacheKey('sts2play:inspect-discard', options),
+      });
       return;
     case "inspect-exhaust":
-      printCliOutput(buildPileInspectView(await inspectPile("exhaust", options), options), { options });
+      printCliOutput(buildPileInspectView(await inspectPile("exhaust", options), options), {
+        options,
+        cacheKey: buildStatusCacheKey('sts2play:inspect-exhaust', options),
+      });
       return;
     case "command": {
       const actions = positional.slice(1);

@@ -149,6 +149,30 @@ function cloneJsonValue<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function omitUnchangedStableSectionsFromView(
+  payload: Record<string, unknown>,
+  previousPayload: Record<string, unknown>,
+): Record<string, unknown> {
+  const current = cloneJsonValue(payload);
+  const previous = previousPayload;
+  const screenType = typeof current.screenType === 'string' ? current.screenType : null;
+
+  const shouldOmitRelics = screenType !== 'merchant_room'
+    && screenType !== 'merchant_inventory'
+    && screenType !== 'treasure_relic_selection'
+    && screenType !== 'run_history';
+  if (shouldOmitRelics && 'relics' in current && 'relics' in previous && stableSectionKey(current.relics) === stableSectionKey(previous.relics)) {
+    delete current.relics;
+  }
+
+  const shouldOmitCardBrowse = screenType === 'merchant_inventory';
+  if (shouldOmitCardBrowse && 'cardBrowse' in current && 'cardBrowse' in previous && stableSectionKey(current.cardBrowse) === stableSectionKey(previous.cardBrowse)) {
+    delete current.cardBrowse;
+  }
+
+  return current;
+}
+
 function omitUnchangedStableSections(payload: unknown, previousPayload: unknown, options: RuntimeCommandOptions = {}): unknown {
   if (resolveViewMode(options) !== 'easy') {
     return payload;
@@ -164,19 +188,26 @@ function omitUnchangedStableSections(payload: unknown, previousPayload: unknown,
 
   const current = cloneJsonValue(payload as Record<string, unknown>);
   const previous = previousPayload as Record<string, unknown>;
-  const screenType = typeof current.screenType === 'string' ? current.screenType : null;
 
-  const shouldOmitRelics = screenType !== 'merchant_room'
-    && screenType !== 'merchant_inventory'
-    && screenType !== 'treasure_relic_selection'
-    && screenType !== 'run_history';
-  if (shouldOmitRelics && 'relics' in current && 'relics' in previous && stableSectionKey(current.relics) === stableSectionKey(previous.relics)) {
-    delete current.relics;
+  if (typeof current.screenType === 'string' && typeof previous.screenType === 'string') {
+    return omitUnchangedStableSectionsFromView(current, previous);
   }
 
-  const shouldOmitCardBrowse = screenType === 'merchant_inventory';
-  if (shouldOmitCardBrowse && 'cardBrowse' in current && 'cardBrowse' in previous && stableSectionKey(current.cardBrowse) === stableSectionKey(previous.cardBrowse)) {
-    delete current.cardBrowse;
+  for (const nestedKey of ['state', 'deckView', 'pileView'] as const) {
+    const nestedCurrent = current[nestedKey];
+    const nestedPrevious = previous[nestedKey];
+    if (!nestedCurrent || typeof nestedCurrent !== 'object' || Array.isArray(nestedCurrent)) {
+      continue;
+    }
+
+    if (!nestedPrevious || typeof nestedPrevious !== 'object' || Array.isArray(nestedPrevious)) {
+      continue;
+    }
+
+    current[nestedKey] = omitUnchangedStableSectionsFromView(
+      nestedCurrent as Record<string, unknown>,
+      nestedPrevious as Record<string, unknown>,
+    );
   }
 
   return current;

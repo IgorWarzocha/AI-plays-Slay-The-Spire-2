@@ -50,7 +50,10 @@ async function main(): Promise<void> {
         throw new Error("inspect-deck is for non-combat in-run reads. Use sts2combat.ts inspect-deck or sts2play.ts inspect-deck from combat.");
       }
 
-      printCliOutput(buildDeckInspectView(await inspectDeck(options), options), { options });
+      printCliOutput(buildDeckInspectView(await inspectDeck(options), options), {
+        options,
+        cacheKey: buildStatusCacheKey('sts2ctl:inspect-deck', options),
+      });
       return;
     }
     case "command": {
@@ -60,7 +63,10 @@ async function main(): Promise<void> {
       }
 
       assertGameplayActions(actions);
-      printCliOutput(buildCommandView(await runActions(actions, options), options), { options });
+      printCliOutput(buildCommandView(await runActions(actions, options), options), {
+        options,
+        cacheKey: buildStatusCacheKey('sts2ctl:command', options),
+      });
       return;
     }
     case "wait-screen": {

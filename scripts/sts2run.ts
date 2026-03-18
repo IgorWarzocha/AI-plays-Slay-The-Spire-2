@@ -47,7 +47,10 @@ async function main(): Promise<void> {
       }
 
       assertBootstrapActions(actions);
-      printCliOutput(buildCommandView(await runActions(actions, options), options), { options });
+      printCliOutput(buildCommandView(await runActions(actions, options), options), {
+        options,
+        cacheKey: buildStatusCacheKey('sts2run:command', options),
+      });
       return;
     }
     case "wait-screen": {
