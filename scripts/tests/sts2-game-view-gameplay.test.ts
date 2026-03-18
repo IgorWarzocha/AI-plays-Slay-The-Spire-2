@@ -100,6 +100,51 @@ test("buildGameplayView includes deck snapshot and detailed relics for merchant 
   assert.equal(expectDefined(expectDefined(view.choices)[0]).label, "Lantern");
 });
 
+test("buildGameplayView includes disabled merchant inventory entries with cleaned remove pricing", () => {
+  const state = {
+    screenType: "merchant_inventory",
+    updatedAtUtc: "2026-03-17T12:11:00.000Z",
+    topBar: {
+      currentHp: 86,
+      maxHp: 89,
+      gold: 80,
+      potionSlotCount: 3,
+      filledPotionSlotCount: 1,
+      emptyPotionSlotCount: 2,
+      buttons: [],
+    },
+    relics: [],
+    potions: [],
+    menuItems: [
+      { id: "card-00-pommel-strike", label: "Pommel Strike", description: "Deal 9 damage. Draw 1 card. Cost: 50 gold.", enabled: true, selected: false },
+      { id: "relic-01-cloak-clasp", label: "Cloak Clasp", description: "At the end of your turn, gain 1 Block for each card in your Hand. Cost: 331 gold. Not enough gold.", enabled: false, selected: false },
+      { id: "remove-02-remove-a-card", label: "Remove a card", description: "100 Cost: 100 gold.", enabled: false, selected: false },
+      { id: "close", label: "Close Merchant", description: "Close the merchant inventory.", enabled: true, selected: false },
+    ],
+    cardBrowse: {
+      kind: "deck_snapshot",
+      title: "Current Deck",
+      pileType: "Deck",
+      cardCount: 1,
+      canClose: false,
+      cards: [
+        { id: "c1", title: "Strike", costText: "1", upgraded: false, description: "Deal 6 damage." },
+      ],
+    },
+    actions: ["merchant.buy:card-00-pommel-strike", "merchant.close"],
+  };
+
+  const view = buildGameplayView(state, { hard: true });
+  assert.deepEqual(expectDefined(view.choices).map((choice) => choice.action), [
+    "merchant.buy:card-00-pommel-strike",
+    "merchant.buy:relic-01-cloak-clasp",
+    "merchant.buy:remove-02-remove-a-card",
+    "merchant.close",
+  ]);
+  assert.equal(expectDefined(expectDefined(view.choices)[1]).enabled, false);
+  assert.equal(expectDefined(expectDefined(view.choices)[2]).description, "Cost: 100 gold.");
+});
+
 test("buildGameplayView preserves readable combat intent summaries", () => {
   const state = {
     screenType: "combat_room",

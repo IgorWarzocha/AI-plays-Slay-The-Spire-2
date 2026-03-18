@@ -70,6 +70,11 @@ function simplifyDescription(description: string | null | undefined, label: stri
     return null;
   }
 
+  const normalizedMerchantRemovePrice = normalized.match(/^(\d+) Cost: \1 gold\.$/i);
+  if (normalizedMerchantRemovePrice) {
+    return `Cost: ${normalizedMerchantRemovePrice[1]} gold.`;
+  }
+
   if (/^hotkey:/i.test(normalized)) {
     return null;
   }
@@ -278,6 +283,63 @@ function fallbackLabel(action: string): string {
   return titleCaseWords(suffix || action);
 }
 
+function deriveMerchantActionFromMenuItem(menuItem: MenuItemState): string | null {
+  const id = menuItem.id;
+  if (!id) {
+    return null;
+  }
+
+  if (id === 'close') {
+    return 'merchant.close';
+  }
+
+  if (id === 'leave') {
+    return 'merchant.leave';
+  }
+
+  if (id.startsWith('merchant.')) {
+    return id;
+  }
+
+  if (id.startsWith('card-') || id.startsWith('relic-') || id.startsWith('potion-') || id.startsWith('remove-')) {
+    return `merchant.buy:${id}`;
+  }
+
+  return null;
+}
+
+function buildMerchantSyntheticDrafts(state: DisplayState, existingRawActions: readonly string[]): ChoiceDraft[] {
+  if (state.screenType !== 'merchant_inventory') {
+    return [];
+  }
+
+  const seenRawActions = new Set(existingRawActions);
+  return (state.menuItems ?? [])
+    .map((menuItem, index) => {
+      const rawAction = deriveMerchantActionFromMenuItem(menuItem);
+      if (!rawAction || seenRawActions.has(rawAction) || menuItem.visible === false) {
+        return null;
+      }
+
+      return {
+        rawAction,
+        action: rawAction,
+        order: index,
+      } satisfies ChoiceDraft;
+    })
+    .filter((draft): draft is ChoiceDraft => draft !== null);
+}
+
+function resolveChoiceDraftOrder(state: DisplayState, rawAction: string, fallbackOrder: number): number {
+  const menuItem = matchMenuItemForAction(rawAction, state.menuItems ?? []);
+  if (!menuItem) {
+    return (state.menuItems ?? []).length + fallbackOrder;
+  }
+
+  const menuIndex = (state.menuItems ?? []).findIndex((item) => item.id === menuItem.id);
+  return menuIndex === -1 ? fallbackOrder : menuIndex;
+}
+
 function enrichDraftFromState(draft: ChoiceDraft, state: DisplayState): ChoiceDraft {
   const menuItem = matchMenuItemForAction(draft.rawAction, state.menuItems ?? []);
   const card = matchCardForAction(draft.rawAction, state.combat ?? null, state.cardBrowse ?? null);
@@ -389,10 +451,22 @@ function shouldIncludeCombatChoices(state: DisplayState | null | undefined): boo
 }
 
 function buildChoicesFromState(state: DisplayState, rawActions: string[]): ChoiceView[] {
-  const drafts = dedupeEquivalentChoices(rawActions
+  const actionDrafts = rawActions
     .filter((action) => !isSkippedAction(action))
-    .map((rawAction, order) => ({ rawAction, action: rawAction, order }))
-    .map((draft) => enrichDraftFromState(draft, state)));
+    .map((rawAction, fallbackOrder) => ({
+      rawAction,
+      action: rawAction,
+      order: resolveChoiceDraftOrder(state, rawAction, fallbackOrder),
+    }))
+    .map((draft) => enrichDraftFromState(draft, state));
+
+  const syntheticDrafts = buildMerchantSyntheticDrafts(state, rawActions)
+    .map((draft) => enrichDraftFromState(draft, state));
+
+  const drafts = dedupeEquivalentChoices([
+    ...actionDrafts,
+    ...syntheticDrafts,
+  ]);
 
   disambiguateDuplicateLabels(drafts);
 
