@@ -25,7 +25,8 @@ public sealed class CombatHandSelectFeature : IAgentFeature
         }
 
         CombatState combatState = ReadCombatState(hand!);
-        CombatHandSnapshot handSnapshot = CombatHandSnapshotReader.Capture(hand!);
+        CombatRuntimePhase runtimePhase = CombatStateReader.ReadRuntimePhase();
+        CombatHandSnapshot handSnapshot = CombatHandSnapshotReader.Capture(hand!, runtimePhase);
         List<ExportCombatCard> handCards = BuildSelectableHandCards(handSnapshot.ActiveHolders);
         CardSelectionPrefsSnapshot prefs = ReadSelectionPrefs(hand!);
         int selectedCount = ReadSelectedCount(hand!);

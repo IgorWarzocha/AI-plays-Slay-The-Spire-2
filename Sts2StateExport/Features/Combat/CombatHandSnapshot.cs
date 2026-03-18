@@ -34,7 +34,7 @@ public static class CombatHandSnapshotReader
     private static readonly FieldInfo? AnimOutTweenField = typeof(NPlayerHand)
         .GetField("_animOutTween", BindingFlags.Instance | BindingFlags.NonPublic);
 
-    public static CombatHandSnapshot Capture(NPlayerHand hand)
+    internal static CombatHandSnapshot Capture(NPlayerHand hand, CombatRuntimePhase runtimePhase)
     {
         IReadOnlyList<NHandCardHolder> activeHolders = hand.ActiveHolders
             .Where(static holder => holder.CardModel is not null)
@@ -45,10 +45,16 @@ public static class CombatHandSnapshotReader
         int modelHandCount = ReadModelHandCount(hand);
         int pendingHolderCount = ReadPendingHolderCount(hand);
         bool handAnimationActive = HasRunningHandTween(hand);
-        bool cardPlayInProgress = hand.InCardPlay || CurrentCardPlayField?.GetValue(hand) is not null;
+        bool rawCardPlayInProgress = hand.InCardPlay || CurrentCardPlayField?.GetValue(hand) is not null;
         bool activeParitySatisfied = hand.CurrentMode.ToString() is not ("None" or "Play")
             || activeHolders.Count == allHolders.Count;
         bool modelParitySatisfied = allHolders.Count == modelHandCount;
+        bool cardPlayInProgress = rawCardPlayInProgress && !ShouldSuppressStickyCardPlayFlag(
+            runtimePhase,
+            pendingHolderCount,
+            handAnimationActive,
+            activeParitySatisfied,
+            modelParitySatisfied);
 
         return new CombatHandSnapshot(
             ActiveHolders: activeHolders,
@@ -62,6 +68,20 @@ public static class CombatHandSnapshotReader
                 && !cardPlayInProgress
                 && activeParitySatisfied
                 && modelParitySatisfied);
+    }
+
+    private static bool ShouldSuppressStickyCardPlayFlag(
+        CombatRuntimePhase runtimePhase,
+        int pendingHolderCount,
+        bool handAnimationActive,
+        bool activeParitySatisfied,
+        bool modelParitySatisfied)
+    {
+        return runtimePhase.IsReadyForPlayerInput
+            && pendingHolderCount == 0
+            && !handAnimationActive
+            && activeParitySatisfied
+            && modelParitySatisfied;
     }
 
     private static IReadOnlyList<NHandCardHolder> ReadAllHolders(NPlayerHand hand)

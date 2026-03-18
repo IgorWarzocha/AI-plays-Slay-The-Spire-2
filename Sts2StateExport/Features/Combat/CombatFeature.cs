@@ -31,13 +31,13 @@ public sealed class CombatFeature : IAgentFeature
             return false;
         }
 
-        CombatHandSnapshot handSnapshot = CombatHandSnapshotReader.Capture(hand);
+        CombatRuntimePhase runtimePhase = CombatStateReader.ReadRuntimePhase();
+        CombatHandSnapshot handSnapshot = CombatHandSnapshotReader.Capture(hand, runtimePhase);
         if (!CombatStateReader.TryResolvePlayerCombatState(combatState, out PlayerCombatState? playerCombatState))
         {
             return false;
         }
 
-        CombatRuntimePhase runtimePhase = CombatStateReader.ReadRuntimePhase();
         List<ExportCombatCreature> creatures = room.CreatureNodes
             .Select(CombatCreatureExportBuilder.BuildCreatureForExport)
             .OrderBy(creature => creature.Side)
