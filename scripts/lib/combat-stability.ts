@@ -1,5 +1,5 @@
 import type { CombatCardState, CombatCostChange, CreatureState, DisplayState } from './types.ts';
-import { isCombatLikeScreen, isCombatStateSettled } from './command-state-utils.ts';
+import { hasStickyCombatPlayFlagFallback, isCombatLikeScreen, isCombatStateSettled } from './command-state-utils.ts';
 
 // Combat state often mutates across a few animation frames. These helpers
 // define what counts as a readable frame so command orchestration can wait for
@@ -51,11 +51,15 @@ export function isCombatDisplayStable(state: DisplayState | null | undefined, { 
     return false;
   }
 
-  if (combat.cardPlayInProgress === true || combat.handAnimationActive === true) {
+  if (combat.handAnimationActive === true) {
     return false;
   }
 
   if ((combat.pendingHandHolderCount ?? 0) > 0) {
+    return false;
+  }
+
+  if (combat.cardPlayInProgress === true && !hasStickyCombatPlayFlagFallback(state)) {
     return false;
   }
 

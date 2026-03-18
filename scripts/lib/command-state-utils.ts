@@ -19,6 +19,59 @@ export function isCombatLikeScreen(screenType: string | null | undefined): boole
     || screenType === 'combat_choice_select';
 }
 
+function hasConsistentCombatHandCounts(state: DisplayState | null | undefined): boolean {
+  const combat = state?.combat;
+  if (!combat) {
+    return false;
+  }
+
+  const activeCount = combat.activeHandCount ?? null;
+  const totalCount = combat.totalHandCount ?? null;
+  const modelCount = combat.modelHandCount ?? null;
+
+  const activeMatchesTotal = activeCount == null || totalCount == null || activeCount === totalCount;
+  const totalMatchesModel = totalCount == null || modelCount == null || totalCount === modelCount;
+  return activeMatchesTotal && totalMatchesModel;
+}
+
+export function hasActionablePlayerCombatSurface(state: DisplayState | null | undefined): boolean {
+  if (!state || !isCombatLikeScreen(state.screenType)) {
+    return false;
+  }
+
+  const combat = state.combat;
+  if (!combat || combat.currentSide !== 'Player' || combat.canEndTurn !== true) {
+    return false;
+  }
+
+  const actions = Array.isArray(state.actions) ? state.actions : [];
+  if (!actions.includes('combat.end_turn')) {
+    return false;
+  }
+
+  return actions.some((action) => action.startsWith('combat.play:')
+    || action.startsWith('combat.use_potion:')
+    || action.startsWith('combat.discard_potion:')
+    || action.startsWith('combat.open_pile:'));
+}
+
+export function hasStickyCombatPlayFlagFallback(state: DisplayState | null | undefined): boolean {
+  if (!state || !isCombatLikeScreen(state.screenType)) {
+    return false;
+  }
+
+  const combat = state.combat;
+  if (!combat || combat.cardPlayInProgress !== true) {
+    return false;
+  }
+
+  if (combat.handAnimationActive === true || (combat.pendingHandHolderCount ?? 0) > 0) {
+    return false;
+  }
+
+  return hasConsistentCombatHandCounts(state) && hasActionablePlayerCombatSurface(state);
+}
+
 export function isMerchantLikeScreen(screenType: string | null | undefined): boolean {
   return screenType === 'merchant_room'
     || screenType === 'merchant_inventory'
@@ -55,32 +108,34 @@ export function isCombatStateSettled(state: DisplayState | null | undefined): bo
     return false;
   }
 
-   const noVisibleAnimation = combat.cardPlayInProgress !== true
-    && combat.handAnimationActive !== true
+  const noVisibleHandAnimation = combat.handAnimationActive !== true
     && (combat.pendingHandHolderCount ?? 0) === 0;
+  const stickyCombatPlayFlagFallback = hasStickyCombatPlayFlagFallback(state);
+  const noBlockingAnimation = noVisibleHandAnimation
+    && (combat.cardPlayInProgress !== true || stickyCombatPlayFlagFallback);
 
   if (state.screenType === 'combat_card_select') {
     const hasSelectionPrompt = typeof combat.selectionPrompt === 'string' && combat.selectionPrompt.length > 0;
     const hasSelectionActions = Array.isArray(state.actions) && state.actions.some((action) => typeof action === 'string' && action.startsWith('combat_card_select.'));
     const hasSelectionMenuItems = Array.isArray(state.menuItems) && state.menuItems.length > 0;
 
-    if (hasSelectionPrompt && (hasSelectionActions || hasSelectionMenuItems) && noVisibleAnimation) {
+    if (hasSelectionPrompt && (hasSelectionActions || hasSelectionMenuItems) && noBlockingAnimation) {
       return true;
     }
   }
 
   if (combat.handIsSettled === true) {
-    return true;
+    return noBlockingAnimation;
   }
 
   if (combat.handIsSettled === false) {
-    return false;
+    return stickyCombatPlayFlagFallback;
   }
 
   const hasRenderableHand = Array.isArray(combat.hand) && combat.hand.length > 0;
   const canReasonFromPlayerTurn = combat.currentSide === 'Player' && typeof combat.canEndTurn === 'boolean';
 
-  return hasRenderableHand && canReasonFromPlayerTurn && noVisibleAnimation;
+  return hasRenderableHand && canReasonFromPlayerTurn && noBlockingAnimation;
 }
 
 export function isQuietSinceLastUpdate(state: DisplayState | null | undefined, quietPeriodMs = 500): boolean {

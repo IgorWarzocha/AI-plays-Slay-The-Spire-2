@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildCombatStabilityKey, detectCombatCostChanges, isCombatDisplayStable } from "../lib/combat-stability.ts";
-import { isCombatStateSettled } from "../lib/command-state-utils.ts";
+import { hasStickyCombatPlayFlagFallback, isCombatStateSettled } from "../lib/command-state-utils.ts";
 
 test("combat stability key changes when hand membership changes", () => {
   const partial = {
@@ -165,4 +165,57 @@ test("combat card select can be settled even while handIsSettled is false", () =
 
   assert.equal(isCombatStateSettled(actionableSelection), true);
   assert.equal(isCombatDisplayStable(actionableSelection, { quietPeriodMs: 500 }), true);
+});
+
+test("combat status tolerates a sticky card-play flag when the player surface is otherwise actionable", () => {
+  const stickyAfterSelfDamage = {
+    screenType: "combat_room",
+    actions: [
+      "combat.play:card-a",
+      "combat.open_pile:draw",
+      "combat.end_turn",
+    ],
+    combat: {
+      currentSide: "Player",
+      canEndTurn: true,
+      handIsSettled: false,
+      activeHandCount: 5,
+      totalHandCount: 5,
+      modelHandCount: 5,
+      pendingHandHolderCount: 0,
+      handAnimationActive: false,
+      cardPlayInProgress: true,
+      hand: [{ id: "card-a" }],
+    },
+  };
+
+  assert.equal(hasStickyCombatPlayFlagFallback(stickyAfterSelfDamage), true);
+  assert.equal(isCombatStateSettled(stickyAfterSelfDamage), true);
+  assert.equal(isCombatDisplayStable(stickyAfterSelfDamage, { quietPeriodMs: 500 }), true);
+});
+
+test("combat status still rejects a real in-flight card play with pending hand work", () => {
+  const realTransition = {
+    screenType: "combat_room",
+    actions: [
+      "combat.play:card-a",
+      "combat.end_turn",
+    ],
+    combat: {
+      currentSide: "Player",
+      canEndTurn: true,
+      handIsSettled: false,
+      activeHandCount: 4,
+      totalHandCount: 5,
+      modelHandCount: 5,
+      pendingHandHolderCount: 1,
+      handAnimationActive: false,
+      cardPlayInProgress: true,
+      hand: [{ id: "card-a" }],
+    },
+  };
+
+  assert.equal(hasStickyCombatPlayFlagFallback(realTransition), false);
+  assert.equal(isCombatStateSettled(realTransition), false);
+  assert.equal(isCombatDisplayStable(realTransition, { quietPeriodMs: 500 }), false);
 });
