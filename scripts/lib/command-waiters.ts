@@ -2,6 +2,7 @@ import type { CommandAck, DisplayState } from './types.ts';
 import { AgentIpcSession, isMissingIpcError, withAgentSession } from './ipc-client.ts';
 import { waitForAsync } from './time.ts';
 import { buildCombatStabilityKey, isCombatDisplayStable } from './combat-stability.ts';
+import { withDisplayStateRunContext } from './display-state-run-context.ts';
 import {
   isCombatCardSelectSelectionFollowThroughState,
   isDeckCardSelectFollowThroughState,
@@ -19,12 +20,14 @@ import { hasStateMutated, isCombatStateSettled, stableJson } from './command-sta
 // makes settlement/follow-through behavior easier to evolve without touching
 // payload construction or bootstrap flow.
 
-function getState(session: AgentIpcSession): DisplayState | null {
+async function getState(session: AgentIpcSession): Promise<DisplayState | null> {
+  await session.refreshSnapshot();
   session.assertHealthy();
   return session.state;
 }
 
-function getAck(session: AgentIpcSession): CommandAck | null {
+async function getAck(session: AgentIpcSession): Promise<CommandAck | null> {
+  await session.refreshSnapshot();
   session.assertHealthy();
   return session.ack;
 }
@@ -37,8 +40,8 @@ export async function waitForSettledCombatState(
   let stableCount = 0;
 
   return waitForAsync<DisplayState>(
-    () => {
-      const state = getState(session);
+    async () => {
+      const state = await getState(session);
       if (!state || !isCombatDisplayStable(state, { quietPeriodMs })) {
         lastKey = null;
         stableCount = 0;
@@ -68,10 +71,10 @@ export async function readDisplayState({ timeoutMs = 2500 }: { timeoutMs?: numbe
       }
 
       if (!shouldWaitForCombatFollowThrough(state)) {
-        return state;
+        return withDisplayStateRunContext(state);
       }
 
-      return waitForSettledCombatState(session, { timeoutMs });
+      return withDisplayStateRunContext(await waitForSettledCombatState(session, { timeoutMs }));
     }, { timeoutMs });
   } catch (error: unknown) {
     if (isMissingIpcError(error)) {
@@ -88,8 +91,8 @@ export async function waitForAck(
   { timeoutMs = 10000 }: { timeoutMs?: number } = {},
 ): Promise<CommandAck> {
   return waitForAsync<CommandAck>(
-    () => {
-      const ack = getAck(session);
+    async () => {
+      const ack = await getAck(session);
       return ack && ack.id === id ? ack : null;
     },
     { timeoutMs, intervalMs: 150, description: `ack ${id}` },
@@ -103,14 +106,14 @@ export async function waitForCommandSettlement(
   { timeoutMs = 12000, allowPendingInteractiveTransition = true }: { timeoutMs?: number; allowPendingInteractiveTransition?: boolean } = {},
 ): Promise<{ ack: CommandAck | null; state: DisplayState }> {
   return waitForAsync(
-    () => {
-      const ack = getAck(session);
+    async () => {
+      const ack = await getAck(session);
       if (ack?.id === id && ack.status === 'error') {
         throw new Error(ack.message ?? `Command ${id} failed.`);
       }
 
       const ackCompleted = ack?.id === id && ack.status !== 'pending';
-      const state = getState(session);
+      const state = await getState(session);
       if (!state || state.lastHandledCommandId !== id) {
         return null;
       }
@@ -139,8 +142,8 @@ async function waitForMapTravelFollowThrough(
   let stableCount = 0;
 
   return waitForAsync(
-    () => {
-      const state = getState(session);
+    async () => {
+      const state = await getState(session);
       if (!isMapTravelFollowThroughState(beforeState, state, commandId)) {
         lastKey = null;
         stableCount = 0;
@@ -195,8 +198,8 @@ async function waitForRewardClaimFollowThrough(
   let stableCount = 0;
 
   return waitForAsync(
-    () => {
-      const state = getState(session);
+    async () => {
+      const state = await getState(session);
       if (!isRewardClaimFollowThroughState(action, beforeState, state)) {
         lastKey = null;
         stableCount = 0;
@@ -235,8 +238,8 @@ async function waitForCombatEndTurnFollowThrough(
   const beforeUpdatedAt = beforeState?.updatedAtUtc ?? null;
 
   return waitForAsync(
-    () => {
-      const state = getState(session);
+    async () => {
+      const state = await getState(session);
       if (!state?.updatedAtUtc || state.updatedAtUtc === beforeUpdatedAt) {
         return null;
       }
@@ -280,8 +283,8 @@ export async function waitForFollowThrough(
 
   if (action.startsWith('rewards.claim:reward-Potion-')) {
     return waitForAsync(
-      () => {
-        const state = getState(session);
+      async () => {
+        const state = await getState(session);
         return isRewardPotionClaimFollowThroughState(action, beforeState, state) ? state : null;
       },
       { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
@@ -293,10 +296,10 @@ export async function waitForFollowThrough(
   }
 
   if (action.startsWith('potions.use:')) {
-    const referenceState = beforeState ?? getState(session);
+    const referenceState = beforeState ?? await getState(session);
     return waitForAsync(
-      () => {
-        const state = getState(session);
+      async () => {
+        const state = await getState(session);
         return isPotionUseFollowThroughState(action, referenceState, state) ? state : null;
       },
       { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
@@ -305,8 +308,8 @@ export async function waitForFollowThrough(
 
   if (action.startsWith('deck_card_select.select:')) {
     return waitForAsync(
-      () => {
-        const state = getState(session);
+      async () => {
+        const state = await getState(session);
         return isDeckCardSelectFollowThroughState(action, beforeState, state) ? state : null;
       },
       { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
@@ -315,8 +318,8 @@ export async function waitForFollowThrough(
 
   if (action.startsWith('combat_card_select.select:')) {
     return waitForAsync(
-      () => {
-        const state = getState(session);
+      async () => {
+        const state = await getState(session);
         return isCombatCardSelectSelectionFollowThroughState(action, beforeState, state) ? state : null;
       },
       { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
@@ -325,8 +328,8 @@ export async function waitForFollowThrough(
 
   if (action.startsWith('merchant.')) {
     return waitForAsync(
-      () => {
-        const state = getState(session);
+      async () => {
+        const state = await getState(session);
         return isMerchantActionFollowThroughState(action, beforeState, state) ? state : null;
       },
       { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
@@ -342,9 +345,9 @@ export async function waitForFollowThrough(
 
 export async function waitForScreen(screenType: string, { timeoutMs = 15000 }: { timeoutMs?: number } = {}): Promise<DisplayState> {
   return withAgentSession(async (session) => waitForAsync(
-    () => {
-      const state = getState(session);
-      return state?.screenType === screenType ? state : null;
+    async () => {
+      const state = await getState(session);
+      return state?.screenType === screenType ? withDisplayStateRunContext(state) : null;
     },
     { timeoutMs, intervalMs: 150, description: `screen ${screenType}` },
   ), { timeoutMs });

@@ -10,6 +10,8 @@ Usually happy to take early:
 - `Uppercut`
 - `Shrug It Off`
 - `Burning Pact`
+- `Vicious`
+- `Cruelty`
 - `Headbutt`
 - `Battle Trance`
 - `Bloodletting`
@@ -45,6 +47,9 @@ Rule:
 - This matters most on rare rewards, where the highest-upside card is often not the one that best matches the deck's current surface description.
 - If you already have one or more exhaust enablers, `Dark Embrace` specifically deserves a stronger compare than most premium rares because it converts those cards from support into a real engine.
 - The main correction is about the rare itself, not a blanket downgrade to later `Burning Pact`s. Because `Dark Embrace` is rare here, the first offered copy must be taken more seriously than old STS1 instinct suggests.
+- For payoff powers like `Vicious` and `Cruelty`, the real question is not only "is this worth taking?" but also "will this deck actually spend boss and elite setup windows casting it?" If not, the pick is being misused.
+- Count deck texture honestly. If early Act 2 still shows many starter cards, lots of commons, and very few premium engine cards, value upgrades, removes, and true scaling more than one more merely solid reward.
+- Ironclad especially should stop taking unupgraded medium commons once the deck has a coherent shell. After that point, only take unupgraded cards if they are premium engine pieces, true missing role coverage, or powerful enough to justify future smith priority.
 
 Usually lower priority in solo unless the reason is concrete:
 
@@ -93,6 +98,7 @@ Highest impact:
 - `Stampede`
 - `Battle Trance`
 - `Bloodletting`
+- any card that is clearly part of the deck's hard-fight core every time it is drawn
 
 Very strong when relevant:
 
@@ -103,6 +109,14 @@ Very strong when relevant:
 - `Thunderclap`
 - `Uppercut`
 - `Rupture`
+
+Practical upgrade rule:
+
+- If a high-value card is going to be played in nearly every elite and boss fight, it deserves explicit smith priority.
+- In a vulnerable shell, `Uppercut+` is a major upgrade because it compresses both debuffs and makes the rest of the deck's turns more reliable.
+- Do not let random relic upgrades stand in for intentional smithing. Core cards still need real upgrade attention.
+- Fires should compare "upgrade the card this deck always wants" against resting, not "upgrade something flashy" against resting.
+- A useful late-Act-1 / Act-2 question is: "Would I still take this card if it were unupgraded and I had no spare smiths?" If the answer is no, skip it unless the deck is still missing something fundamental.
 
 Low-value upgrades unless they fix a breakpoint:
 

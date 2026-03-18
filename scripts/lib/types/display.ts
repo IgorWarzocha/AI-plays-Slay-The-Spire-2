@@ -131,7 +131,18 @@ export interface MapState {
   visible?: boolean;
   travelEnabled?: boolean;
   traveling?: boolean;
+  boss?: string | null;
   points?: MapPointState[];
+}
+
+export interface ActState {
+  index?: number | null;
+  number?: number | null;
+  id?: string | null;
+  shortId?: string | null;
+  ancientId?: string | null;
+  bossId?: string | null;
+  bossShortId?: string | null;
 }
 
 export interface CardBrowseState {
@@ -251,6 +262,7 @@ export interface DisplayState {
   screenType?: string | null;
   updatedAtUtc?: string | null;
   lastHandledCommandId?: string | null;
+  act?: ActState | null;
   topBar?: TopBarState | null;
   relics?: RelicState[];
   potions?: PotionState[];

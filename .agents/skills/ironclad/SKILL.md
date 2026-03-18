@@ -34,6 +34,8 @@ If the current decision is an elite or boss commitment, also read `/home/igorw/W
 
 - Frontload matters because many hard fights punish slow starts.
 - Setup is still mandatory when the fight demands it. Ironclad loses plenty of runs by pretending all strength or exhaust turns are too slow.
+- Powers are part of Ironclad's real fight plan, not decorative draft text. If the deck has taken a power because it solves scaling, draw, or conversion, then elite and boss fights must explicitly ask when that power should be deployed.
+- If a safe or semi-safe setup window appears and a drafted power still does not get played, treat that as a likely play mistake unless current survival math concretely forbids it.
 - Exhaust, card flow, and energy conversion are often what turn strong cards into an actual deck.
 - Take damage intentionally, not lazily. HP is there to buy winning positions, not to subsidize fuzzy lines.
 
@@ -42,6 +44,7 @@ If the current decision is an elite or boss commitment, also read `/home/igorw/W
 - Prioritize cards that solve immediate deck failures: weak turn 1s, no vulnerable, no draw smoothing, no AoE, or no scaling.
 - Respect skip. A filler attack or block card can be worse than preserving future draw quality.
 - Treat synergy as earned. Do not draft for a payoff line that the deck has not actually started supporting.
+- Do not draft a power as if it were future flavor text. If the deck takes a power, the run must expect to cast it in the hard fights it was taken for.
 - Rare rewards require a second pass. After identifying the obvious on-plan card, explicitly ask whether another rare would open or enable a stronger Ironclad lane that the deck can realistically support soon.
 - Premium engine rares like draw or exhaust enablers should not be dismissed just because the current deck is winning with a different package. Consider whether the reward is offering a real pivot, not just an immediate fit.
 

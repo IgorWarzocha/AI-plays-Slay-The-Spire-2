@@ -288,7 +288,7 @@ public sealed class AgentIpcServer : IDisposable
                 return;
             }
 
-            string json = JsonSerializer.Serialize(response, AgentJson.Options);
+            string json = JsonSerializer.Serialize(response, AgentIpcJson.Options);
 
             await _writeLock.WaitAsync(cancellationToken);
             try

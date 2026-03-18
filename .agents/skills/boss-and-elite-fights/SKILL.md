@@ -31,6 +31,7 @@ Then make the safest defensible decision available and update the skill referenc
 - Hard fights are threshold checks, not generic hallway fights with bigger numbers.
 - Do not commit because current HP looks fine. Commit because the deck has earned the fight.
 - Judge the deck on frontload, survivability through bad turns, scaling, draw consistency, potion quality, and recovery after the fight.
+- Treat draw consistency and hand-size-sensitive defense as real survivability, not optional polish.
 - Plan the fight around what kills you in the next cycle, not around perfect energy use this turn.
 - Potions are for breakpoint turns. Spend them when they change setup, lethal, or survival math.
 - In multi-target or summon fights, identify the source of future damage, scaling, or deck pollution first.

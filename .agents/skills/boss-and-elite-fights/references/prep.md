@@ -39,6 +39,8 @@ As the boss approaches, ask:
 - what is still missing in the deck
 - should the next reward, fire, or shop be judged almost entirely through the boss
 - is the run preserving potions for the turns that matter
+- if the boss offers a tax choice, which tax this specific deck can really carry
+- whether the deck's draw is passive or energy-paid, and whether hand size itself contributes to defense or retention value
 
 Late in an act, do not over-preserve if the deck is already ahead of the act's tests and the route still has recovery or potion outs.
 

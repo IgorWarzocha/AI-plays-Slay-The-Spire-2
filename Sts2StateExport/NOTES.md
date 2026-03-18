@@ -58,6 +58,14 @@ socket at `~/.local/share/SlayTheSpire2/agent_ipc/sts2-agent.sock`.
   - Clients send live command envelopes over the same connection. Commands are
     still deduped by `id`, but no file persistence is used in the hot path.
 
+## Troubleshooting
+
+- See `TROUBLESHOOTING.md` for the mod-loading recovery notes covering:
+  - stale `.pck` rebuilds
+  - manifest schema requirements
+  - loose manifest discovery rules
+  - newline-delimited IPC JSON framing
+
 ## Design Rules
 
 - Shared files stay runtime-agnostic where possible.

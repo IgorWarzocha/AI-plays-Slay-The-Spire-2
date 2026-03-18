@@ -44,6 +44,8 @@ If the fight is an elite or boss, also read:
    - scaling
    - body count
    - breakpoints for lethal or a safer next shuffle
+   - whether a drafted power is currently acting as a recurring dead draw and should instead be converted into live board text
+   - whether card draw, hand size, or a cheap repeatable card is functioning as real survivability rather than optional value text
    - passive block or damage that will happen at end of turn from relics or powers
 4. Commit the line that improves position, not just current-turn efficiency.
 5. After any draw burst, cost mutation, free-card effect, or state-changing power:
@@ -108,6 +110,8 @@ Practical rule:
 - Do not use `--batch` past temporary free cards, cost changes, draw effects, or uncertain kill math.
 - Do not confuse "elite fight" with "every action must be single-stepped." The hard part is the planning boundary, not the room label.
 - Do not do manual combat math as if cards were the whole board. Always include surfaced relic and power text that adds end-of-turn block, damage, or other passive combat value.
+- Do not treat card draw as decorative upside. In many fights it is part of your real HP total because it preserves better defensive and offensive choices.
+- Do not assume avoiding every small hit is correct. Some chip damage is worth taking if it preserves draw quality, hand size, or a materially stronger next-cycle position.
 - Do not use potions just to smooth an average turn; use them when they change setup, survival, or lethal math.
 - If combat state is not concretely exposed, stop and fix the surface before acting.
 

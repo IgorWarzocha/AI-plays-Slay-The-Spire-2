@@ -4,6 +4,7 @@ import { waitForAsync } from './time.ts';
 import { launchGame } from './process-manager.ts';
 import { normalizeActionForCurrentState } from './action-normalization.ts';
 import { detectCombatCostChanges } from './combat-stability.ts';
+import { withDisplayStateRunContext } from './display-state-run-context.ts';
 import { isAdvancedPlayerCombatTurn } from './follow-through-state.ts';
 import {
   waitForAck,
@@ -76,7 +77,7 @@ async function sendActionWithSession(session: AgentIpcSession, action: string, o
   }
 
   if (isExplicitFalse(options.strict)) {
-    return { action, id, ack, settled: false, state: session.state };
+    return { action, id, ack, settled: false, state: withDisplayStateRunContext(session.state) };
   }
 
   let followThroughState: DisplayState | null = null;
@@ -126,6 +127,7 @@ async function sendActionWithSession(session: AgentIpcSession, action: string, o
         return session.state;
       }
     })();
+  const annotatedFinalState = withDisplayStateRunContext(finalState);
   const finalAck: CommandAck | null = session.ack;
 
   return {
@@ -135,9 +137,9 @@ async function sendActionWithSession(session: AgentIpcSession, action: string, o
     ack: finalAck?.id === id ? finalAck : ack,
     settled: true,
     ackStatus: finalAck?.id === id ? finalAck.status : ack.status,
-    screenType: finalState?.screenType ?? null,
-    costChanges: detectCombatCostChanges(beforeState, finalState),
-    state: finalState,
+    screenType: annotatedFinalState?.screenType ?? null,
+    costChanges: detectCombatCostChanges(beforeState, annotatedFinalState),
+    state: annotatedFinalState,
   };
 }
 
@@ -165,7 +167,7 @@ export async function runActions(actions: readonly string[], options: RuntimeCom
       ok: true,
       actionCount: results.length,
       results,
-      state: results.at(-1)?.state ?? session.state,
+      state: results.at(-1)?.state ?? withDisplayStateRunContext(session.state),
     };
   });
 }
@@ -199,6 +201,6 @@ export async function startStandardRun(options: RuntimeCommandOptions = {}): Pro
       { timeoutMs: 20000, intervalMs: 250, description: 'run to leave character select' },
     );
 
-    return session.state;
+    return withDisplayStateRunContext(session.state);
   }, { timeoutMs: 60000 });
 }

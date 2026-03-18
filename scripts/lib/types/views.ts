@@ -154,6 +154,7 @@ export interface MapView {
   visible: boolean | undefined;
   travelEnabled: boolean | undefined;
   traveling: boolean | undefined;
+  boss: string | null;
   current: MapPointView | null;
   travelablePoints: MapPointView[];
   traveledCount: number;

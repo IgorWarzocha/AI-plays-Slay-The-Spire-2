@@ -56,6 +56,7 @@ export function summarizeMap(map: MapState, mode: Exclude<ViewMode, 'full'> = 'h
     visible: map.visible,
     travelEnabled: map.travelEnabled,
     traveling: map.traveling,
+    boss: map.boss ?? null,
     current,
     travelablePoints,
     traveledCount: points.filter((point) => point.state === 'Traveled').length,

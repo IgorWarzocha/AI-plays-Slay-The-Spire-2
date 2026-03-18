@@ -105,6 +105,22 @@ export class AgentIpcSession {
     return { state: this.state, ack: this.ack };
   }
 
+  async refreshSnapshot({ timeoutMs = 2000 }: { timeoutMs?: number } = {}): Promise<{ state: DisplayState | null; ack: CommandAck | null }> {
+    this.requestSnapshot();
+    const initialVersion = this.snapshotVersion;
+
+    await waitForAsync(() => {
+      this.assertHealthy();
+      return this.snapshotVersion > initialVersion ? true : null;
+    }, {
+      timeoutMs,
+      intervalMs: 25,
+      description: 'IPC snapshot refresh',
+    });
+
+    return { state: this.state, ack: this.ack };
+  }
+
   requestSnapshot(): void {
     this.assertHealthy();
     const envelope: SnapshotRequestEnvelope = {

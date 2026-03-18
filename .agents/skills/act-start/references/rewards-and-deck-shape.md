@@ -32,6 +32,8 @@ When reconstructing the deck, answer:
 - Prioritize cards that solve immediate failures before speculative payoff cards.
 - Do not over-draft synergy. Payoff is earned only after the shell exists.
 - If a card is only good after two more hits, it is usually not the pick unless the current run is already stable.
+- Add an upgrade gate once the deck is no longer desperate. After the deck has enough baseline power to clear current fights, start rejecting unupgraded filler — especially commons — unless the card is a missing engine piece, a premium role-fixer, or an unusually efficient upgrade target.
+- The appearance of upgraded card rewards in Act 2 should trigger a stricter compare: if the offered unupgraded card would not still be attractive as an upgraded version, it is usually just clutter.
 - Rare rewards deserve an explicit pivot check. Do not autopick the card that best matches the current lane until you compare it against any premium engine or lane-opening rare.
 - On rare rewards, ask three questions in order:
   1. what is the best immediate card
@@ -70,6 +72,7 @@ When reconstructing the deck, answer:
 - taking immediate value, then pathing like a high-roll deck anyway
 - using rewards to widen the deck instead of sharpening the plan
 - valuing unknown or weakly surfaced outputs above concrete upgrades to deck quality
+- continuing to accept unupgraded medium cards after the deck should have moved into a skip, smith, and remove discipline phase
 
 ## Living Rule
 

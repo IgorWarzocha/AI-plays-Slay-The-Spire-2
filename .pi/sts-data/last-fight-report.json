@@ -1,0 +1,9 @@
+{
+  "fightType": "hallway",
+  "model": "openai-codex/gpt-5.4-mini:high",
+  "promptFile": "/home/igorw/Work/STS2/.pi/sts-agents/hallway.md",
+  "loadFight": "map.travel:4,2",
+  "summary": "## Fight Summary\n- Won the hallway fight vs **Sludge Spinner**.\n- Ended combat at **74/80 HP** after Burning Blood.\n- **Raw damage taken: 6**.\n- **Potion used: Speed Potion**.\n\n## Tactical Notes\n- Opening **Battle Trance+** was good; it widened the hand and let me keep the line flexible.\n- The key HP-save was spending the **Speed Potion** on the turn where the Spinner’s attack had ramped and the hand could convert that extra Dex into a cleaner block line.\n- The fight became a small sequencing puzzle once the Spinner started stacking **Strength**; I prioritized not getting chipped by its bigger attacks over greedily forcing damage.\n\n## Main-Agent Guide Update Suggestions\n- Consider a note that **starter Ironclad + Battle Trance+** can use the draw spell early to find the exact block/damage mix, especially into enemies that scale attack quickly.\n- Consider a hallway-combat reminder that **tempo potions are worth spending** when they convert a future bad-damage turn into clean block without losing position.\n- No skill or guide files were edited by me.\n\n## Reward Screen State\n- Reward screen is live and untouched.\n- Visible choices: **11 Gold**, **Fire Potion**, or **Card Reward**.\n- **Silver Crucible** still has **1 upgraded reward** remaining.\n- I did **not** take any reward.",
+  "completedAtUtc": "2026-03-18T10:52:58.273Z",
+  "stderr": "Extension error (/home/igorw/Work/STS2/.pi/extensions/sts-manager/index.ts): Timed out waiting for map travel follow-through."
+}
