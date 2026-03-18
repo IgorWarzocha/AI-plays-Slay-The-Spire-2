@@ -31,17 +31,15 @@ function withCommandStateSurface(state: DisplayState | null | undefined, options
 
 function summarizeActionEntry(
   result: RunActionsResult['results'][number],
-  options: RuntimeCommandOptions = {},
+  _options: RuntimeCommandOptions = {},
 ): ActionSummaryView {
-  const mode = resolveViewMode(options);
-
   return {
     action: result.action,
     id: result.id,
     ackStatus: result.ackStatus ?? result.ack?.status ?? null,
     screenType: result.screenType ?? null,
     costChanges: (result.costChanges ?? []).map(summarizeCostChange),
-    combatAfter: mode === 'full' ? summarizeCombatActionState(result.state ?? null, 'hard') : summarizeCombatActionState(result.state ?? null, mode),
+    combatAfter: summarizeCombatActionState(result.state ?? null, 'hard'),
   };
 }
 

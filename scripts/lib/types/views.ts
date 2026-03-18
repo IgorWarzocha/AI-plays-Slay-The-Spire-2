@@ -125,15 +125,7 @@ export interface CombatViewData {
 export interface CombatActionStateView {
   screenType: string | null;
   updatedAtUtc: string | null;
-  combat: {
-    roundNumber: number | null;
-    currentSide: string | null;
-    energy: number | null;
-    canEndTurn: boolean | null;
-    selectionMode: string | null;
-    selectionPrompt: string | null;
-    hand: CombatCardView[];
-  } | null;
+  combat: CombatViewData | null;
 }
 
 export interface MapPointView {

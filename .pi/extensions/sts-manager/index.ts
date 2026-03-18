@@ -30,13 +30,15 @@ const SUBAGENT_PREFIGHT_STATE_ENV = "PI_STS_SUBAGENT_PREFIGHT_STATE";
 
 const MAIN_SYSTEM_APPENDIX = `
 STS combat delegation is extension-owned in this repo.
-- Use start_fight for hallway, elite, and boss combat.
+- Use delegate_fight for hallway, elite, and boss combat.
 - The main agent owns pathing, events, merchants, rewards, picks, long-term strategy, and guide or skill updates.
 - The combat prompt files are living assets owned by the main agent: .pi/sts-agents/hallway.md, .pi/sts-agents/elite.md, and .pi/sts-agents/boss.md.
-- start_fight requires one exact load_fight action string from the live state's actions list.
-- Do not play the fight yourself when you can delegate it with start_fight.
-- After start_fight returns, you own all reward decisions and any guide/skill edits.
-- Trust the subagent's reported reward-screen state after start_fight returns. Do not immediately re-check the same state unless something concrete is missing, ambiguous, or inconsistent.
+- delegate_fight requires one exact load_fight action string that would enter or load the fight from the last non-combat state.
+- If an unknown node or event unexpectedly becomes a fight, stop playing manually and hand over the fight with delegate_fight. Still pass the best exact load_fight action that entered that node or fight.
+- The tool itself decides whether to execute load_fight or attach to the already-loaded combat. Do not add extra parameters for that distinction.
+- Do not play the fight yourself when you can delegate it with delegate_fight.
+- After delegate_fight returns, you own all reward decisions and any guide/skill edits.
+- Trust the subagent's reported reward-screen state after delegate_fight returns. Do not immediately re-check the same state unless something concrete is missing, ambiguous, or inconsistent.
 - If a combat subagent misbehaves, oversteps ownership, ignores formatting, or produces weak summaries, tighten the responsible .pi/sts-agents/*.md prompt directly.
 - Refine those prompt files incrementally and specifically: sharpen ownership boundaries, workflow steps, stop conditions, and output contract instead of bloating them.
 - Subagents never edit their own prompt files; the main agent does that improvement loop.
@@ -52,7 +54,7 @@ const StartFightParams = Type.Object({
     description: "Main-agent handoff prompt describing the run state, plan, and what the combat specialist should know.",
   }),
   load_fight: Type.String({
-    description: "One exact action string from the current live state's actions list that enters or loads the fight. The extension executes this programmatically before the subagent's first turn.",
+    description: "One exact action string that would enter or load the fight from the last non-combat state. If the fight is already in progress, still pass it; the tool will attach instead of replaying it.",
   }),
 });
 
@@ -84,6 +86,12 @@ interface StartFightDetails {
   summary: string;
   completedAtUtc: string;
   stderr?: string;
+}
+
+function isCombatScreen(screenType: string | null | undefined): boolean {
+  return screenType === "combat_room"
+    || screenType === "combat_card_select"
+    || screenType === "combat_choice_select";
 }
 
 function isSubagentMode(): boolean {
@@ -132,10 +140,16 @@ function writePromptToTempFile(prefix: string, body: string): { dir: string; fil
 async function spawnFightSubagent(
   params: StartFightParamsType,
   signal: AbortSignal | undefined,
-): Promise<{ summary: string; stderr: string; model: string }> {
+): Promise<{ summary: string; stderr: string; model: string; loadFight: string }> {
   const config = readFightAgentConfig(params.fight_type);
   const model = buildSubagentModel(config);
   const prefightState = await readHardState();
+  const loadFight = params.load_fight.trim();
+
+  if (!loadFight) {
+    throw new Error("delegate_fight requires load_fight.");
+  }
+
   const { dir, filePath } = writePromptToTempFile(params.fight_type, config.promptBody);
 
   const args = [
@@ -152,7 +166,7 @@ async function spawnFightSubagent(
       ...process.env,
       [SUBAGENT_MODE_ENV]: "1",
       [SUBAGENT_KIND_ENV]: params.fight_type,
-      [SUBAGENT_LOAD_FIGHT_ENV]: params.load_fight,
+      [SUBAGENT_LOAD_FIGHT_ENV]: loadFight,
       [SUBAGENT_PREFIGHT_STATE_ENV]: prefightState.text,
     };
 
@@ -240,7 +254,7 @@ async function spawnFightSubagent(
       throw new Error("Fight subagent finished without a final summary.");
     }
 
-    return { summary: result.summary, stderr: result.stderr, model };
+    return { summary: result.summary, stderr: result.stderr, model, loadFight };
   } finally {
     try {
       fs.unlinkSync(filePath);
@@ -251,16 +265,18 @@ async function spawnFightSubagent(
   }
 }
 
-function buildBootstrapMessage(kind: FightKind, loadFight: string, prefightState: string, bootstrappedState: string): string {
+function buildBootstrapMessage(kind: FightKind, loadFight: string, prefightState: string, bootstrappedState: string, attached: boolean): string {
   return [
-    `STS ${kind} bootstrap executed programmatically before your first turn.`,
+    attached
+      ? `STS ${kind} delegated by attaching to the already-loaded combat.`
+      : `STS ${kind} bootstrap executed programmatically before your first turn.`,
     "",
     `load_fight action: ${loadFight}`,
     "",
-    "Prefight hard state before load_fight:",
+    attached ? "Hard state at handoff:" : "Prefight hard state before load_fight:",
     prefightState,
     "",
-    "Hard state after load_fight:",
+    attached ? "Bootstrapped combat hard state:" : "Hard state after load_fight:",
     bootstrappedState,
     "",
     formatLatestRunLogSummary(),
@@ -273,6 +289,66 @@ function buildCompactFightResult(details: StartFightDetails): string[] {
     `load_fight: ${details.loadFight}`,
     truncate(details.summary.replace(/\s+/g, " "), 160),
   ];
+}
+
+function registerFightDelegationTool(pi: ExtensionAPI): void {
+  pi.registerTool({
+    name: "delegate_fight",
+    label: "Delegate Fight",
+    description: "Delegate one hallway, elite, or boss fight to the configured disposable combat subagent. Always pass load_fight; the tool decides whether to execute it or attach to current combat.",
+    parameters: StartFightParams,
+    async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
+      const startParams = params as StartFightParamsType;
+      const outcome = await spawnFightSubagent(startParams, signal);
+      const details: StartFightDetails = {
+        fightType: startParams.fight_type,
+        model: outcome.model,
+        promptFile: readFightAgentConfig(startParams.fight_type).filePath,
+        loadFight: outcome.loadFight,
+        summary: outcome.summary,
+        completedAtUtc: new Date().toISOString(),
+        ...(outcome.stderr ? { stderr: outcome.stderr } : {}),
+      };
+
+      writeLastFightReport(details);
+
+      return {
+        content: [{ type: "text", text: outcome.summary }],
+        details,
+      };
+    },
+    renderCall(args, theme) {
+      return new Text(
+        `${theme.fg("toolTitle", theme.bold("delegate_fight "))}${theme.fg("accent", args.fight_type ?? "fight")}`,
+        0,
+        0,
+      );
+    },
+    renderResult(result, options, theme) {
+      const details = result.details as StartFightDetails | undefined;
+      if (!details) {
+        return new Text(theme.fg("warning", truncate(stringifyTextContent(result.content as Array<{ type: string; text?: string }>), 160)), 0, 0);
+      }
+
+      if (!options.expanded) {
+        return new Text(`${buildCompactFightResult(details).join("\n")}\n${theme.fg("dim", "Ctrl+O for full result")}`, 0, 0);
+      }
+
+      const fullText = stringifyTextContent(result.content as Array<{ type: string; text?: string }>) || details.summary;
+      const lines = [
+        theme.fg("success", `Fight delegated: ${details.fightType}`),
+        `Model: ${details.model}`,
+        `Prompt file: ${details.promptFile}`,
+        `load_fight: ${details.loadFight}`,
+        "",
+        fullText,
+      ];
+      if (details.stderr) {
+        lines.push("", theme.fg("warning", `stderr: ${details.stderr}`));
+      }
+      return new Text(lines.join("\n"), 0, 0);
+    },
+  });
 }
 
 async function editAgentFile(kind: FightKind, ctx: Parameters<NonNullable<ExtensionAPI["registerCommand"]>>[1]["handler"] extends (args: string, ctx: infer T) => any ? T : never): Promise<void> {
@@ -434,63 +510,7 @@ export default function registerStsFightManager(pi: ExtensionAPI): void {
       },
     });
 
-    pi.registerTool({
-      name: "start_fight",
-      label: "Start Fight",
-      description: "Delegate one hallway, elite, or boss fight to the configured disposable combat subagent. The main agent still owns rewards, picks, long-term strategy, and guide updates.",
-      parameters: StartFightParams,
-      async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
-        const startParams = params as StartFightParamsType;
-        const outcome = await spawnFightSubagent(startParams, signal);
-        const details: StartFightDetails = {
-          fightType: startParams.fight_type,
-          model: outcome.model,
-          promptFile: readFightAgentConfig(startParams.fight_type).filePath,
-          loadFight: startParams.load_fight,
-          summary: outcome.summary,
-          completedAtUtc: new Date().toISOString(),
-          ...(outcome.stderr ? { stderr: outcome.stderr } : {}),
-        };
-
-        writeLastFightReport(details);
-
-        return {
-          content: [{ type: "text", text: outcome.summary }],
-          details,
-        };
-      },
-      renderCall(args, theme) {
-        return new Text(
-          `${theme.fg("toolTitle", theme.bold("start_fight "))}${theme.fg("accent", args.fight_type ?? "fight")}`,
-          0,
-          0,
-        );
-      },
-      renderResult(result, options, theme) {
-        const details = result.details as StartFightDetails | undefined;
-        if (!details) {
-          return new Text(theme.fg("warning", truncate(stringifyTextContent(result.content as Array<{ type: string; text?: string }>), 160)), 0, 0);
-        }
-
-        if (!options.expanded) {
-          return new Text(`${buildCompactFightResult(details).join("\n")}\n${theme.fg("dim", "Ctrl+O for full result")}`, 0, 0);
-        }
-
-        const fullText = stringifyTextContent(result.content as Array<{ type: string; text?: string }>) || details.summary;
-        const lines = [
-          theme.fg("success", `Fight delegated: ${details.fightType}`),
-          `Model: ${details.model}`,
-          `Prompt file: ${details.promptFile}`,
-          `load_fight: ${details.loadFight}`,
-          "",
-          fullText,
-        ];
-        if (details.stderr) {
-          lines.push("", theme.fg("warning", `stderr: ${details.stderr}`));
-        }
-        return new Text(lines.join("\n"), 0, 0);
-      },
-    });
+    registerFightDelegationTool(pi);
 
     return;
   }
@@ -505,11 +525,20 @@ export default function registerStsFightManager(pi: ExtensionAPI): void {
       return undefined;
     }
     bootstrapInjected = true;
-    const bootstrapped = await runActionWithHardView(bootstrapAction);
+    const current = await readHardState();
+    const attached = isCombatScreen(current.state?.screenType);
+    const bootstrapped = attached
+      ? {
+          state: current.state,
+          view: current.view,
+          text: current.text,
+          resolvedAction: bootstrapAction,
+        }
+      : await runActionWithHardView(bootstrapAction);
     return {
       message: {
         customType: "sts-fight-bootstrap",
-        content: buildBootstrapMessage(subagentKind, bootstrapped.resolvedAction, prefightStateText, bootstrapped.text),
+        content: buildBootstrapMessage(subagentKind, bootstrapped.resolvedAction, prefightStateText, bootstrapped.text, attached),
         display: false,
       },
     };

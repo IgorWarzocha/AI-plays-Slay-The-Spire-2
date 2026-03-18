@@ -171,14 +171,6 @@ export function summarizeCombatActionState(
   return {
     screenType: state.screenType ?? null,
     updatedAtUtc: state.updatedAtUtc ?? null,
-    combat: {
-      roundNumber: combat.roundNumber ?? null,
-      currentSide: combat.currentSide ?? null,
-      energy: combat.energy ?? null,
-      canEndTurn: combat.canEndTurn ?? null,
-      selectionMode: combat.selectionMode ?? null,
-      selectionPrompt: combat.selectionPrompt ?? null,
-      hand: (combat.hand ?? []).map((card) => summarizeCombatCard(card, mode)),
-    },
+    combat: summarizeCombat(combat, mode),
   };
 }

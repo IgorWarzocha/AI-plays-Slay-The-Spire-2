@@ -6,10 +6,12 @@ import {
   assertCombatActions,
   assertGameplayActions,
   assertHistoryActions,
+  isCombatScreenType,
   isCombatAction,
   isBootstrapAction,
   isHistoryAction,
   isSharedInRunAction,
+  resolveCommandSurface,
 } from "../lib/action-scopes.ts";
 
 test("bootstrap and gameplay action scopes stay separated", () => {
@@ -45,4 +47,18 @@ test("bootstrap and gameplay action scopes stay separated", () => {
     () => assertCombatActions(["combat.play:bash-01@creature-1", "combat.end_turn"]),
     /requires --batch/,
   );
+});
+
+test("resolveCommandSurface auto-routes play commands", () => {
+  assert.equal(resolveCommandSurface(["main_menu.continue"]), "bootstrap");
+  assert.equal(resolveCommandSurface(["merchant.open"]), "gameplay");
+  assert.equal(resolveCommandSurface(["combat.end_turn"]), "combat");
+  assert.equal(resolveCommandSurface(["card_pile.close"], "combat_room"), "combat");
+  assert.equal(resolveCommandSurface(["card_pile.close"], "merchant_inventory"), "gameplay");
+  assert.equal(isCombatScreenType("combat_room"), true);
+  assert.equal(isCombatScreenType("merchant_inventory"), false);
+
+  assert.throws(() => resolveCommandSurface(["main_menu.continue", "merchant.open"]), /Cannot mix bootstrap/);
+  assert.throws(() => resolveCommandSurface(["combat.end_turn", "merchant.open"]), /Cannot mix combat/);
+  assert.throws(() => resolveCommandSurface(["run_history.next"]), /sts2history/);
 });

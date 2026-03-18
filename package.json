@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "admin": "node scripts/sts2admin.ts",
+    "play": "node scripts/sts2play.ts",
     "run": "node scripts/sts2run.ts",
     "ctl": "node scripts/sts2ctl.ts",
     "combat": "node scripts/sts2combat.ts",

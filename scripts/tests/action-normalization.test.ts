@@ -78,3 +78,46 @@ test("generic proceed resolves to the current surface proceed action", () => {
   assert.equal(normalizeActionForCurrentState("proceed", eventState), "event.choose:textkey:proceed");
   assert.equal(normalizeActionForCurrentState("proceed", rewardState), "rewards.proceed");
 });
+
+test("reward aliases resolve against dynamic reward action ids", () => {
+  const state = {
+    screenType: "rewards_screen",
+    actions: [
+      "rewards.claim:reward-Gold-1-2a11",
+      "rewards.claim:reward-Potion-2-41fdba",
+      "rewards.claim:reward-Relic-3-bowl",
+      "rewards.claim:reward-Card-4-cc99",
+      "rewards.proceed",
+    ],
+    menuItems: [
+      { id: "reward-Gold-1-2a11", label: "17 Gold", description: "17 Gold" },
+      { id: "reward-Potion-2-41fdba", label: "Speed Potion", description: "Gain Dexterity." },
+      { id: "reward-Relic-3-bowl", label: "Strawberry", description: "Relic reward." },
+      { id: "reward-Card-4-cc99", label: "Add a card to your deck.", description: "Add a card to your deck." },
+    ],
+  };
+
+  assert.equal(normalizeActionForCurrentState("rewards.claim:gold", state), "rewards.claim:reward-Gold-1-2a11");
+  assert.equal(normalizeActionForCurrentState("rewards.claim:potion", state), "rewards.claim:reward-Potion-2-41fdba");
+  assert.equal(normalizeActionForCurrentState("rewards.claim:relic", state), "rewards.claim:reward-Relic-3-bowl");
+  assert.equal(normalizeActionForCurrentState("rewards.claim:card", state), "rewards.claim:reward-Card-4-cc99");
+});
+
+test("raw reward ids re-resolve when only a dynamic suffix changed", () => {
+  const state = {
+    screenType: "rewards_screen",
+    actions: [
+      "rewards.claim:reward-Gold-1-2a11",
+      "rewards.claim:reward-Potion-2-41fdba",
+    ],
+  };
+
+  assert.equal(
+    normalizeActionForCurrentState("rewards.claim:reward-Gold-1", state),
+    "rewards.claim:reward-Gold-1-2a11",
+  );
+  assert.equal(
+    normalizeActionForCurrentState("rewards.claim:reward-Potion-2", state),
+    "rewards.claim:reward-Potion-2-41fdba",
+  );
+});

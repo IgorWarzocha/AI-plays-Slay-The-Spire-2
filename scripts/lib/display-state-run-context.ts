@@ -107,6 +107,6 @@ export function withDisplayStateRunContext(state: DisplayState | null | undefine
   return {
     ...state,
     act,
-    map: nextMap,
+    ...(nextMap !== undefined ? { map: nextMap } : {}),
   };
 }

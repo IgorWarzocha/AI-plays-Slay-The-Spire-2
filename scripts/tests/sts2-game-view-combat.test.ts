@@ -135,9 +135,20 @@ test("buildCombatCommandView surfaces combat cost changes per action", () => {
             roundNumber: 2,
             currentSide: "Player",
             energy: 2,
+            handIsSettled: true,
+            activeHandCount: 1,
+            totalHandCount: 1,
+            pendingHandHolderCount: 0,
+            handAnimationActive: false,
+            cardPlayInProgress: false,
+            drawPileCount: 9,
+            discardPileCount: 2,
+            exhaustPileCount: 0,
             canEndTurn: true,
             selectionMode: null,
             selectionPrompt: null,
+            potions: [],
+            creatures: [],
             hand: [{ id: "bash-01", title: "Bash", costText: "1", isPlayable: true, validTargetIds: ["creature-1"] }],
           },
         },
@@ -156,6 +167,14 @@ test("buildCombatCommandView surfaces combat cost changes per action", () => {
         currentSide: "Player",
         energy: 2,
         handIsSettled: true,
+        activeHandCount: 1,
+        totalHandCount: 1,
+        pendingHandHolderCount: 0,
+        handAnimationActive: false,
+        cardPlayInProgress: false,
+        drawPileCount: 9,
+        discardPileCount: 2,
+        exhaustPileCount: 0,
         canEndTurn: true,
         hand: [{ id: "bash-01", title: "Bash", costText: "1", isPlayable: true, validTargetIds: ["creature-1"] }],
         potions: [],
@@ -166,7 +185,109 @@ test("buildCombatCommandView surfaces combat cost changes per action", () => {
 
   const view = buildCombatCommandView(result);
   assert.equal(expectDefined(expectDefined(view.actions[0]).costChanges[0]).afterCost, "1");
-  assert.equal(expectDefined(expectDefined(expectDefined(view.actions[0]).combatAfter).combat).hand[0]?.cost, "1");
+  const combatAfter = expectDefined(expectDefined(view.actions[0]).combatAfter).combat;
+  assert.equal(expectDefined(combatAfter).hand[0]?.cost, "1");
+  assert.equal(expectDefined(combatAfter).piles.draw, 9);
+});
+
+test("buildCombatCommandView keeps rich combatAfter details even in easy mode", () => {
+  const result = {
+    ok: true,
+    actionCount: 1,
+    results: [
+      {
+        action: "combat.play:bash-01@creature-1",
+        id: "cmd-3",
+        ackStatus: "completed",
+        screenType: "combat_room",
+        state: {
+          screenType: "combat_room",
+          updatedAtUtc: "2026-03-17T12:41:00.000Z",
+          combat: {
+            roundNumber: 2,
+            currentSide: "Player",
+            energy: 1,
+            handIsSettled: true,
+            activeHandCount: 3,
+            totalHandCount: 3,
+            pendingHandHolderCount: 0,
+            handAnimationActive: false,
+            cardPlayInProgress: false,
+            drawPileCount: 7,
+            discardPileCount: 2,
+            exhaustPileCount: 0,
+            canEndTurn: true,
+            hand: [
+              {
+                id: "strike-01",
+                title: "Strike",
+                costText: "1",
+                description: "Deal 6 damage.",
+                isPlayable: true,
+                validTargetIds: ["creature-1"],
+              },
+            ],
+            potions: [],
+            creatures: [
+              {
+                id: "creature-1",
+                name: "Fossil Stalker",
+                side: "Enemy",
+                currentHp: 39,
+                maxHp: 51,
+                block: 0,
+                intents: [
+                  {
+                    kind: "SingleAttackIntent",
+                    label: "12",
+                    title: "Aggressive",
+                    description: "Attack for 12.",
+                    summary: "12 damage",
+                    targets: ["creature-0"],
+                  },
+                ],
+                powers: [],
+              },
+            ],
+          },
+        },
+      },
+    ],
+    state: {
+      screenType: "combat_room",
+      updatedAtUtc: "2026-03-17T12:41:00.000Z",
+      topBar: { currentHp: 52, maxHp: 80, gold: 88 },
+      relics: [],
+      notes: [],
+      menuItems: [],
+      actions: ["combat.end_turn"],
+      combat: {
+        roundNumber: 2,
+        currentSide: "Player",
+        energy: 1,
+        handIsSettled: true,
+        activeHandCount: 3,
+        totalHandCount: 3,
+        pendingHandHolderCount: 0,
+        handAnimationActive: false,
+        cardPlayInProgress: false,
+        drawPileCount: 7,
+        discardPileCount: 2,
+        exhaustPileCount: 0,
+        canEndTurn: true,
+        hand: [],
+        potions: [],
+        creatures: [],
+      },
+    },
+  };
+
+  const view = buildCombatCommandView(result, { easy: true });
+  const combatAfter = expectDefined(expectDefined(view.actions[0]).combatAfter).combat;
+  assert.equal(expectDefined(combatAfter).hand[0]?.description, "Deal 6 damage.");
+  assert.equal(expectDefined(expectDefined(combatAfter).creatures[0]).intents[0]?.summary, "12 damage");
+  assert.equal(expectDefined(combatAfter).piles.draw, 7);
+  assert.equal(expectDefined(combatAfter).handMeta?.active, 3);
 });
 
 test("buildGameplayView surfaces combat card transient states and unplayable causes", () => {
