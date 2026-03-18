@@ -1,14 +1,14 @@
 # STS2 State Export Mod
 
-This mod exposes Slay the Spire 2 state and commands through JSON files in
-`~/.local/share/SlayTheSpire2/agent_state`.
+This mod exposes Slay the Spire 2 state and commands through a Unix domain
+socket at `~/.local/share/SlayTheSpire2/agent_ipc/sts2-agent.sock`.
 
 ## File Map
 
 - `ModEntry.cs`
   - Thin bootstrap only. Hooks the Godot frame loop and delegates immediately.
 - `Shared/`
-  - Cross-feature contracts, JSON/file IO, scene traversal, the frame coordinator,
+  - Cross-feature contracts, JSON/socket IO, scene traversal, the frame coordinator,
     and the reflection catalog split into partial files by surface.
 - `Shared/Models/`
   - Runtime-agnostic JSON transport models grouped by surface (`state`, `combat`,
@@ -48,13 +48,12 @@ This mod exposes Slay the Spire 2 state and commands through JSON files in
 
 ## Runtime Contract
 
-- `screen_state.json`
-  - Latest exported state for the currently visible supported screen.
-- `command.json`
-  - A single command request. Commands are deduped by `id` and deleted after
-    they are acknowledged so restart does not replay stale work.
-- `command_ack.json`
-  - Result of the last handled command.
+- `sts2-agent.sock`
+  - Unix domain socket server hosted inside the mod process.
+  - Clients receive snapshot pushes containing the latest surfaced state and
+    last command acknowledgement.
+  - Clients send live command envelopes over the same connection. Commands are
+    still deduped by `id`, but no file persistence is used in the hot path.
 
 ## Design Rules
 

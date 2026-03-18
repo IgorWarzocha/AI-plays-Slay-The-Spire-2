@@ -1,14 +1,26 @@
 import type { CommandAck, DisplayState, LiveStatus } from './types.ts';
 
-import { readOptionalJson } from "./json-io.ts";
-import { STS2_RUNTIME_PATHS } from "./runtime-paths.ts";
+import { isMissingIpcError, withAgentSession } from './ipc-client.ts';
 import { getWindow } from './window-detector.ts';
 
-export function captureLiveStatus(): LiveStatus {
+export async function captureLiveStatus(): Promise<LiveStatus> {
   const window = getWindow();
   const running = Boolean(window);
-  const state = readOptionalJson<DisplayState>(STS2_RUNTIME_PATHS.statePath);
-  const ack = readOptionalJson<CommandAck>(STS2_RUNTIME_PATHS.ackPath);
+  let state: DisplayState | null = null;
+  let ack: CommandAck | null = null;
+
+  try {
+    const snapshot = await withAgentSession(async (session) => ({
+      state: session.state,
+      ack: session.ack,
+    }));
+    state = snapshot.state;
+    ack = snapshot.ack;
+  } catch (error: unknown) {
+    if (!isMissingIpcError(error)) {
+      throw error;
+    }
+  }
 
   return {
     capturedAtUtc: new Date().toISOString(),

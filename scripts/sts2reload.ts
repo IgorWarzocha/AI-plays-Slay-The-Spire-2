@@ -7,7 +7,7 @@ import {
   waitForScreen,
 } from "./lib/sts2-runtime.ts";
 import { buildCombatView, buildGameplayView } from "./lib/sts2-game-view.ts";
-import { waitFor } from "./lib/time.ts";
+import { waitForAsync } from "./lib/time.ts";
 import type { DisplayState, RuntimeCommandOptions } from "./lib/types.ts";
 
 function usage(): void {
@@ -36,8 +36,8 @@ function readWaitTimeout(value: RuntimeCommandOptions['waitTimeoutMs'], fallback
     : fallback;
 }
 
-function openPauseMenu(options: RuntimeCommandOptions): DisplayState {
-  const state = readDisplayState();
+async function openPauseMenu(options: RuntimeCommandOptions): Promise<DisplayState> {
+  const state = await readDisplayState();
   if (state?.screenType === "pause_menu") {
     return state;
   }
@@ -46,37 +46,37 @@ function openPauseMenu(options: RuntimeCommandOptions): DisplayState {
     throw new Error(`Cannot open pause menu from screen '${state?.screenType ?? "unknown"}'.`);
   }
 
-  sendAction("top_bar.pause", options);
+  await sendAction("top_bar.pause", options);
   return waitForScreen("pause_menu", { timeoutMs: readWaitTimeout(options.waitTimeoutMs, 15000) });
 }
 
-function saveQuit(options: RuntimeCommandOptions): DisplayState {
-  openPauseMenu(options);
-  sendAction("pause_menu.save_and_quit", { ...options, strict: false });
+async function saveQuit(options: RuntimeCommandOptions): Promise<DisplayState> {
+  await openPauseMenu(options);
+  await sendAction("pause_menu.save_and_quit", { ...options, strict: false });
   return waitForScreen("main_menu", { timeoutMs: readWaitTimeout(options.waitTimeoutMs, 20000) });
 }
 
-function continueRun(options: RuntimeCommandOptions): DisplayState {
-  const state = readDisplayState();
+async function continueRun(options: RuntimeCommandOptions): Promise<DisplayState> {
+  const state = await readDisplayState();
   if (state?.screenType !== "main_menu") {
     throw new Error(`Continue requires main menu, got '${state?.screenType ?? "unknown"}'.`);
   }
 
-  sendAction("main_menu.continue", { ...options, strict: false });
+  await sendAction("main_menu.continue", { ...options, strict: false });
   return waitForLoadedRun(options);
 }
 
-function reloadRun(options: RuntimeCommandOptions): DisplayState {
-  const state = readDisplayState();
+async function reloadRun(options: RuntimeCommandOptions): Promise<DisplayState> {
+  const state = await readDisplayState();
   if (state?.screenType === "main_menu") {
     return continueRun(options);
   }
 
-  saveQuit(options);
+  await saveQuit(options);
   return continueRun(options);
 }
 
-function waitForLoadedRun(options: RuntimeCommandOptions): DisplayState {
+function waitForLoadedRun(options: RuntimeCommandOptions): Promise<DisplayState> {
   return waitForLoadedRunSurface(readWaitTimeout(options.waitTimeoutMs, 25000));
 }
 
@@ -92,11 +92,11 @@ function isLoadedRunSurface(state: DisplayState | null | undefined): state is Di
   return true;
 }
 
-function waitForLoadedRunSurface(timeoutMs: number): DisplayState {
-  return waitFor(
-    () => {
+async function waitForLoadedRunSurface(timeoutMs: number): Promise<DisplayState> {
+  return waitForAsync(
+    async () => {
       try {
-        const state = readDisplayState({ timeoutMs: Math.min(timeoutMs, 5000) });
+        const state = await readDisplayState({ timeoutMs: Math.min(timeoutMs, 5000) });
         return isLoadedRunSurface(state) ? state : null;
       } catch (error) {
         if (error instanceof Error && error.message.includes("stable combat state")) {
@@ -110,22 +110,22 @@ function waitForLoadedRunSurface(timeoutMs: number): DisplayState {
   );
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const { positional, options } = parseArgs(process.argv.slice(2));
   const command = positional[0];
 
   switch (command) {
     case "status":
-      printState(readDisplayState(), options);
+      printState(await readDisplayState(), options);
       return;
     case "save-quit":
-      printState(saveQuit(options), options);
+      printState(await saveQuit(options), options);
       return;
     case "continue":
-      printState(continueRun(options), options);
+      printState(await continueRun(options), options);
       return;
     case "reload":
-      printState(reloadRun(options), options);
+      printState(await reloadRun(options), options);
       return;
     default:
       usage();
@@ -135,4 +135,4 @@ function main(): void {
   }
 }
 
-main();
+await main();

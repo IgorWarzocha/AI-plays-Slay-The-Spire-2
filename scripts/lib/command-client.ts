@@ -18,7 +18,6 @@ export {
   waitForSettledCombatState,
 } from './command-waiters.ts';
 export {
-  writeCommand,
   sendAction,
   runActions,
   startStandardRun,

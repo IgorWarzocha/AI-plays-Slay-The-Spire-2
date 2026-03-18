@@ -22,13 +22,13 @@ function printState(state: DisplayState | null | undefined, options: RuntimeComm
   console.log(JSON.stringify(buildCombatView(state, options), null, 2));
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const { positional, options } = parseArgs(process.argv.slice(2));
   const command = positional[0];
 
   switch (command) {
     case "status":
-      printState(readDisplayState(), options);
+      printState(await readDisplayState(), options);
       return;
     case "command": {
       const actions = positional.slice(1);
@@ -37,7 +37,7 @@ function main(): void {
       }
 
       assertCombatActions(actions, options);
-      console.log(JSON.stringify(buildCombatCommandView(runActions(actions, options), options), null, 2));
+      console.log(JSON.stringify(buildCombatCommandView(await runActions(actions, options), options), null, 2));
       return;
     }
     case "wait-screen": {
@@ -46,7 +46,7 @@ function main(): void {
         throw new Error("wait-screen requires a screen type.");
       }
 
-      printState(waitForScreen(screenType), options);
+      printState(await waitForScreen(screenType), options);
       return;
     }
     default:
@@ -57,4 +57,4 @@ function main(): void {
   }
 }
 
-main();
+await main();

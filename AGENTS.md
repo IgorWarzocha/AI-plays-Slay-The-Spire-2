@@ -21,7 +21,7 @@
 ## Key Paths
 
 - Repo: `/home/igorw/Work/STS2`
-- Exported state: `/home/igorw/.local/share/SlayTheSpire2/agent_state`
+- Agent IPC socket: `/home/igorw/.local/share/SlayTheSpire2/agent_ipc/sts2-agent.sock`
 - Game log: `/home/igorw/.local/share/SlayTheSpire2/logs/godot.log`
 - Modded save root: `/home/igorw/.local/share/SlayTheSpire2/steam/76561198178272743/modded/profile1`
 

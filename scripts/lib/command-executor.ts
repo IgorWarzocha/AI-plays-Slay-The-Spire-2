@@ -1,9 +1,6 @@
-import fs from 'node:fs';
-
-import type { ActionResult, CommandPayload, DisplayState, RunActionsResult, RuntimeCommandOptions } from './types.ts';
-import { readAck, readState } from './game-state.ts';
-import { STS2_RUNTIME_PATHS } from './runtime-paths.ts';
-import { waitFor } from './time.ts';
+import type { ActionResult, CommandAck, CommandPayload, DisplayState, RunActionsResult, RuntimeCommandOptions } from './types.ts';
+import { withAgentSession, type AgentIpcSession } from './ipc-client.ts';
+import { waitForAsync } from './time.ts';
 import { launchGame } from './process-manager.ts';
 import { normalizeActionForCurrentState } from './action-normalization.ts';
 import { detectCombatCostChanges } from './combat-stability.ts';
@@ -12,7 +9,6 @@ import {
   waitForAck,
   waitForCommandSettlement,
   waitForFollowThrough,
-  waitForScreen,
   waitForSettledCombatState,
 } from './command-waiters.ts';
 
@@ -48,13 +44,23 @@ function shouldPreferFollowThroughBeforeSettlement(action: string): boolean {
     || action.startsWith('merchant.');
 }
 
-export function writeCommand(command: CommandPayload): void {
-  fs.writeFileSync(STS2_RUNTIME_PATHS.commandPath, `${JSON.stringify(command, null, 2)}\n`);
+async function waitForScreenInSession(
+  session: AgentIpcSession,
+  screenType: string,
+  { timeoutMs = 15000 }: { timeoutMs?: number } = {},
+): Promise<DisplayState> {
+  return waitForAsync(
+    () => {
+      session.assertHealthy();
+      return session.state?.screenType === screenType ? session.state : null;
+    },
+    { timeoutMs, intervalMs: 150, description: `screen ${screenType}` },
+  );
 }
 
-export function sendAction(action: string, options: RuntimeCommandOptions = {}): ActionResult {
+async function sendActionWithSession(session: AgentIpcSession, action: string, options: RuntimeCommandOptions = {}): Promise<ActionResult> {
   const id = typeof options.id === 'string' ? options.id : createCommandId();
-  const beforeState = readState();
+  const beforeState = session.state;
   const resolvedAction = normalizeActionForCurrentState(action, beforeState);
   const settleTimeoutMs = readTimeoutOption(options['settle-timeout-ms'] ?? options.settleTimeoutMs, 12000);
   const defaultFollowThroughTimeoutMs = resolvedAction.startsWith('map.travel:') ? 45000 : 12000;
@@ -63,21 +69,21 @@ export function sendAction(action: string, options: RuntimeCommandOptions = {}):
     defaultFollowThroughTimeoutMs,
   );
 
-  writeCommand(buildCommandPayload(id, resolvedAction, options));
-  const ack = waitForAck(id);
+  session.sendCommand(buildCommandPayload(id, resolvedAction, options));
+  const ack = await waitForAck(session, id);
   if (ack.status === 'error') {
     throw new Error(ack.message ?? `Command ${resolvedAction} failed.`);
   }
 
   if (isExplicitFalse(options.strict)) {
-    return { action, id, ack, settled: false, state: readState() };
+    return { action, id, ack, settled: false, state: session.state };
   }
 
   let followThroughState: DisplayState | null = null;
   const requiresStrictSettlement = resolvedAction.startsWith('map.travel:');
   if (shouldPreferFollowThroughBeforeSettlement(resolvedAction)) {
     try {
-      followThroughState = waitForFollowThrough(resolvedAction, beforeState, {
+      followThroughState = await waitForFollowThrough(session, resolvedAction, beforeState, {
         timeoutMs: followThroughTimeoutMs,
         commandId: id,
       });
@@ -86,7 +92,7 @@ export function sendAction(action: string, options: RuntimeCommandOptions = {}):
         throw error;
       }
 
-      const currentState = readState();
+      const currentState = session.state;
       if (!isAdvancedPlayerCombatTurn(beforeState, currentState)) {
         throw error;
       }
@@ -97,7 +103,7 @@ export function sendAction(action: string, options: RuntimeCommandOptions = {}):
 
   const settlement = followThroughState
     ? null
-    : waitForCommandSettlement(id, beforeState, {
+    : await waitForCommandSettlement(session, id, beforeState, {
         timeoutMs: settleTimeoutMs,
         allowPendingInteractiveTransition: !requiresStrictSettlement,
       });
@@ -105,7 +111,7 @@ export function sendAction(action: string, options: RuntimeCommandOptions = {}):
   const fallbackFollowThroughState = followThroughState
     ?? (requiresStrictSettlement
       ? null
-      : waitForFollowThrough(resolvedAction, beforeState, {
+      : await waitForFollowThrough(session, resolvedAction, beforeState, {
           timeoutMs: followThroughTimeoutMs,
           commandId: id,
         }));
@@ -113,14 +119,14 @@ export function sendAction(action: string, options: RuntimeCommandOptions = {}):
   const finalState = followThroughState
     ?? fallbackFollowThroughState
     ?? settlement?.state
-    ?? (() => {
+    ?? await (async () => {
       try {
-        return waitForSettledCombatState();
+        return await waitForSettledCombatState(session);
       } catch {
-        return readState();
+        return session.state;
       }
     })();
-  const finalAck = readAck();
+  const finalAck: CommandAck | null = session.ack;
 
   return {
     action,
@@ -135,54 +141,64 @@ export function sendAction(action: string, options: RuntimeCommandOptions = {}):
   };
 }
 
-export function runActions(actions: readonly string[], options: RuntimeCommandOptions = {}): RunActionsResult {
-  const results: ActionResult[] = [];
-
-  for (const action of actions) {
-    const actionOptions: RuntimeCommandOptions = actions.length === 1 || options.id == null
-      ? options
-      : { ...options };
-
-    if (actions.length !== 1 && 'id' in actionOptions) {
-      delete actionOptions.id;
-    }
-
-    results.push(sendAction(action, actionOptions));
-  }
-
-  return {
-    ok: true,
-    actionCount: results.length,
-    results,
-    state: results.at(-1)?.state ?? readState(),
-  };
+export async function sendAction(action: string, options: RuntimeCommandOptions = {}): Promise<ActionResult> {
+  return withAgentSession((session) => sendActionWithSession(session, action, options));
 }
 
-export function startStandardRun(options: RuntimeCommandOptions = {}): DisplayState | null {
-  launchGame();
-  waitForScreen('main_menu', { timeoutMs: 60000 });
-  sendAction('main_menu.singleplayer', { id: `cmd-${Date.now()}-menu` });
-  waitForScreen('singleplayer_submenu');
-  sendAction('singleplayer.standard', { id: `cmd-${Date.now()}-singleplayer` });
-  waitForScreen('character_select');
+export async function runActions(actions: readonly string[], options: RuntimeCommandOptions = {}): Promise<RunActionsResult> {
+  return withAgentSession(async (session) => {
+    const results: ActionResult[] = [];
 
-  const startOptions: RuntimeCommandOptions = {
-    id: `cmd-${Date.now()}-start`,
-    character: typeof options.character === 'string' ? options.character : 'ironclad',
-    act1: typeof options.act1 === 'string' ? options.act1 : 'act1',
-  };
-  if (typeof options.seed === 'string') {
-    startOptions.seed = options.seed;
-  }
-  sendAction('character.start_run', startOptions);
+    for (const action of actions) {
+      const actionOptions: RuntimeCommandOptions = actions.length === 1 || options.id == null
+        ? options
+        : { ...options };
 
-  waitFor(
-    () => {
-      const state = readState();
-      return state && state.screenType !== 'character_select' ? state : null;
-    },
-    { timeoutMs: 20000, intervalMs: 250, description: 'run to leave character select' },
-  );
+      if (actions.length !== 1 && 'id' in actionOptions) {
+        delete actionOptions.id;
+      }
 
-  return readState();
+      results.push(await sendActionWithSession(session, action, actionOptions));
+    }
+
+    return {
+      ok: true,
+      actionCount: results.length,
+      results,
+      state: results.at(-1)?.state ?? session.state,
+    };
+  });
+}
+
+export async function startStandardRun(options: RuntimeCommandOptions = {}): Promise<DisplayState | null> {
+  await launchGame();
+
+  return withAgentSession(async (session) => {
+    await waitForScreenInSession(session, 'main_menu', { timeoutMs: 60000 });
+    await sendActionWithSession(session, 'main_menu.singleplayer', { id: `cmd-${Date.now()}-menu` });
+    await waitForScreenInSession(session, 'singleplayer_submenu');
+    await sendActionWithSession(session, 'singleplayer.standard', { id: `cmd-${Date.now()}-singleplayer` });
+    await waitForScreenInSession(session, 'character_select');
+
+    const startOptions: RuntimeCommandOptions = {
+      id: `cmd-${Date.now()}-start`,
+      character: typeof options.character === 'string' ? options.character : 'ironclad',
+      act1: typeof options.act1 === 'string' ? options.act1 : 'act1',
+    };
+    if (typeof options.seed === 'string') {
+      startOptions.seed = options.seed;
+    }
+    await sendActionWithSession(session, 'character.start_run', startOptions);
+
+    await waitForAsync(
+      () => {
+        session.assertHealthy();
+        const state = session.state;
+        return state && state.screenType !== 'character_select' ? state : null;
+      },
+      { timeoutMs: 20000, intervalMs: 250, description: 'run to leave character select' },
+    );
+
+    return session.state;
+  }, { timeoutMs: 60000 });
 }

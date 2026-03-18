@@ -1,6 +1,6 @@
 import type { CommandAck, DisplayState } from './types.ts';
-import { readAck, readState } from './game-state.ts';
-import { waitFor } from './time.ts';
+import { AgentIpcSession, isMissingIpcError, withAgentSession } from './ipc-client.ts';
+import { waitForAsync } from './time.ts';
 import { buildCombatStabilityKey, isCombatDisplayStable } from './combat-stability.ts';
 import {
   isCombatCardSelectSelectionFollowThroughState,
@@ -19,13 +19,26 @@ import { hasStateMutated, isCombatStateSettled, stableJson } from './command-sta
 // makes settlement/follow-through behavior easier to evolve without touching
 // payload construction or bootstrap flow.
 
-export function waitForSettledCombatState({ timeoutMs = 2500, quietPeriodMs = 500, stableSamples = 3 }: { timeoutMs?: number; quietPeriodMs?: number; stableSamples?: number } = {}): DisplayState {
+function getState(session: AgentIpcSession): DisplayState | null {
+  session.assertHealthy();
+  return session.state;
+}
+
+function getAck(session: AgentIpcSession): CommandAck | null {
+  session.assertHealthy();
+  return session.ack;
+}
+
+export async function waitForSettledCombatState(
+  session: AgentIpcSession,
+  { timeoutMs = 2500, quietPeriodMs = 500, stableSamples = 3 }: { timeoutMs?: number; quietPeriodMs?: number; stableSamples?: number } = {},
+): Promise<DisplayState> {
   let lastKey: string | null = null;
   let stableCount = 0;
 
-  return waitFor<DisplayState>(
+  return waitForAsync<DisplayState>(
     () => {
-      const state = readState();
+      const state = getState(session);
       if (!state || !isCombatDisplayStable(state, { quietPeriodMs })) {
         lastKey = null;
         stableCount = 0;
@@ -46,43 +59,58 @@ export function waitForSettledCombatState({ timeoutMs = 2500, quietPeriodMs = 50
   );
 }
 
-export function readDisplayState({ timeoutMs = 2500 }: { timeoutMs?: number } = {}): DisplayState | null {
-  const state = readState();
-  if (!state) {
-    return null;
-  }
+export async function readDisplayState({ timeoutMs = 2500 }: { timeoutMs?: number } = {}): Promise<DisplayState | null> {
+  try {
+    return await withAgentSession(async (session) => {
+      const state = session.state;
+      if (!state) {
+        return null;
+      }
 
-  if (!shouldWaitForCombatFollowThrough(state)) {
-    return state;
-  }
+      if (!shouldWaitForCombatFollowThrough(state)) {
+        return state;
+      }
 
-  return waitForSettledCombatState({ timeoutMs });
+      return waitForSettledCombatState(session, { timeoutMs });
+    }, { timeoutMs });
+  } catch (error: unknown) {
+    if (isMissingIpcError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
 }
 
-export function waitForAck(id: string, { timeoutMs = 10000 }: { timeoutMs?: number } = {}): CommandAck {
-  return waitFor<CommandAck>(
+export async function waitForAck(
+  session: AgentIpcSession,
+  id: string,
+  { timeoutMs = 10000 }: { timeoutMs?: number } = {},
+): Promise<CommandAck> {
+  return waitForAsync<CommandAck>(
     () => {
-      const ack = readAck();
+      const ack = getAck(session);
       return ack && ack.id === id ? ack : null;
     },
     { timeoutMs, intervalMs: 150, description: `ack ${id}` },
   );
 }
 
-export function waitForCommandSettlement(
+export async function waitForCommandSettlement(
+  session: AgentIpcSession,
   id: string,
   beforeState: DisplayState | null | undefined,
   { timeoutMs = 12000, allowPendingInteractiveTransition = true }: { timeoutMs?: number; allowPendingInteractiveTransition?: boolean } = {},
-): { ack: CommandAck | null; state: DisplayState } {
-  return waitFor(
+): Promise<{ ack: CommandAck | null; state: DisplayState }> {
+  return waitForAsync(
     () => {
-      const ack = readAck();
+      const ack = getAck(session);
       if (ack?.id === id && ack.status === 'error') {
         throw new Error(ack.message ?? `Command ${id} failed.`);
       }
 
       const ackCompleted = ack?.id === id && ack.status !== 'pending';
-      const state = readState();
+      const state = getState(session);
       if (!state || state.lastHandledCommandId !== id) {
         return null;
       }
@@ -101,13 +129,18 @@ export function waitForCommandSettlement(
   );
 }
 
-function waitForMapTravelFollowThrough(beforeState: DisplayState | null | undefined, timeoutMs: number, commandId: string | null): DisplayState | null {
+async function waitForMapTravelFollowThrough(
+  session: AgentIpcSession,
+  beforeState: DisplayState | null | undefined,
+  timeoutMs: number,
+  commandId: string | null,
+): Promise<DisplayState | null> {
   let lastKey: string | null = null;
   let stableCount = 0;
 
-  return waitFor(
+  return waitForAsync(
     () => {
-      const state = readState();
+      const state = getState(session);
       if (!isMapTravelFollowThroughState(beforeState, state, commandId)) {
         lastKey = null;
         stableCount = 0;
@@ -152,13 +185,18 @@ function waitForMapTravelFollowThrough(beforeState: DisplayState | null | undefi
   );
 }
 
-function waitForRewardClaimFollowThrough(action: string, beforeState: DisplayState | null | undefined, timeoutMs: number): DisplayState | null {
+async function waitForRewardClaimFollowThrough(
+  session: AgentIpcSession,
+  action: string,
+  beforeState: DisplayState | null | undefined,
+  timeoutMs: number,
+): Promise<DisplayState | null> {
   let lastKey: string | null = null;
   let stableCount = 0;
 
-  return waitFor(
+  return waitForAsync(
     () => {
-      const state = readState();
+      const state = getState(session);
       if (!isRewardClaimFollowThroughState(action, beforeState, state)) {
         lastKey = null;
         stableCount = 0;
@@ -187,13 +225,18 @@ function waitForRewardClaimFollowThrough(action: string, beforeState: DisplaySta
   );
 }
 
-function waitForCombatEndTurnFollowThrough(action: string, beforeState: DisplayState | null | undefined, timeoutMs: number): DisplayState | null {
+async function waitForCombatEndTurnFollowThrough(
+  session: AgentIpcSession,
+  action: string,
+  beforeState: DisplayState | null | undefined,
+  timeoutMs: number,
+): Promise<DisplayState | null> {
   const beforeRoundNumber = beforeState?.combat?.roundNumber ?? null;
   const beforeUpdatedAt = beforeState?.updatedAtUtc ?? null;
 
-  return waitFor(
+  return waitForAsync(
     () => {
-      const state = readState();
+      const state = getState(session);
       if (!state?.updatedAtUtc || state.updatedAtUtc === beforeUpdatedAt) {
         return null;
       }
@@ -225,19 +268,20 @@ function waitForCombatEndTurnFollowThrough(action: string, beforeState: DisplayS
   );
 }
 
-export function waitForFollowThrough(
+export async function waitForFollowThrough(
+  session: AgentIpcSession,
   action: string,
   beforeState: DisplayState | null | undefined,
   { timeoutMs = 12000, commandId = null }: { timeoutMs?: number; commandId?: string | null } = {},
-): DisplayState | null {
+): Promise<DisplayState | null> {
   if (action.startsWith('map.travel:')) {
-    return waitForMapTravelFollowThrough(beforeState, timeoutMs, commandId);
+    return waitForMapTravelFollowThrough(session, beforeState, timeoutMs, commandId);
   }
 
   if (action.startsWith('rewards.claim:reward-Potion-')) {
-    return waitFor(
+    return waitForAsync(
       () => {
-        const state = readState();
+        const state = getState(session);
         return isRewardPotionClaimFollowThroughState(action, beforeState, state) ? state : null;
       },
       { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
@@ -245,14 +289,14 @@ export function waitForFollowThrough(
   }
 
   if (action.startsWith('rewards.claim:')) {
-    return waitForRewardClaimFollowThrough(action, beforeState, timeoutMs);
+    return waitForRewardClaimFollowThrough(session, action, beforeState, timeoutMs);
   }
 
   if (action.startsWith('potions.use:')) {
-    const referenceState = beforeState ?? readState();
-    return waitFor(
+    const referenceState = beforeState ?? getState(session);
+    return waitForAsync(
       () => {
-        const state = readState();
+        const state = getState(session);
         return isPotionUseFollowThroughState(action, referenceState, state) ? state : null;
       },
       { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
@@ -260,9 +304,9 @@ export function waitForFollowThrough(
   }
 
   if (action.startsWith('deck_card_select.select:')) {
-    return waitFor(
+    return waitForAsync(
       () => {
-        const state = readState();
+        const state = getState(session);
         return isDeckCardSelectFollowThroughState(action, beforeState, state) ? state : null;
       },
       { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
@@ -270,9 +314,9 @@ export function waitForFollowThrough(
   }
 
   if (action.startsWith('combat_card_select.select:')) {
-    return waitFor(
+    return waitForAsync(
       () => {
-        const state = readState();
+        const state = getState(session);
         return isCombatCardSelectSelectionFollowThroughState(action, beforeState, state) ? state : null;
       },
       { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
@@ -280,9 +324,9 @@ export function waitForFollowThrough(
   }
 
   if (action.startsWith('merchant.')) {
-    return waitFor(
+    return waitForAsync(
       () => {
-        const state = readState();
+        const state = getState(session);
         return isMerchantActionFollowThroughState(action, beforeState, state) ? state : null;
       },
       { timeoutMs, intervalMs: 200, description: `${action} follow-through` },
@@ -293,15 +337,15 @@ export function waitForFollowThrough(
     return null;
   }
 
-  return waitForCombatEndTurnFollowThrough(action, beforeState, timeoutMs);
+  return waitForCombatEndTurnFollowThrough(session, action, beforeState, timeoutMs);
 }
 
-export function waitForScreen(screenType: string, { timeoutMs = 15000 }: { timeoutMs?: number } = {}): DisplayState {
-  return waitFor(
+export async function waitForScreen(screenType: string, { timeoutMs = 15000 }: { timeoutMs?: number } = {}): Promise<DisplayState> {
+  return withAgentSession(async (session) => waitForAsync(
     () => {
-      const state = readState();
+      const state = getState(session);
       return state?.screenType === screenType ? state : null;
     },
     { timeoutMs, intervalMs: 150, description: `screen ${screenType}` },
-  );
+  ), { timeoutMs });
 }

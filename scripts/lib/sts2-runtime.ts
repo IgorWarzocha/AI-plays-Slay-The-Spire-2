@@ -11,10 +11,10 @@ export { waitForAck, waitForCommandSettlement, waitForFollowThrough, waitForScre
 import { readAck, readState } from "./game-state.ts";
 import { getWindow } from "./window-detector.ts";
 
-export function buildAdminStatus(): AdminStatus {
+export async function buildAdminStatus(): Promise<AdminStatus> {
   const window = getWindow();
-  const state = readState();
-  const ack = readAck();
+  const state = await readState();
+  const ack = await readAck();
 
   return {
     running: Boolean(window),

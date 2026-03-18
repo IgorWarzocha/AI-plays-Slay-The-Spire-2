@@ -1,6 +1,5 @@
 import type { CommandAck, DisplayState } from './types.ts';
-import { readOptionalJson } from './json-io.ts';
-import { STS2_RUNTIME_PATHS } from './runtime-paths.ts';
+import { isMissingIpcError, readAckFromIpc, readStateFromIpc } from './ipc-client.ts';
 
 function parseInstant(value: string | null | undefined): number {
   if (!value) {
@@ -37,10 +36,26 @@ export function chooseNewestAck(liveAck: CommandAck | null, fileAck: CommandAck 
   return selectNewestStateLike(liveAck, fileAck, (value) => value.handledAtUtc);
 }
 
-export function readState(): DisplayState | null {
-  return readOptionalJson<DisplayState>(STS2_RUNTIME_PATHS.statePath);
+export async function readState(): Promise<DisplayState | null> {
+  try {
+    return await readStateFromIpc();
+  } catch (error: unknown) {
+    if (isMissingIpcError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
 }
 
-export function readAck(): CommandAck | null {
-  return readOptionalJson<CommandAck>(STS2_RUNTIME_PATHS.ackPath);
+export async function readAck(): Promise<CommandAck | null> {
+  try {
+    return await readAckFromIpc();
+  } catch (error: unknown) {
+    if (isMissingIpcError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
 }

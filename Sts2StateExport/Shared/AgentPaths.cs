@@ -2,15 +2,13 @@ namespace Sts2StateExport;
 
 public static class AgentPaths
 {
-    public static readonly string ExportDir =
+    public static readonly string IpcDir =
         Path.Combine(
             System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile),
             ".local",
             "share",
             "SlayTheSpire2",
-            "agent_state");
+            "agent_ipc");
 
-    public static readonly string StatePath = Path.Combine(ExportDir, "screen_state.json");
-    public static readonly string CommandPath = Path.Combine(ExportDir, "command.json");
-    public static readonly string AckPath = Path.Combine(ExportDir, "command_ack.json");
+    public static readonly string SocketPath = Path.Combine(IpcDir, "sts2-agent.sock");
 }

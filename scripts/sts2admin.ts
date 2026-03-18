@@ -20,31 +20,33 @@ function usage() {
 }
 
 function printStatus() {
-  console.log(JSON.stringify(buildAdminStatus(), null, 2));
+  return buildAdminStatus().then((status) => {
+    console.log(JSON.stringify(status, null, 2));
+  });
 }
 
-function main() {
+async function main() {
   const { positional } = parseArgs(process.argv.slice(2));
   const command = positional[0];
 
   switch (command) {
     case "status":
-      printStatus();
+      await printStatus();
       return;
     case "launch":
-      launchGame();
-      printStatus();
+      await launchGame();
+      await printStatus();
       return;
     case "quit":
-      quitGame();
-      printStatus();
+      await quitGame();
+      await printStatus();
       return;
     case "restart":
-      restartGame();
-      printStatus();
+      await restartGame();
+      await printStatus();
       return;
     case "monitor-capture":
-      console.log(JSON.stringify(captureLiveStatus(), null, 2));
+      console.log(JSON.stringify(await captureLiveStatus(), null, 2));
       return;
     default:
       usage();
@@ -54,4 +56,4 @@ function main() {
   }
 }
 
-main();
+await main();

@@ -2,11 +2,11 @@ import { spawn } from "node:child_process";
 
 import { STS2_RUNTIME_PATHS } from "./runtime-paths.ts";
 import { run } from "./shell.ts";
-import { waitFor } from "./time.ts";
+import { waitFor, waitForAsync } from "./time.ts";
 import { readState } from "./game-state.ts";
 import { getWindow, isRunning } from "./window-detector.ts";
 
-export function launchGame({ timeoutMs = 45000, readyTimeoutMs = 20000 } = {}) {
+export async function launchGame({ timeoutMs = 45000, readyTimeoutMs = 20000 } = {}) {
   const launchStartedAtIso = new Date().toISOString();
 
   if (isRunning()) {
@@ -24,9 +24,9 @@ export function launchGame({ timeoutMs = 45000, readyTimeoutMs = 20000 } = {}) {
     description: "STS2 window",
   });
 
-  waitFor(
-    () => {
-      const state = readState();
+  await waitForAsync(
+    async () => {
+      const state = await readState();
       return state?.updatedAtUtc && state.updatedAtUtc >= launchStartedAtIso ? state : null;
     },
     { timeoutMs: readyTimeoutMs, intervalMs: 250, description: "fresh STS2 state heartbeat" },
@@ -35,7 +35,7 @@ export function launchGame({ timeoutMs = 45000, readyTimeoutMs = 20000 } = {}) {
   return window;
 }
 
-export function quitGame() {
+export async function quitGame() {
   const window = getWindow();
   if (!window) {
     return false;
@@ -46,12 +46,12 @@ export function quitGame() {
   return true;
 }
 
-export function restartGame() {
-  quitGame();
-  const window = launchGame();
-  waitFor(
-    () => {
-      const state = readState();
+export async function restartGame() {
+  await quitGame();
+  const window = await launchGame();
+  await waitForAsync(
+    async () => {
+      const state = await readState();
       if (!state?.screenType) {
         return null;
       }

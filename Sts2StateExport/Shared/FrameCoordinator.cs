@@ -7,26 +7,26 @@ namespace Sts2StateExport;
 public sealed class FrameCoordinator
 {
     private readonly MegaCrit.Sts2.Core.Logging.Logger _logger;
-    private readonly JsonFileStore _fileStore;
+    private readonly AgentIpcServer _ipcServer;
     private readonly Sts2Reflection _reflection;
     private readonly IReadOnlyList<IAgentFeature> _primaryFeatures;
     private readonly IReadOnlyList<IAgentOverlayFeature> _overlayFeatures;
 
     private ulong _lastTickMs;
     private string? _lastStateJson;
+    private ExportState? _lastState;
     private string? _lastHandledCommandId;
     private ExportCommandAck? _lastAck;
-    private string? _lastCommandFingerprint;
 
     private FrameCoordinator(
         MegaCrit.Sts2.Core.Logging.Logger logger,
-        JsonFileStore fileStore,
+        AgentIpcServer ipcServer,
         Sts2Reflection reflection,
         IReadOnlyList<IAgentFeature> primaryFeatures,
         IReadOnlyList<IAgentOverlayFeature> overlayFeatures)
     {
         _logger = logger;
-        _fileStore = fileStore;
+        _ipcServer = ipcServer;
         _reflection = reflection;
         _primaryFeatures = primaryFeatures.OrderBy(feature => feature.Order).ToList();
         _overlayFeatures = overlayFeatures.OrderBy(feature => feature.Order).ToList();
@@ -34,12 +34,12 @@ public sealed class FrameCoordinator
 
     public static FrameCoordinator CreateDefault(MegaCrit.Sts2.Core.Logging.Logger logger)
     {
-        JsonFileStore fileStore = new();
+        AgentIpcServer ipcServer = new(logger);
         Sts2Reflection reflection = new();
 
         return new FrameCoordinator(
             logger,
-            fileStore,
+            ipcServer,
             reflection,
             [
                 new ProfileFeature(),
@@ -80,17 +80,16 @@ public sealed class FrameCoordinator
 
     public void WriteBootstrapState()
     {
-        _fileStore.DeleteIfExists(AgentPaths.CommandPath);
-        _fileStore.DeleteIfExists(AgentPaths.AckPath);
-        _fileStore.WriteAtomic(
-            AgentPaths.StatePath,
-            new ExportState
-            {
-                Source = "initializer",
-                UpdatedAtUtc = DateTimeOffset.UtcNow,
-                ScreenType = "booting",
-                Notes = ["Frame hook installed."]
-            });
+        _ipcServer.Start();
+        _lastState = new ExportState
+        {
+            Source = "initializer",
+            UpdatedAtUtc = DateTimeOffset.UtcNow,
+            ScreenType = "booting",
+            Notes = ["Frame hook installed."]
+        };
+        _lastStateJson = System.Text.Json.JsonSerializer.Serialize(_lastState, AgentJson.Options);
+        _ipcServer.PublishSnapshot(_lastState, _lastAck);
     }
 
     public void Tick()
@@ -148,98 +147,84 @@ public sealed class FrameCoordinator
 
     private void HandleCommandIfNeeded()
     {
-        string? commandJson = _fileStore.ReadTextOrDefault(AgentPaths.CommandPath);
-        if (string.IsNullOrWhiteSpace(commandJson) || commandJson == _lastCommandFingerprint)
+        while (_ipcServer.TryDequeueCommand(out ExportCommand? rawCommand) && rawCommand is not null)
         {
-            return;
-        }
-
-        try
-        {
-            CommandEnvelopeParseResult envelopeResult = CommandEnvelopeReader.Parse(commandJson);
-            if (envelopeResult.Status != CommandEnvelopeParseStatus.Ok)
+            try
             {
-                WriteCommandAck(null, null, "error", envelopeResult.ErrorMessage);
-                _lastCommandFingerprint = commandJson;
-                return;
-            }
-
-            ExportCommand rawCommand = envelopeResult.Command
-                ?? throw new InvalidOperationException("Command file did not contain a command object.");
-            ParsedCommand command = CommandParser.Parse(rawCommand);
-            ExportCommandAck? persistedAck = _fileStore.ReadOrDefault<ExportCommandAck>(AgentPaths.AckPath);
-            if (command.Id == _lastHandledCommandId || persistedAck?.Id == command.Id)
-            {
-                _lastCommandFingerprint = commandJson;
-                return;
-            }
-
-            SceneTree tree = (SceneTree)Engine.GetMainLoop();
-            FeatureContext context = new(tree.Root, _reflection);
-
-            foreach (IAgentFeature feature in _primaryFeatures)
-            {
-                if (!feature.TryExecute(context, command))
+                ParsedCommand command = CommandParser.Parse(rawCommand);
+                if (command.Id == _lastHandledCommandId)
                 {
                     continue;
                 }
 
-                _lastHandledCommandId = command.Id;
-                _lastCommandFingerprint = commandJson;
+                SceneTree tree = (SceneTree)Engine.GetMainLoop();
+                FeatureContext context = new(tree.Root, _reflection);
 
-                if (context.ScheduledTasks.Count == 0)
+                foreach (IAgentFeature feature in _primaryFeatures)
                 {
-                    WriteCommandAck(command.Id, command.RawAction, "completed", null);
-                    return;
+                    if (!feature.TryExecute(context, command))
+                    {
+                        continue;
+                    }
+
+                    _lastHandledCommandId = command.Id;
+
+                    if (context.ScheduledTasks.Count == 0)
+                    {
+                        WriteCommandAck(command.Id, command.RawAction, "completed", null);
+                        goto commandHandled;
+                    }
+
+                    WriteCommandAck(command.Id, command.RawAction, "pending", "Awaiting async completion.");
+                    ObserveScheduledCommand(command, context.ScheduledTasks);
+                    goto commandHandled;
                 }
 
-                WriteCommandAck(command.Id, command.RawAction, "pending", "Awaiting async completion.");
-                ObserveScheduledCommand(command, context.ScheduledTasks);
-                return;
-            }
+                foreach (IAgentOverlayFeature feature in _overlayFeatures)
+                {
+                    if (!feature.TryExecute(context, command))
+                    {
+                        continue;
+                    }
 
-            foreach (IAgentOverlayFeature feature in _overlayFeatures)
+                    _lastHandledCommandId = command.Id;
+
+                    if (context.ScheduledTasks.Count == 0)
+                    {
+                        WriteCommandAck(command.Id, command.RawAction, "completed", null);
+                        goto commandHandled;
+                    }
+
+                    WriteCommandAck(command.Id, command.RawAction, "pending", "Awaiting async completion.");
+                    ObserveScheduledCommand(command, context.ScheduledTasks);
+                    goto commandHandled;
+                }
+
+                throw new InvalidOperationException($"No feature handled command '{command.RawAction}'.");
+
+            commandHandled:
+                continue;
+            }
+            catch (Exception exception)
             {
-                if (!feature.TryExecute(context, command))
-                {
-                    continue;
-                }
-
-                _lastHandledCommandId = command.Id;
-                _lastCommandFingerprint = commandJson;
-
-                if (context.ScheduledTasks.Count == 0)
-                {
-                    WriteCommandAck(command.Id, command.RawAction, "completed", null);
-                    return;
-                }
-
-                WriteCommandAck(command.Id, command.RawAction, "pending", "Awaiting async completion.");
-                ObserveScheduledCommand(command, context.ScheduledTasks);
-                return;
+                WriteCommandAck(rawCommand?.Id, rawCommand?.Action, "error", exception.Message);
+                _logger.Error($"Command failed: {exception}", 0);
             }
-
-            throw new InvalidOperationException($"No feature handled command '{command.RawAction}'.");
-        }
-        catch (Exception exception)
-        {
-            ExportCommand? rawCommand = CommandEnvelopeReader.Parse(commandJson).Command;
-            WriteCommandAck(rawCommand?.Id, rawCommand?.Action, "error", exception.Message);
-            _lastCommandFingerprint = commandJson;
-            _logger.Error($"Command failed: {exception}", 0);
         }
     }
 
     private void WriteStateIfChanged(ExportState state)
     {
         string json = System.Text.Json.JsonSerializer.Serialize(state, AgentJson.Options);
+        _lastState = state;
+
         if (json == _lastStateJson)
         {
             return;
         }
 
         _lastStateJson = json;
-        _fileStore.WriteAtomic(AgentPaths.StatePath, state);
+        _ipcServer.PublishSnapshot(state, _lastAck);
     }
 
     private void ObserveScheduledCommand(ParsedCommand command, IReadOnlyList<ScheduledCommandTask> tasks)
@@ -272,8 +257,7 @@ public sealed class FrameCoordinator
             Message = message,
             HandledAtUtc = DateTimeOffset.UtcNow
         };
-        _fileStore.WriteAtomic(AgentPaths.AckPath, _lastAck);
-        _fileStore.DeleteIfExists(AgentPaths.CommandPath);
+        _ipcServer.PublishSnapshot(_lastState, _lastAck);
     }
 
     private void AugmentState(FeatureContext context, ExportState state)

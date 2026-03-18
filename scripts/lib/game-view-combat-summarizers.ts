@@ -97,9 +97,9 @@ export function summarizeCreature(creature: CreatureState, mode: Exclude<ViewMod
     block: creature.block,
     powers: compact
       ? (creature.powers ?? []).map((power) => ({
-        id: 'id' in power ? power.id : undefined,
-        label: 'label' in power ? power.label : undefined,
-        title: power.title,
+        ...('id' in power && power.id != null ? { id: power.id } : {}),
+        ...('label' in power && power.label != null ? { label: power.label } : {}),
+        ...(power.title != null ? { title: power.title } : {}),
         amount: power.amount ?? null,
       }))
       : (creature.powers ?? []),

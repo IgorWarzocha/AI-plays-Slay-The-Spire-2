@@ -26,13 +26,13 @@ function printGameplayState(state: DisplayState | null | undefined, options: Run
   console.log(JSON.stringify(buildGameplayView(state, options), null, 2));
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const { positional, options } = parseArgs(process.argv.slice(2));
   const command = positional[0];
 
   switch (command) {
     case "status":
-      printGameplayState(readDisplayState(), options);
+      printGameplayState(await readDisplayState(), options);
       return;
     case "command": {
       const actions = positional.slice(1);
@@ -41,7 +41,7 @@ function main(): void {
       }
 
       assertGameplayActions(actions);
-      console.log(JSON.stringify(buildCommandView(runActions(actions, options), options), null, 2));
+      console.log(JSON.stringify(buildCommandView(await runActions(actions, options), options), null, 2));
       return;
     }
     case "wait-screen": {
@@ -50,7 +50,7 @@ function main(): void {
         throw new Error("wait-screen requires a screen type.");
       }
 
-      printGameplayState(waitForScreen(screenType), options);
+      printGameplayState(await waitForScreen(screenType), options);
       return;
     }
     default:
@@ -61,4 +61,4 @@ function main(): void {
   }
 }
 
-main();
+await main();

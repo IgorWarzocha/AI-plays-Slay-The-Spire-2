@@ -2,10 +2,10 @@
 
 import { captureLiveStatus } from "./lib/monitor-client.ts";
 
-function main(): void {
-  const snapshot = captureLiveStatus();
+async function main(): Promise<void> {
+  const snapshot = await captureLiveStatus();
 
   console.log(JSON.stringify(snapshot, null, 2));
 }
 
-main();
+await main();

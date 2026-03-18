@@ -24,13 +24,13 @@ function printState(state: DisplayState | null | undefined, options: RuntimeComm
   console.log(JSON.stringify(buildGameplayView(state, options), null, 2));
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const { positional, options } = parseArgs(process.argv.slice(2));
   const command = positional[0];
 
   switch (command) {
     case "status":
-      printState(readDisplayState(), options);
+      printState(await readDisplayState(), options);
       return;
     case "command": {
       const actions = positional.slice(1);
@@ -39,7 +39,7 @@ function main(): void {
       }
 
       assertBootstrapActions(actions);
-      console.log(JSON.stringify(buildCommandView(runActions(actions, options), options), null, 2));
+      console.log(JSON.stringify(buildCommandView(await runActions(actions, options), options), null, 2));
       return;
     }
     case "wait-screen": {
@@ -48,11 +48,11 @@ function main(): void {
         throw new Error("wait-screen requires a screen type.");
       }
 
-      printState(waitForScreen(screenType), options);
+      printState(await waitForScreen(screenType), options);
       return;
     }
     case "start-standard":
-      printState(startStandardRun(options), options);
+      printState(await startStandardRun(options), options);
       return;
     default:
       usage();
@@ -62,4 +62,4 @@ function main(): void {
   }
 }
 
-main();
+await main();
