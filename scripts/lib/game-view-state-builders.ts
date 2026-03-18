@@ -72,7 +72,8 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
   const includeRelicDetails = viewPreferences.includeRelicDetails
     || state.screenType === 'merchant_room'
     || state.screenType === 'merchant_inventory';
-  const omitDeckOverlayContext = viewPreferences.mode === 'easy' && state.screenType === 'deck_view';
+  const omitCardBrowseOverlayContext = viewPreferences.mode === 'easy'
+    && (state.screenType === 'deck_view' || state.screenType === 'card_pile');
   const relics = includeRelicDetails
     ? (state.relics ?? []).map(summarizeRelic)
     : (state.relics ?? []).map(summarizeRelicLabel);
@@ -84,8 +85,8 @@ export function buildGameplayView(state: DisplayState | null | undefined, option
     screenType: state.screenType ?? null,
     updatedAtUtc: state.updatedAtUtc ?? null,
     topBar: buildTopBarView(state.topBar),
-    ...(omitDeckOverlayContext ? {} : { relics }),
-    ...(omitDeckOverlayContext ? {} : { potions }),
+    ...(omitCardBrowseOverlayContext ? {} : { relics }),
+    ...(omitCardBrowseOverlayContext ? {} : { potions }),
     choices: buildGameplayChoices(state, viewPreferences.mode),
   };
 

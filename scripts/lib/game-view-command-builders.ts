@@ -1,4 +1,4 @@
-import type { ActionSummaryView, CombatCommandView, CommandView, DeckInspectView, DeckInspectionResult, DisplayState, RunActionsResult, RuntimeCommandOptions } from './types.ts';
+import type { ActionSummaryView, CombatCommandView, CommandView, DeckInspectView, DeckInspectionResult, DisplayState, PileInspectView, PileInspectionResult, RunActionsResult, RuntimeCommandOptions } from './types.ts';
 import { summarizeCombatActionState, summarizeCostChange } from './game-view-summarizers.ts';
 import { buildCombatView, buildGameplayView } from './game-view-state-builders.ts';
 import { resolveViewMode } from './view-options.ts';
@@ -89,6 +89,22 @@ export function buildDeckInspectView(result: DeckInspectionResult, options: Runt
   return {
     ...standard,
     deckView: buildGameplayView(result.deckState, options),
+    sourceScreenType: result.sourceScreenType,
+    restoredScreenType: result.restoredScreenType,
+  };
+}
+
+export function buildPileInspectView(result: PileInspectionResult, options: RuntimeCommandOptions = {}): PileInspectView {
+  const standard = result.state?.screenType === 'combat_room'
+    || result.state?.screenType === 'combat_card_select'
+    || result.state?.screenType === 'combat_choice_select'
+    ? buildCombatCommandView(result, options)
+    : buildCommandView(result, options);
+
+  return {
+    ...standard,
+    pileView: buildGameplayView(result.pileState, options),
+    pileType: result.pileType,
     sourceScreenType: result.sourceScreenType,
     restoredScreenType: result.restoredScreenType,
   };

@@ -302,3 +302,14 @@ export interface DeckInspectView {
   sourceScreenType: string | null;
   restoredScreenType: string | null;
 }
+
+export interface PileInspectView {
+  ok: boolean;
+  actionCount: number;
+  actions: ActionSummaryView[];
+  state: GameplayView | CombatViewScreen;
+  pileView: GameplayView;
+  pileType: string | null;
+  sourceScreenType: string | null;
+  restoredScreenType: string | null;
+}

@@ -8,8 +8,8 @@ import {
 } from "./lib/sts2-runtime.ts";
 import { assertCombatActions } from "./lib/action-scopes.ts";
 import { buildStatusCacheKey, printCliOutput } from "./lib/cli-output.ts";
-import { buildCombatCommandView, buildCombatView, buildDeckInspectView } from "./lib/sts2-game-view.ts";
-import { inspectDeck } from "./lib/deck-inspection.ts";
+import { buildCombatCommandView, buildCombatView, buildDeckInspectView, buildPileInspectView } from "./lib/sts2-game-view.ts";
+import { inspectDeck, inspectPile } from "./lib/deck-inspection.ts";
 import type { DisplayState, RuntimeCommandOptions } from "./lib/types.ts";
 
 function usage(): void {
@@ -17,6 +17,9 @@ function usage(): void {
   sts2combat.ts status [--easy | --hard | --full]
   sts2combat.ts command <action> [action...] [--batch] [--strict false] [--settle-timeout-ms <ms>] [--easy | --hard | --full]
   sts2combat.ts inspect-deck [--easy | --hard | --full]
+  sts2combat.ts inspect-draw [--easy | --hard | --full]
+  sts2combat.ts inspect-discard [--easy | --hard | --full]
+  sts2combat.ts inspect-exhaust [--easy | --hard | --full]
   sts2combat.ts wait-screen <screenType> [--easy | --hard | --full]
 `);
 }
@@ -42,6 +45,15 @@ async function main(): Promise<void> {
       return;
     case "inspect-deck":
       printCliOutput(buildDeckInspectView(await inspectDeck(options), options), { options });
+      return;
+    case "inspect-draw":
+      printCliOutput(buildPileInspectView(await inspectPile("draw", options), options), { options });
+      return;
+    case "inspect-discard":
+      printCliOutput(buildPileInspectView(await inspectPile("discard", options), options), { options });
+      return;
+    case "inspect-exhaust":
+      printCliOutput(buildPileInspectView(await inspectPile("exhaust", options), options), { options });
       return;
     case "command": {
       const actions = positional.slice(1);

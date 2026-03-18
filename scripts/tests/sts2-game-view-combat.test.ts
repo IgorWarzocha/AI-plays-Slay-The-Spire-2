@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildCombatCommandView, buildCombatView, buildDeckInspectView, buildGameplayView } from "../lib/sts2-game-view.ts";
+import { buildCombatCommandView, buildCombatView, buildDeckInspectView, buildGameplayView, buildPileInspectView } from "../lib/sts2-game-view.ts";
 
 function expectDefined<T>(value: T): NonNullable<T> {
   assert.notEqual(value, null);
@@ -377,6 +377,96 @@ test("buildDeckInspectView returns restored combat state plus captured deck view
   assert.equal(expectDefined(view.deckView.cardBrowse).cardCount, 1);
   assert.equal(view.deckView.relics, undefined);
   assert.equal(view.deckView.potions, undefined);
+});
+
+test("buildPileInspectView returns restored combat state plus captured pile view", () => {
+  const result = {
+    ok: true,
+    actionCount: 2,
+    results: [
+      { action: "combat.open_pile:discard", id: "cmd-open", ackStatus: "completed", screenType: "card_pile" },
+      {
+        action: "card_pile.close",
+        id: "cmd-close",
+        ackStatus: "completed",
+        screenType: "combat_room",
+        state: {
+          screenType: "combat_room",
+          updatedAtUtc: "2026-03-17T12:46:00.000Z",
+          topBar: { currentHp: 87, maxHp: 90, gold: 282 },
+          relics: [],
+          notes: [],
+          actions: ["combat.end_turn"],
+          combat: {
+            roundNumber: 1,
+            currentSide: "Player",
+            energy: 6,
+            handIsSettled: true,
+            activeHandCount: 5,
+            totalHandCount: 5,
+            pendingHandHolderCount: 0,
+            handAnimationActive: false,
+            cardPlayInProgress: false,
+            canEndTurn: true,
+            hand: [{ id: "strike-01", title: "Strike", costText: "1", isPlayable: true, validTargetIds: ["enemy-1"] }],
+            potions: [],
+            creatures: [{ id: "enemy-1", name: "Spiny Toad", side: "Enemy", currentHp: 119, maxHp: 119, block: 0, intents: [] }],
+          },
+        },
+      },
+    ],
+    state: {
+      screenType: "combat_room",
+      updatedAtUtc: "2026-03-17T12:46:00.000Z",
+      topBar: { currentHp: 87, maxHp: 90, gold: 282 },
+      relics: [],
+      notes: [],
+      actions: ["combat.end_turn"],
+      combat: {
+        roundNumber: 1,
+        currentSide: "Player",
+        energy: 6,
+        handIsSettled: true,
+        activeHandCount: 5,
+        totalHandCount: 5,
+        pendingHandHolderCount: 0,
+        handAnimationActive: false,
+        cardPlayInProgress: false,
+        canEndTurn: true,
+        hand: [{ id: "strike-01", title: "Strike", costText: "1", isPlayable: true, validTargetIds: ["enemy-1"] }],
+        potions: [],
+        creatures: [{ id: "enemy-1", name: "Spiny Toad", side: "Enemy", currentHp: 119, maxHp: 119, block: 0, intents: [] }],
+      },
+    },
+    pileState: {
+      screenType: "card_pile",
+      updatedAtUtc: "2026-03-17T12:45:30.000Z",
+      topBar: { currentHp: 87, maxHp: 90, gold: 282, potionSlotCount: 3, filledPotionSlotCount: 2, emptyPotionSlotCount: 1 },
+      actions: ["card_pile.close"],
+      menuItems: [{ id: "close", label: "Close", description: "Return from the discard pile.", enabled: true, selected: false }],
+      notes: ["Discard pile overlay is open."],
+      cardBrowse: {
+        kind: "card_pile",
+        title: "Discard Pile",
+        pileType: "Discard",
+        cardCount: 1,
+        canClose: true,
+        cards: [{ id: "c1", title: "Bloodletting", costText: "0", upgraded: true, description: "Lose 3 HP. Gain 3 Energy." }],
+      },
+    },
+    pileType: "Discard",
+    sourceScreenType: "combat_room",
+    restoredScreenType: "combat_room",
+  };
+
+  const view = buildPileInspectView(result, { easy: true });
+  assert.equal(view.state.screenType, "combat_room");
+  assert.equal(view.restoredScreenType, "combat_room");
+  assert.equal(view.sourceScreenType, "combat_room");
+  assert.equal(view.pileType, "Discard");
+  assert.equal(expectDefined(view.pileView.cardBrowse).title, "Discard Pile");
+  assert.equal(view.pileView.relics, undefined);
+  assert.equal(view.pileView.potions, undefined);
 });
 
 test("buildGameplayView surfaces combat card transient states and unplayable causes", () => {

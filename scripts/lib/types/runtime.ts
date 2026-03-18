@@ -47,6 +47,13 @@ export interface DeckInspectionResult extends RunActionsResult {
   restoredScreenType: string | null;
 }
 
+export interface PileInspectionResult extends RunActionsResult {
+  pileState: DisplayState;
+  pileType: string | null;
+  sourceScreenType: string | null;
+  restoredScreenType: string | null;
+}
+
 export interface GameWindow {
   address?: string;
   class?: string;

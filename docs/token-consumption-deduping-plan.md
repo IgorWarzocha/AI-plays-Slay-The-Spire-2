@@ -22,7 +22,7 @@ Implementation note: keep the operator surface simple. Do not add new operator-f
 - P1 preservation of exact control by keeping exact actions whenever aliasing would lose information
 - P2 partial compact text normalization for notes, event text, choice descriptions, and common compact combat/relic/potion/card descriptions
 - easy-mode status output now omits some unchanged stable sections, currently focused on relics and merchant deck snapshots, while `--hard` remains conservative
-- added a dedicated live deck inspection command that opens the deck overlay, captures the live deck view, restores the prior screen, and returns a standard command-style payload with the restored state plus the captured deck snapshot
+- added dedicated live card-browse inspection commands that open deck/draw/discard/exhaust overlays, capture the live browse view, restore the prior screen, and return a standard command-style payload with the restored state plus the captured snapshot
 
 ### Partially implemented
 
