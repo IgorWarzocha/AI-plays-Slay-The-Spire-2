@@ -2,10 +2,11 @@
 
 ## Surfaces
 
-- `sts2admin.mjs`: process, window, monitor
-- `sts2run.mjs`: main menu, profile, run start
-- `sts2ctl.mjs`: non-combat in-run flow
-- `sts2combat.mjs`: combat only
+- `admin`: process, window, monitor
+- `run`: main menu, profile, run start
+- `ctl`: non-combat in-run flow
+- `combat`: combat only
+- Full script entrypoints live under `scripts/`.
 
 ## Core Commands
 
@@ -14,6 +15,11 @@
 - `npm run run -- start-standard`
 - `npm run ctl -- status`
 - `npm run combat -- status`
+- `npm run play -- status`
+- `npm run play -- inspect-deck`
+- `npm run play -- inspect-draw`
+- `npm run play -- inspect-discard`
+- `npm run play -- inspect-exhaust`
 - `npm run history`, `npm run history:raw`
 - `npm run log`
 - `npm run inspect -- <TypeFragment>`
@@ -28,6 +34,7 @@
 ## Rules
 
 - Keep admin, bootstrap, non-combat, and combat separate.
+- Agent-facing CLI output is compact JSON by default. Use the default compact surface for routine execution and already-settled follow-through. Use `--hard` only when the decision is genuinely planning-heavy, ambiguous, or information-dense. Use `--full` only for lossless/debug output.
 - After every automated compaction summary, the first action is to re-read the live run state from the exporter and current run artifacts before making any choice. Always confirm the current floor, act, room, path, deck, relics, potions, HP, key upcoming fights, and any other immediately relevant state instead of trusting memory or the summary alone.
 - After every new run and after every automated compaction summary, re-read the repo skill that matches the current run before taking action.
 - The current character skill is mandatory re-reading after compaction. Example: if the run is Ironclad, re-read `/home/igorw/Work/STS2/.agents/skills/ironclad/SKILL.md`.

@@ -83,6 +83,29 @@ npm run reload:save-quit
 npm run reload:cycle
 ```
 
+Useful inspection flows:
+
+```bash
+npm run play -- inspect-deck
+npm run play -- inspect-draw
+npm run play -- inspect-discard
+npm run play -- inspect-exhaust
+```
+
+## CLI Output Modes
+
+Agent-facing CLI surfaces now default to compact single-line JSON with pruning and repeated-state dedupe where safe.
+
+- default / `--easy`: compressed execution surface
+- `--hard`: richer planning surface with more context preserved
+- `--full`: lossless/debug-oriented surface
+
+Compact output also includes:
+
+- canonical `choices` instead of duplicated action/menu surfaces in compact views
+- stable merchant buy aliases when unique
+- auto-closing deck and pile inspection commands that restore the prior screen and return the captured snapshot plus restored state
+
 ## Design Principles
 
 - No OCR by default if the runtime can expose the state directly.
