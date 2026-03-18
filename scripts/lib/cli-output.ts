@@ -5,8 +5,13 @@ import { STS2_RUNTIME_PATHS } from './runtime-paths.ts';
 import type { RuntimeCommandOptions } from './types.ts';
 import { resolveViewMode } from './view-options.ts';
 
+interface CliOutputCacheEntry {
+  semanticKey: string;
+  payload?: unknown;
+}
+
 interface CliOutputCache {
-  entries: Record<string, string>;
+  entries: Record<string, CliOutputCacheEntry>;
 }
 
 export interface RenderCliOutputOptions {
@@ -28,8 +33,26 @@ function readCliOutputCache(cachePath: string): CliOutputCache {
     }
 
     const parsed = JSON.parse(raw) as Partial<CliOutputCache>;
+    const entries = parsed.entries && typeof parsed.entries === 'object'
+      ? Object.entries(parsed.entries as Record<string, unknown>).reduce<Record<string, CliOutputCacheEntry>>((result, [key, value]) => {
+        if (typeof value === 'string') {
+          result[key] = { semanticKey: value };
+          return result;
+        }
+
+        if (value && typeof value === 'object' && 'semanticKey' in value && typeof value.semanticKey === 'string') {
+          result[key] = {
+            semanticKey: value.semanticKey,
+            ...('payload' in value ? { payload: (value as { payload?: unknown }).payload } : {}),
+          };
+        }
+
+        return result;
+      }, {})
+      : {};
+
     return {
-      entries: parsed.entries && typeof parsed.entries === 'object' ? parsed.entries as Record<string, string> : {},
+      entries,
     };
   } catch (error: unknown) {
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT') {
@@ -118,6 +141,47 @@ export function buildStatusCacheKey(baseKey: string, options: RuntimeCommandOpti
   return `${baseKey}:${resolveViewMode(options)}`;
 }
 
+function stableSectionKey(value: unknown): string {
+  return JSON.stringify(sortKeysDeep(value));
+}
+
+function cloneJsonValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function omitUnchangedStableSections(payload: unknown, previousPayload: unknown, options: RuntimeCommandOptions = {}): unknown {
+  if (resolveViewMode(options) !== 'easy') {
+    return payload;
+  }
+
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (!previousPayload || typeof previousPayload !== 'object' || Array.isArray(previousPayload)) {
+    return payload;
+  }
+
+  const current = cloneJsonValue(payload as Record<string, unknown>);
+  const previous = previousPayload as Record<string, unknown>;
+  const screenType = typeof current.screenType === 'string' ? current.screenType : null;
+
+  const shouldOmitRelics = screenType !== 'merchant_room'
+    && screenType !== 'merchant_inventory'
+    && screenType !== 'treasure_relic_selection'
+    && screenType !== 'run_history';
+  if (shouldOmitRelics && 'relics' in current && 'relics' in previous && stableSectionKey(current.relics) === stableSectionKey(previous.relics)) {
+    delete current.relics;
+  }
+
+  const shouldOmitCardBrowse = screenType === 'merchant_inventory';
+  if (shouldOmitCardBrowse && 'cardBrowse' in current && 'cardBrowse' in previous && stableSectionKey(current.cardBrowse) === stableSectionKey(previous.cardBrowse)) {
+    delete current.cardBrowse;
+  }
+
+  return current;
+}
+
 export function renderCliOutput(value: unknown, {
   options = {},
   cacheKey,
@@ -129,15 +193,26 @@ export function renderCliOutput(value: unknown, {
   if (mode !== 'full' && cacheKey) {
     const semanticKey = buildCliSemanticKey(value, options);
     const cache = readCliOutputCache(cachePath);
-    if (cache.entries[cacheKey] === semanticKey) {
+    const previousEntry = cache.entries[cacheKey];
+    if (previousEntry?.semanticKey === semanticKey) {
       return {
         text: '',
         suppressed: true,
       };
     }
 
-    cache.entries[cacheKey] = semanticKey;
+    const emittedPayload = omitUnchangedStableSections(payload, previousEntry?.payload, options);
+
+    cache.entries[cacheKey] = {
+      semanticKey,
+      payload,
+    };
     writeCliOutputCache(cachePath, cache);
+
+    return {
+      text: JSON.stringify(emittedPayload ?? null),
+      suppressed: false,
+    };
   }
 
   return {

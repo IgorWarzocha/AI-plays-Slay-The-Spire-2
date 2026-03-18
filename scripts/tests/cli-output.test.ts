@@ -107,3 +107,109 @@ test('renderCliOutput does not suppress full mode output', () => {
     fs.rmSync(cacheDir, { recursive: true, force: true });
   }
 });
+
+test('renderCliOutput omits unchanged easy relics while preserving changed state', () => {
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sts2-cli-output-test-'));
+  const cachePath = path.join(cacheDir, 'cache.json');
+
+  try {
+    const first = renderCliOutput({
+      screenType: 'event',
+      updatedAtUtc: '1',
+      topBar: { gold: 10 },
+      relics: ['Burning Blood'],
+      choices: [{ action: 'proceed', label: 'Proceed' }],
+    }, {
+      options: { easy: true },
+      cacheKey: 'status:easy',
+      cachePath,
+    });
+    assert.equal(first.text, '{"screenType":"event","topBar":{"gold":10},"relics":["Burning Blood"],"choices":[{"action":"proceed","label":"Proceed"}]}');
+
+    const second = renderCliOutput({
+      screenType: 'event',
+      updatedAtUtc: '2',
+      topBar: { gold: 11 },
+      relics: ['Burning Blood'],
+      choices: [{ action: 'proceed', label: 'Proceed' }],
+    }, {
+      options: { easy: true },
+      cacheKey: 'status:easy',
+      cachePath,
+    });
+    assert.equal(second.suppressed, false);
+    assert.equal(second.text, '{"screenType":"event","topBar":{"gold":11},"choices":[{"action":"proceed","label":"Proceed"}]}');
+  } finally {
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+  }
+});
+
+test('renderCliOutput keeps hard relic context even when unchanged', () => {
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sts2-cli-output-test-'));
+  const cachePath = path.join(cacheDir, 'cache.json');
+
+  try {
+    renderCliOutput({
+      screenType: 'event',
+      updatedAtUtc: '1',
+      topBar: { gold: 10 },
+      relics: ['Burning Blood'],
+      choices: [{ action: 'proceed', label: 'Proceed' }],
+    }, {
+      options: { hard: true },
+      cacheKey: 'status:hard',
+      cachePath,
+    });
+
+    const second = renderCliOutput({
+      screenType: 'event',
+      updatedAtUtc: '2',
+      topBar: { gold: 11 },
+      relics: ['Burning Blood'],
+      choices: [{ action: 'proceed', label: 'Proceed' }],
+    }, {
+      options: { hard: true },
+      cacheKey: 'status:hard',
+      cachePath,
+    });
+    assert.equal(second.suppressed, false);
+    assert.equal(second.text, '{"screenType":"event","topBar":{"gold":11},"relics":["Burning Blood"],"choices":[{"action":"proceed","label":"Proceed"}]}');
+  } finally {
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+  }
+});
+
+test('renderCliOutput omits unchanged merchant deck snapshot in easy mode', () => {
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sts2-cli-output-test-'));
+  const cachePath = path.join(cacheDir, 'cache.json');
+
+  try {
+    renderCliOutput({
+      screenType: 'merchant_inventory',
+      updatedAtUtc: '1',
+      topBar: { gold: 200 },
+      choices: [{ action: 'merchant.buy:1', label: 'Lantern' }],
+      cardBrowse: { title: 'Current Deck', cardCount: 20, cards: [{ title: 'Strike' }] },
+    }, {
+      options: { easy: true },
+      cacheKey: 'status:easy',
+      cachePath,
+    });
+
+    const second = renderCliOutput({
+      screenType: 'merchant_inventory',
+      updatedAtUtc: '2',
+      topBar: { gold: 123 },
+      choices: [{ action: 'merchant.buy:1', label: 'Lantern' }],
+      cardBrowse: { title: 'Current Deck', cardCount: 20, cards: [{ title: 'Strike' }] },
+    }, {
+      options: { easy: true },
+      cacheKey: 'status:easy',
+      cachePath,
+    });
+    assert.equal(second.suppressed, false);
+    assert.equal(second.text, '{"screenType":"merchant_inventory","topBar":{"gold":123},"choices":[{"action":"merchant.buy:1","label":"Lantern"}]}');
+  } finally {
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+  }
+});

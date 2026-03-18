@@ -21,6 +21,7 @@ Implementation note: keep the operator surface simple. Do not add new operator-f
 - P1 duplicate-label disambiguation for exact card-select actions such as `Strike` vs `Strike+` and multiple `Strike` copies
 - P1 preservation of exact control by keeping exact actions whenever aliasing would lose information
 - P2 partial compact text normalization for notes, event text, choice descriptions, and common compact combat/relic/potion/card descriptions
+- easy-mode status output now omits some unchanged stable sections, currently focused on relics and merchant deck snapshots, while `--hard` remains conservative
 
 ### Partially implemented
 
@@ -28,7 +29,7 @@ Implementation note: keep the operator surface simple. Do not add new operator-f
 
 ### Not yet implemented
 
-- stable-context hashing for relics/deck/map snapshots
+- stable-context hashing/delta handling beyond the current easy-mode omission pass
 - broader screen-specific compact schemas beyond the current `choices` translation layer
 - TOON presentation layer
 
@@ -202,6 +203,8 @@ Example direction:
 
 Then allow explicit expansion when needed.
 
+Current implementation note: the first safe pass is intentionally smaller. In easy-mode status polling, some unchanged stable sections can now be omitted between reads. Hard-mode reads remain conservative and should continue to surface the richer planning context.
+
 #### 10. Use minimal screen-specific schemas
 
 Rather than one generalized view carrying too much optional structure, prefer screen-specific minimal forms.
@@ -285,6 +288,8 @@ Status: 5 and 6 are implemented. 7 is partially implemented with a conservative 
 8. stable-context hashing for relics/deck/map
 9. evaluate TOON as a final presentation/translator layer after JSON payloads stabilize
 
+Status: an initial easy-mode stable-section omission pass is implemented, but the broader hashing/delta architecture is still pending.
+
 ## Likely files to touch
 
 - `scripts/sts2ctl.ts`
@@ -321,5 +326,5 @@ If implementing only the most important improvements first, the strongest order 
 Current next slice:
 
 1. extend text normalization only where live evidence shows more safe wins
-2. add stable-context hashing/delta ideas for large persistent sections like relics/deck/map, with `--hard` kept conservative
+2. expand stable-context handling only where live evidence shows safe wins, with `--hard` kept conservative
 3. consider broader screen-specific compact schemas once the `choices` layer has stabilized in live play
