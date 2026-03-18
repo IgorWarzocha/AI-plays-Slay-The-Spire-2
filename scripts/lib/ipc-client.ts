@@ -21,6 +21,10 @@ interface CommandEnvelope {
   command: CommandPayload;
 }
 
+interface SnapshotRequestEnvelope {
+  type: 'snapshot';
+}
+
 type AgentEnvelope = SnapshotEnvelope | ErrorEnvelope;
 
 function isNodeError(value: unknown): value is NodeJS.ErrnoException {
@@ -39,6 +43,7 @@ export class AgentIpcSession {
   private closed = false;
   private lastError: Error | null = null;
   private hasSnapshot = false;
+  private snapshotVersion = 0;
 
   state: DisplayState | null = null;
   ack: CommandAck | null = null;
@@ -85,9 +90,12 @@ export class AgentIpcSession {
   }
 
   async waitForInitialSnapshot({ timeoutMs = 3000 }: { timeoutMs?: number } = {}): Promise<{ state: DisplayState | null; ack: CommandAck | null }> {
+    this.requestSnapshot();
+    const initialVersion = this.snapshotVersion;
+
     await waitForAsync(() => {
       this.assertHealthy();
-      return this.hasSnapshot ? true : null;
+      return this.snapshotVersion > initialVersion ? true : null;
     }, {
       timeoutMs,
       intervalMs: 25,
@@ -95,6 +103,14 @@ export class AgentIpcSession {
     });
 
     return { state: this.state, ack: this.ack };
+  }
+
+  requestSnapshot(): void {
+    this.assertHealthy();
+    const envelope: SnapshotRequestEnvelope = {
+      type: 'snapshot',
+    };
+    this.socket.write(`${JSON.stringify(envelope)}\n`);
   }
 
   sendCommand(command: CommandPayload): void {
@@ -147,6 +163,7 @@ export class AgentIpcSession {
           this.state = envelope.state ?? null;
           this.ack = envelope.ack ?? null;
           this.hasSnapshot = true;
+          this.snapshotVersion += 1;
           continue;
         }
 

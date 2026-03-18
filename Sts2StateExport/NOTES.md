@@ -50,8 +50,11 @@ socket at `~/.local/share/SlayTheSpire2/agent_ipc/sts2-agent.sock`.
 
 - `sts2-agent.sock`
   - Unix domain socket server hosted inside the mod process.
-  - Clients receive snapshot pushes containing the latest surfaced state and
-    last command acknowledgement.
+  - Clients can request a one-shot snapshot on demand.
+  - After a command is handled, the mod automatically enters a short
+    observation window and pushes snapshots every `250ms` for `3s` so command
+    follow-through and animation settling can be observed without permanent idle
+    polling.
   - Clients send live command envelopes over the same connection. Commands are
     still deduped by `id`, but no file persistence is used in the hot path.
 

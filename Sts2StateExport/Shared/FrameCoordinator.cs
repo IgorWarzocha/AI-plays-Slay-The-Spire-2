@@ -6,13 +6,17 @@ namespace Sts2StateExport;
 // dedupe, and file persistence. Features stay focused on one game surface each.
 public sealed class FrameCoordinator
 {
+    private const ulong ObservationIntervalMs = 250;
+    private const ulong ObservationDurationMs = 3000;
+
     private readonly MegaCrit.Sts2.Core.Logging.Logger _logger;
     private readonly AgentIpcServer _ipcServer;
     private readonly Sts2Reflection _reflection;
     private readonly IReadOnlyList<IAgentFeature> _primaryFeatures;
     private readonly IReadOnlyList<IAgentOverlayFeature> _overlayFeatures;
 
-    private ulong _lastTickMs;
+    private ulong _lastObservationTickMs;
+    private ulong _observeUntilTickMs;
     private string? _lastStateJson;
     private ExportState? _lastState;
     private string? _lastHandledCommandId;
@@ -97,16 +101,24 @@ public sealed class FrameCoordinator
         try
         {
             ulong now = Time.GetTicksMsec();
-            if (now - _lastTickMs < 120)
+            HandleCommandIfNeeded(now);
+
+            bool snapshotRequested = _ipcServer.ConsumeSnapshotRequests();
+            bool observing = now < _observeUntilTickMs;
+            bool observationSampleDue = observing && now - _lastObservationTickMs >= ObservationIntervalMs;
+
+            if (!snapshotRequested && !observationSampleDue)
             {
                 return;
             }
 
-            _lastTickMs = now;
-
             ExportState state = BuildState();
-            HandleCommandIfNeeded();
-            WriteStateIfChanged(state);
+            if (observationSampleDue)
+            {
+                _lastObservationTickMs = now;
+            }
+
+            PublishStateSnapshot(state);
         }
         catch (Exception exception)
         {
@@ -145,7 +157,7 @@ public sealed class FrameCoordinator
         return state;
     }
 
-    private void HandleCommandIfNeeded()
+    private void HandleCommandIfNeeded(ulong now)
     {
         while (_ipcServer.TryDequeueCommand(out ExportCommand? rawCommand) && rawCommand is not null)
         {
@@ -171,11 +183,11 @@ public sealed class FrameCoordinator
 
                     if (context.ScheduledTasks.Count == 0)
                     {
-                        WriteCommandAck(command.Id, command.RawAction, "completed", null);
+                        WriteCommandAck(command.Id, command.RawAction, "completed", null, now);
                         goto commandHandled;
                     }
 
-                    WriteCommandAck(command.Id, command.RawAction, "pending", "Awaiting async completion.");
+                    WriteCommandAck(command.Id, command.RawAction, "pending", "Awaiting async completion.", now);
                     ObserveScheduledCommand(command, context.ScheduledTasks);
                     goto commandHandled;
                 }
@@ -191,11 +203,11 @@ public sealed class FrameCoordinator
 
                     if (context.ScheduledTasks.Count == 0)
                     {
-                        WriteCommandAck(command.Id, command.RawAction, "completed", null);
+                        WriteCommandAck(command.Id, command.RawAction, "completed", null, now);
                         goto commandHandled;
                     }
 
-                    WriteCommandAck(command.Id, command.RawAction, "pending", "Awaiting async completion.");
+                    WriteCommandAck(command.Id, command.RawAction, "pending", "Awaiting async completion.", now);
                     ObserveScheduledCommand(command, context.ScheduledTasks);
                     goto commandHandled;
                 }
@@ -207,21 +219,16 @@ public sealed class FrameCoordinator
             }
             catch (Exception exception)
             {
-                WriteCommandAck(rawCommand?.Id, rawCommand?.Action, "error", exception.Message);
+                WriteCommandAck(rawCommand?.Id, rawCommand?.Action, "error", exception.Message, now);
                 _logger.Error($"Command failed: {exception}", 0);
             }
         }
     }
 
-    private void WriteStateIfChanged(ExportState state)
+    private void PublishStateSnapshot(ExportState state)
     {
         string json = System.Text.Json.JsonSerializer.Serialize(state, AgentJson.Options);
         _lastState = state;
-
-        if (json == _lastStateJson)
-        {
-            return;
-        }
 
         _lastStateJson = json;
         _ipcServer.PublishSnapshot(state, _lastAck);
@@ -237,17 +244,17 @@ public sealed class FrameCoordinator
         try
         {
             await Task.WhenAll(tasks.Select(static task => task.Task));
-            WriteCommandAck(command.Id, command.RawAction, "completed", null);
+            WriteCommandAck(command.Id, command.RawAction, "completed", null, Time.GetTicksMsec());
         }
         catch (Exception exception)
         {
             string actionList = string.Join(", ", tasks.Select(static task => task.ActionName));
-            WriteCommandAck(command.Id, command.RawAction, "error", exception.Message);
+            WriteCommandAck(command.Id, command.RawAction, "error", exception.Message, Time.GetTicksMsec());
             _logger.Error($"Async action '{actionList}' failed: {exception}", 0);
         }
     }
 
-    private void WriteCommandAck(string? id, string? action, string status, string? message)
+    private void WriteCommandAck(string? id, string? action, string status, string? message, ulong now)
     {
         _lastAck = new ExportCommandAck
         {
@@ -257,7 +264,21 @@ public sealed class FrameCoordinator
             Message = message,
             HandledAtUtc = DateTimeOffset.UtcNow
         };
+
+        if (_lastState is not null)
+        {
+            _lastState.LastHandledCommandId = _lastHandledCommandId;
+            _lastState.LastCommandAck = _lastAck;
+        }
+
+        ActivateObservation(now);
         _ipcServer.PublishSnapshot(_lastState, _lastAck);
+    }
+
+    private void ActivateObservation(ulong now)
+    {
+        _observeUntilTickMs = Math.Max(_observeUntilTickMs, now + ObservationDurationMs);
+        _lastObservationTickMs = now;
     }
 
     private void AugmentState(FeatureContext context, ExportState state)

@@ -12,6 +12,7 @@ public sealed class AgentIpcServer : IDisposable
     private readonly object _snapshotLock = new();
     private readonly ConcurrentQueue<ExportCommand> _pendingCommands = new();
     private readonly List<ClientConnection> _clients = [];
+    private int _pendingSnapshotRequests;
 
     private Socket? _listener;
     private CancellationTokenSource? _lifecycleCts;
@@ -38,6 +39,13 @@ public sealed class AgentIpcServer : IDisposable
         _listener.Listen(8);
 
         _ = AcceptLoopAsync(_lifecycleCts.Token);
+    }
+
+    public bool HasPendingCommands => !_pendingCommands.IsEmpty;
+
+    public bool ConsumeSnapshotRequests()
+    {
+        return Interlocked.Exchange(ref _pendingSnapshotRequests, 0) > 0;
     }
 
     public void PublishSnapshot(ExportState? state, ExportCommandAck? ack)
@@ -123,7 +131,6 @@ public sealed class AgentIpcServer : IDisposable
                     _clients.Add(client);
                 }
 
-                await client.SendAsync(BuildSnapshotMessage(), cancellationToken);
                 _ = client.RunAsync();
             }
             catch (OperationCanceledException)
@@ -176,6 +183,11 @@ public sealed class AgentIpcServer : IDisposable
     private void EnqueueCommand(ExportCommand command)
     {
         _pendingCommands.Enqueue(command);
+    }
+
+    private void RequestSnapshot()
+    {
+        Interlocked.Increment(ref _pendingSnapshotRequests);
     }
 
     private sealed class ClientConnection : IDisposable
@@ -236,6 +248,12 @@ public sealed class AgentIpcServer : IDisposable
                                 Message = parseResult.ErrorMessage
                             },
                             _serverCancellationToken);
+                        continue;
+                    }
+
+                    if (parseResult.RequestType == AgentIpcRequestType.Snapshot)
+                    {
+                        _server.RequestSnapshot();
                         continue;
                     }
 
